@@ -41,7 +41,8 @@ async function api(method, path, body) {
   } catch {
     data = {};
   }
-  if (res.status === 401 && !path.startsWith('login')) {
+  // « me » = simple vérification au chargement : pas de message « expirée » pour une première visite.
+  if (res.status === 401 && !path.startsWith('login') && path !== 'me') {
     showLogin('Session expirée : reconnectez-vous.');
     throw new ApiError(401, 'Session expirée.');
   }
@@ -518,7 +519,7 @@ async function init() {
     const me = await api('GET', 'me');
     await showDashboard(me.email);
   } catch (err) {
-    if (err.status !== 401) showLogin(err.message);
+    showLogin(err.status === 401 ? '' : err.message);
   }
 }
 
