@@ -59,7 +59,8 @@ function languagesEuropass(view) {
 }
 
 function renderEuropass(view) {
-  const order = EUROPASS_ORDER.filter((k) => view.order.includes(k));
+  // Ordre officiel Europass, puis les rubriques personnalisées dans l'ordre choisi.
+  const order = [...EUROPASS_ORDER.filter((k) => view.order.includes(k)), ...view.order.filter((k) => k.startsWith('custom:'))];
   const body = order.map((k) => (k === 'languages' ? languagesEuropass(view) : section(view, k))).join('');
   return `${head(view, { contact: 'list' })}${section(view, 'summary')}${body}`;
 }

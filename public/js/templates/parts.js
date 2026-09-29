@@ -121,6 +121,8 @@ export function head(view, { contact = 'inline', withPhoto = true, extraClass = 
 
 /** Libellé de rubrique : libellé standard, ou libellé officiel propre au modèle (ex. Europass). */
 export function label(view, key) {
+  const cs = customSection(view, key);
+  if (cs) return cs.title;
   return (view.labels && view.labels[key]) || t(view.lang, key);
 }
 
@@ -248,8 +250,20 @@ export function sectionBody(view, key, variant = 'default') {
   }
 }
 
+/** Rubrique personnalisée de la vue pour une clé « custom:<id> ». */
+export function customSection(view, key) {
+  if (!String(key).startsWith('custom:')) return null;
+  return (view.cv.custom || []).find((c) => `custom:${c.id}` === key) || null;
+}
+
+function customBody(view, cs) {
+  return cs.items.map((it) => datedItem(view, it.title, it.subtitle, it, it.description)).join('');
+}
+
 export function hasContent(view, key) {
   if (key === 'summary') return Boolean(view.summary.trim());
+  const cs = customSection(view, key);
+  if (cs) return cs.items.length > 0 && Boolean(cs.title.trim());
   if (key === 'references') return view.cv.references.length > 0 || view.cv.referencesOnRequest;
   return (view.cv[key] || []).length > 0;
 }
@@ -257,8 +271,10 @@ export function hasContent(view, key) {
 /** Rubrique complète (titre standard + contenu) ; chaîne vide si rien à afficher. */
 export function section(view, key, variant = 'default') {
   if (!hasContent(view, key)) return '';
-  const body = key === 'summary' ? `<p class="cv-summary">${esc(view.summary)}</p>` : sectionBody(view, key, variant);
+  const cs = customSection(view, key);
+  const body = key === 'summary' ? `<p class="cv-summary">${esc(view.summary)}</p>` : cs ? customBody(view, cs) : sectionBody(view, key, variant);
   if (!body) return '';
+  if (cs) return `<section class="cv-section cv-s-custom" data-section="${esc(key)}">${sectionTitle(view, key)}${body}</section>`;
   return `<section class="cv-section cv-s-${key}" data-section="${key}">${sectionTitle(view, key)}${body}</section>`;
 }
 

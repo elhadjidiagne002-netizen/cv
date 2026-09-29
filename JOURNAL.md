@@ -1,5 +1,28 @@
 # Journal du projet (le plus récent en haut)
 
+## 2026-09-29 — cycle 4 : Word, rubriques personnalisées, lettres de stage / relance / remerciement, accessibilité
+**Fait.** **Export Word (.docx)** du CV et de la lettre, sans dépendance (WordprocessingML + ZIP écrits à la main) ;
+**rubriques personnalisées** (Stages, Vie associative…) avec contrôles de titre standard, rendues partout (33
+modèles, texte brut, Word, JSON Resume) ; **demande de stage, relance et remerciement** en plus de la candidature ;
+**import / export JSON Resume** ; **audit d'accessibilité axe-core** (0 violation WCAG A/AA) et deux défauts corrigés.
+
+**Pourquoi.** Demande « autres améliorations ». Le .docx est souvent exigé par les cabinets et plateformes d'emploi ;
+les rubriques libres et la demande de stage répondent aux CV de jeunes diplômés, très nombreux au Sénégal ; l'audit
+automatique garantit l'exigence WCAG 2.2 AA du cahier des charges au fil des cycles.
+
+**Choix notables.**
+- ZIP « stocké » (sans compression) : format valide et simple à vérifier (CRC-32 testé contre la valeur de référence
+  0xCBF43926) ; un algorithme deflate maison aurait été un risque pour un gain de quelques dizaines de Ko.
+- Le .docx reste un document ATS (une colonne, styles de titres Word) quel que soit le modèle : un tableau ou des
+  zones de texte pour imiter les modèles créatifs seraient mal lus par les logiciels de tri.
+- Texte brut et Word partagent la même liste de blocs (`cvBlocks`), qui reproduit l'ordre imposé par Europass et le
+  résumé US : le contenu est identique dans les trois formats.
+- Rubriques personnalisées stockées à part (`cv.custom`) et référencées dans `meta.sectionOrder` par
+  `custom:<id>` : les rubriques standard et leurs règles restent inchangées.
+- axe-core injecté avec `bypassCSP` uniquement dans `a11y.spec.mjs` ; tous les autres tests gardent la vraie CSP.
+
+**État.** 128 tests unitaires et 34 tests Playwright verts. Propositions du cycle 5 dans `ROADMAP.md`.
+
 ## 2026-09-29 — cycle 3 : réalités sénégalaises, lettre de motivation, confort d'édition
 **Fait.** **Lettre de motivation** assortie au modèle du CV, en 3 styles (standard, **administratif sénégalais**,
 anglais), avec brouillon guidé construit à partir du CV et contrôle dédié (longueur, 1 page, formules, objet,

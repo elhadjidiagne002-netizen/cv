@@ -76,6 +76,8 @@ export function draftLetter(cv, style = cv.letter.style || 'standard', today = n
   const bullets = last ? String(last.description || '').split(/\r?\n/).map(cleanLine).filter(Boolean).slice(0, 2) : [];
   const latestEdu = cv.education.find((e) => !e.hidden);
   const salutation = style === 'en' ? 'Dear Hiring Manager,' : salutationFor(L.recipientTitle, style);
+  const ctx = { cv, L, style, title, org, years, last, keywords, bullets, latestEdu, salutation };
+  if (L.kind && L.kind !== 'candidature') return draftOther(L.kind, ctx);
 
   if (style === 'en') {
     const body = [
@@ -118,6 +120,72 @@ export function draftLetter(cv, style = cv.letter.style || 'standard', today = n
   };
 }
 
+const du = (degree) => (/^[aeiouyéèêàâîôûh]/i.test(degree) ? 'd\'' : 'du ');
+
+/** Demande de stage, relance après candidature, remerciement après entretien. */
+function draftOther(kind, { cv, L, style, title, org, years, keywords, latestEdu, salutation, last }) {
+  const skills = keywords.length ? keywords.slice(0, 3).join(', ') : (style === 'en' ? '[key skills]' : '[compétences clés]');
+  const closing = closingFor(salutation, style);
+  const t = lowerFirst(title);
+  if (style === 'en') {
+    const drafts = {
+      stage: {
+        subject: `Internship application${cv.targetTitle ? ` — ${cv.targetTitle}` : ''}`,
+        body: [`${latestEdu ? `Currently studying for a ${latestEdu.degree}${latestEdu.school ? ` at ${latestEdu.school}` : ''}` : 'As a student'}, I am seeking a [n]-month internship starting [date] at ${org}. [What attracts you to the company.]`,
+          `My studies${last ? ` and my experience as ${last.position}` : ''} have given me skills in ${skills}. [One project that proves it.]`,
+          'I would be glad to discuss this internship with you. My school can provide an internship agreement.'].join('\n\n'),
+      },
+      relance: {
+        subject: `Follow-up on my application for the ${title} position`,
+        body: [`On [date], I applied for the ${title} position at ${org}. I remain very interested in this opportunity, as my skills in ${skills} match your needs.`,
+          'I would welcome the chance to discuss my application at your convenience. Thank you for your consideration.'].join('\n\n'),
+      },
+      remerciement: {
+        subject: `Thank you — interview on [date]`,
+        body: [`Thank you for our interview on [date] about the ${title} position at ${org}. [One point from the discussion that struck you.]`,
+          `Our conversation strengthened my motivation: my skills in ${skills} match the needs you described, especially [need]. Please let me know if you need any further information.`].join('\n\n'),
+      },
+    };
+    return { ...drafts[kind], salutation, closing, enclosures: kind === 'stage' ? 'Resume' : '' };
+  }
+  const admin = style === 'administratif';
+  const study = latestEdu
+    ? (latestEdu.current ? `Actuellement en ${latestEdu.degree}${latestEdu.school ? ` à ${latestEdu.school}` : ''}` : `Titulaire ${du(latestEdu.degree)}${latestEdu.degree}${latestEdu.school ? ` (${latestEdu.school})` : ''}`)
+    : 'Actuellement en [formation] à [établissement]';
+  const drafts = {
+    stage: {
+      subject: `Demande de stage${cv.targetTitle ? ` : ${t}` : ''}`,
+      body: [
+        admin
+          ? `J'ai l'honneur de solliciter auprès de votre haute bienveillance un stage [de fin d'études / de perfectionnement] d'une durée de [n] mois, à compter du [date], au sein de votre structure.`
+          : `${study}, je recherche un stage de [n] mois à partir du [date]. [Ce qui vous attire chez ${org} : secteur, projets, réputation.]`,
+        `${admin ? `${study}, j'ai` : 'Ma formation'}${last ? `${admin ? '' : ' et mon expérience de '}${admin ? ` une première expérience de ${lowerFirst(last.position)}` : lowerFirst(last.position)}` : ''}${admin ? ' et des' : ' m\'ont permis d\'acquérir des'} compétences en ${skills}. [Un projet, un stage ou un engagement qui le prouve.]`,
+        `Ce stage me permettrait de mettre ces acquis en pratique tout en contribuant à [une mission du service]. Mon établissement peut établir une convention de stage. Je reste à votre disposition pour un entretien.`,
+      ].join('\n\n'),
+    },
+    relance: {
+      subject: `Relance : candidature au poste de ${t}`,
+      body: [
+        `Le [date], je vous ai adressé ma candidature au poste de ${t}${admin ? '' : ` au sein de ${org}`}. Ce poste m'intéresse toujours vivement : ${years >= 1 ? `mes ${years} an${years > 1 ? 's' : ''} d'expérience et ` : ''}mes compétences en ${skills} répondent aux besoins exprimés.`,
+        `Je reste à votre disposition pour un entretien et vous remercie de l'attention que vous porterez à ma candidature.`,
+      ].join('\n\n'),
+    },
+    remerciement: {
+      subject: 'Remerciements : entretien du [date]',
+      body: [
+        `Je vous remercie pour l'entretien du [date], au cours duquel vous m'avez présenté le poste de ${t} et les projets ${admin ? 'de votre structure' : `de ${org}`}. [Un point de l'échange qui vous a marqué.]`,
+        `Cet échange a renforcé ma motivation : mes compétences en ${skills} correspondent aux besoins évoqués, notamment [un besoin exprimé]. Je reste à votre disposition pour toute information complémentaire.`,
+      ].join('\n\n'),
+    },
+  };
+  return { ...drafts[kind], salutation, closing, enclosures: kind === 'stage' ? (admin ? 'Curriculum vitae, relevés de notes, attestation d\'inscription' : 'Curriculum vitae') : '' };
+}
+
+/** Longueur attendue selon le type de lettre (mots). */
+export function letterLength(kind) {
+  return kind === 'relance' || kind === 'remerciement' ? { min: 50, max: 250, ideal: '80 à 180', paragraphs: 2 } : { min: 120, max: 450, ideal: '250 à 400', paragraphs: 3 };
+}
+
 /** Paragraphes du corps (séparés par une ligne vide). */
 export function paragraphs(text) {
   return String(text || '').split(/\n\s*\n/).map((p) => p.replace(/\s*\n\s*/g, ' ').trim()).filter(Boolean);
@@ -135,12 +203,17 @@ export function checkLetter(cv, opts = {}) {
   const add = (id, severity, message, target) => issues.push({ id, severity, message, target });
   const lang = letterLang(L);
   const words = wordCount(L.body);
+  const len = letterLength(L.kind);
   if (!L.body.trim()) add('letter.body', 'error', 'La lettre est vide : cliquez sur « Proposer un brouillon » puis personnalisez-le.', 'letter.body');
   else {
-    if (words > 450) add('letter.long', 'warning', `Lettre de ${words} mots : visez 250 à 400 mots pour tenir sur une page.`, 'letter.body');
-    else if (words < 120) add('letter.short', 'info', `Lettre de ${words} mots : développez (250 à 400 mots), en 3 paragraphes (vous, moi, nous).`, 'letter.body');
+    if (words > len.max) add('letter.long', 'warning', `Lettre de ${words} mots : visez ${len.ideal} mots${len.paragraphs === 3 ? ' pour tenir sur une page' : ' (une relance ou un remerciement reste bref)'}.`, 'letter.body');
+    else if (words < len.min) add('letter.short', 'info', `Lettre de ${words} mots : développez (${len.ideal} mots)${len.paragraphs === 3 ? ', en 3 paragraphes (vous, moi, nous)' : ''}.`, 'letter.body');
     const n = paragraphs(L.body).length;
-    if (n < 3) add('letter.paragraphs', 'info', `${n} paragraphe${n > 1 ? 's' : ''} : structurez en 3 ou 4 (ce qui vous attire chez l'employeur, ce que vous apportez, la suite proposée). Séparez-les par une ligne vide.`, 'letter.body');
+    if (n < len.paragraphs) {
+      add('letter.paragraphs', 'info', len.paragraphs === 3
+        ? `${n} paragraphe${n > 1 ? 's' : ''} : structurez en 3 ou 4 (ce qui vous attire chez l'employeur, ce que vous apportez, la suite proposée). Séparez-les par une ligne vide.`
+        : 'Un seul paragraphe : séparez le rappel du contexte et la conclusion par une ligne vide.', 'letter.body');
+    }
   }
   const all = [L.subject, L.salutation, L.body, L.closing, L.recipientTitle, L.organization].join('\n');
   if (/\[[^\]]+\]/.test(all)) add('letter.placeholder', 'warning', 'Il reste des passages entre crochets [ … ] à personnaliser.', /\[[^\]]+\]/.test(L.body) ? 'letter.body' : 'letter.organization');
@@ -212,6 +285,33 @@ export function renderLetter(cv, templateId = cv.meta.templateId, opts = {}) {
   }</article>`;
 }
 
+/** Blocs de la lettre (texte brut et Word), dans l'ordre de lecture du rendu. */
+export function letterBlocks(cv, today = new Date()) {
+  const L = cv.letter;
+  const lang = letterLang(L);
+  const admin = L.style === 'administratif';
+  const colon = lang === 'fr' ? ' :' : ':';
+  const out = [];
+  const name = [cv.identity.firstName, cv.identity.lastName].filter(Boolean).join(' ');
+  if (name) out.push({ t: 'name', text: name });
+  const contact = [cv.identity.email, cv.identity.phone && (cv.identity.whatsapp ? `${cv.identity.phone} (WhatsApp)` : cv.identity.phone), [cv.identity.city, cv.identity.country].filter(Boolean).join(', ')].filter(Boolean).join(' | ');
+  if (contact) out.push({ t: 'contact', text: contact });
+  const date = { t: 'right', text: placeAndDate(cv, today) };
+  const recipient = [admin && (L.recipientTitle || L.organization) ? 'À' : '', !admin ? L.recipientName : '', L.recipientTitle, L.organization,
+    admin && L.recipientName ? `(à l'attention de ${L.recipientName})` : '', L.recipientAddress].filter(Boolean).map((text) => ({ t: 'right', text, bold: admin }));
+  if (admin) out.push(date, { t: 'gap' }, ...recipient);
+  else out.push(...recipient, { t: 'gap' }, date);
+  out.push({ t: 'gap' });
+  if (L.subject) out.push({ t: 'p', label: `${lang === 'fr' ? 'Objet' : 'Subject'}${colon}`, text: L.subject });
+  if (L.reference) out.push({ t: 'p', label: `${lang === 'fr' ? 'Réf.' : 'Ref.'}${colon}`, text: L.reference });
+  if (L.salutation) out.push({ t: 'gap' }, { t: 'p', text: L.salutation });
+  for (const p of paragraphs(L.body)) out.push({ t: 'p', text: p, justify: true });
+  if (L.closing) out.push({ t: 'p', text: L.closing.replace(/\s*\n\s*/g, ' '), justify: true });
+  if (name) out.push({ t: 'signature', text: name });
+  if (L.enclosures) out.push({ t: 'gap' }, { t: 'p', label: `${lang === 'fr' ? 'P. J.' : 'Enclosure'}${colon}`, text: L.enclosures });
+  return out;
+}
+
 /** Lettre en texte brut (copier-coller dans un formulaire ou le corps d'un e-mail). */
 export function letterText(cv, today = new Date()) {
   const L = cv.letter;
@@ -228,4 +328,3 @@ export function letterText(cv, today = new Date()) {
   out.push('', placeAndDate(cv, today));
   return out.join('\n').replace(/\n{3,}/g, '\n\n').trim();
 }
-

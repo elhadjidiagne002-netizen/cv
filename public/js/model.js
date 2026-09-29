@@ -209,6 +209,7 @@ export function createEmptyCV(overrides = {}) {
     },
     privacy: { showPhoto: false, showBirthDate: false, showBirthPlace: false, showNationality: false, showMaritalStatus: false, showDrivingLicence: false },
     letter: createLetter(),
+    custom: [],
     targetTitle: '',
     summary: '',
     referencesOnRequest: false,
@@ -259,6 +260,66 @@ function normalizeLevel(v) {
   return s;
 }
 
+// ————————————————————————— Rubriques personnalisées —————————————————————————
+
+/**
+ * Rubriques personnalisées : { id, title, items: [{ id, hidden, title, subtitle, start, end, current, description }] }.
+ * Elles prennent place dans meta.sectionOrder sous la clé « custom:<id> ». Leur titre doit rester un intitulé
+ * standard et reconnaissable (suggestions ci-dessous) : le contrôleur signale les libellés fantaisistes.
+ */
+export const CUSTOM_ITEM_FIELDS = [
+  { key: 'title', label: 'Intitulé (ex. : Stage d\'assistant comptable, Mémoire de Master)', type: 'text', required: true },
+  { key: 'subtitle', label: 'Organisme, lieu ou précision', type: 'text' },
+  { key: 'start', label: 'Début', type: 'month' },
+  { key: 'end', label: 'Fin (ou date)', type: 'month' },
+  { key: 'current', label: 'En cours', type: 'checkbox' },
+  { key: 'description', label: 'Détails (une ligne par point)', type: 'textarea' },
+];
+
+/** Intitulés standard proposés pour une rubrique personnalisée (FR / EN). */
+export const CUSTOM_TITLES = [
+  'Stages', 'Formations complémentaires', 'Mémoire et travaux de recherche', 'Vie associative', 'Engagements citoyens',
+  'Missions ponctuelles', 'Service civique', 'Informatique', 'Permis et habilitations', 'Activités extra-professionnelles',
+  'Conférences et interventions', 'Expositions', 'Affiliations professionnelles',
+  'Internships', 'Additional Training', 'Memberships', 'Community Involvement', 'Technical Skills',
+];
+
+export const MAX_CUSTOM_SECTIONS = 6;
+
+export const customKey = (section) => `custom:${section.id}`;
+
+export function createCustomItem(values = {}) {
+  return normalizeCustomItem({ id: uid('cit'), ...values });
+}
+
+export function createCustomSection(values = {}) {
+  return normalizeCustomSection({ id: uid('cus'), title: '', items: [], ...values });
+}
+
+function normalizeCustomItem(raw) {
+  const src = raw && typeof raw === 'object' ? raw : {};
+  const item = { id: str(src.id) || uid('cit'), hidden: Boolean(src.hidden) };
+  for (const f of CUSTOM_ITEM_FIELDS) {
+    if (f.type === 'checkbox') item[f.key] = Boolean(src[f.key]);
+    else if (f.type === 'month') item[f.key] = normalizeDate(src[f.key]);
+    else item[f.key] = str(src[f.key]);
+  }
+  return item;
+}
+
+function normalizeCustomSection(raw) {
+  const src = raw && typeof raw === 'object' ? raw : {};
+  const id = /^[a-z0-9-]{1,60}$/i.test(str(src.id)) ? str(src.id) : uid('cus');
+  return { id, title: str(src.title).slice(0, 80), items: (Array.isArray(src.items) ? src.items : []).map(normalizeCustomItem) };
+}
+
+/** Rubrique personnalisée correspondant à une clé d'ordre « custom:<id> » (ou undefined). */
+export function findCustom(cv, key) {
+  if (!String(key).startsWith('custom:')) return undefined;
+  const id = key.slice(7);
+  return (cv.custom || []).find((c) => c.id === id);
+}
+
 // ————————————————————————— Lettre de motivation —————————————————————————
 
 /**
@@ -266,6 +327,9 @@ function normalizeLevel(v) {
  * « À Monsieur le Directeur… », objet, formule de haute considération), « en » (cover letter).
  */
 export const LETTER_STYLES = ['standard', 'administratif', 'en'];
+
+/** Types de lettre : candidature (motivation / demande d'emploi), demande de stage, relance, remerciement après entretien. */
+export const LETTER_KINDS = ['candidature', 'stage', 'relance', 'remerciement'];
 
 /** Champs de la lettre de motivation (éditeur + normalisation). */
 export const LETTER_FIELDS = [
@@ -289,7 +353,10 @@ export function createLetter(values = {}) {
 
 export function normalizeLetter(raw) {
   const src = raw && typeof raw === 'object' ? raw : {};
-  const letter = { style: LETTER_STYLES.includes(src.style) ? src.style : 'standard' };
+  const letter = {
+    style: LETTER_STYLES.includes(src.style) ? src.style : 'standard',
+    kind: LETTER_KINDS.includes(src.kind) ? src.kind : 'candidature',
+  };
   for (const f of LETTER_FIELDS) letter[f.key] = str(src[f.key]).slice(0, f.key === 'body' ? 8000 : 600);
   if (letter.date && !/^\d{4}-\d{2}-\d{2}$/.test(letter.date)) letter.date = '';
   return letter;
@@ -303,8 +370,11 @@ export function normalizeCV(raw) {
   const src = raw && typeof raw === 'object' ? raw : {};
   const m = src.meta && typeof src.meta === 'object' ? src.meta : {};
   const now = new Date().toISOString();
-  const order = Array.isArray(m.sectionOrder) ? m.sectionOrder.filter((s) => LIST_SECTIONS.includes(s)) : [];
-  for (const s of LIST_SECTIONS) if (!order.includes(s)) order.push(s);
+  const custom = (Array.isArray(src.custom) ? src.custom : []).slice(0, MAX_CUSTOM_SECTIONS).map(normalizeCustomSection);
+  const customKeys = custom.map(customKey);
+  const known = [...LIST_SECTIONS, ...customKeys];
+  const order = Array.isArray(m.sectionOrder) ? m.sectionOrder.filter((s, i, a) => known.includes(s) && a.indexOf(s) === i) : [];
+  for (const s of known) if (!order.includes(s)) order.push(s);
   const id = src.identity && typeof src.identity === 'object' ? src.identity : {};
   const p = src.privacy && typeof src.privacy === 'object' ? src.privacy : {};
   const cv = {
@@ -340,6 +410,7 @@ export function normalizeCV(raw) {
     summary: str(src.summary),
     referencesOnRequest: Boolean(src.referencesOnRequest),
     letter: normalizeLetter(src.letter),
+    custom,
   };
   for (const f of [...IDENTITY_FIELDS, ...SENSITIVE_IDENTITY_FIELDS]) {
     cv.identity[f.key] = f.type === 'checkbox' ? Boolean(id[f.key]) : str(id[f.key]).trim();

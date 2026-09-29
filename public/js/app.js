@@ -4,7 +4,10 @@
 import {
   createEmptyCV, createSampleCV, createSampleCVEnglish, createSampleJunior, createItem, cloneCV, getByPath, setByPath, moveItem,
   normalizeDate, normalizeCV, ITEM_FIELDS, IDENTITY_FIELDS, SENSITIVE_IDENTITY_FIELDS, CEFR_LEVELS, MAX_FIT, LETTER_FIELDS,
+  CUSTOM_ITEM_FIELDS, CUSTOM_TITLES, MAX_CUSTOM_SECTIONS, createCustomSection, createCustomItem, customKey, findCustom,
 } from './model.js';
+import { cvToDocx, letterToDocx, DOCX_MIME } from './docx.js';
+import { toJSONResume } from './jsonresume.js';
 import { createStore, exportJSON, importJSON, createAutosaver, QuotaError } from './storage.js';
 import { renderCV, TEMPLATES, getTemplate, effectivePaper, applyTheme, effectivePalette } from './render.js';
 import { checkCV, applyFix } from './norms.js';
@@ -117,7 +120,7 @@ function datalistFor(path) {
 function renderDatalists() {
   const dl = (id, values) => `<datalist id="${id}">${values.map((v) => `<option value="${esc(v)}"></option>`).join('')}</datalist>`;
   $('#datalists').innerHTML = dl('dl-cities', CITIES) + dl('dl-schools', SCHOOLS) + dl('dl-languages', LANGUAGES)
-    + dl('dl-diplomas', DIPLOMAS.map((d) => d.label));
+    + dl('dl-diplomas', DIPLOMAS.map((d) => d.label)) + dl('dl-custom-titles', CUSTOM_TITLES);
 }
 
 function detailsOpen(key) {
@@ -265,6 +268,13 @@ function dossierHTML(cv) {
   </details>`;
 }
 
+const LETTER_KINDS_UI = [
+  { id: 'candidature', name: 'Candidature (lettre de motivation / demande d\'emploi)', desc: 'Réponse à une offre ou candidature spontanée : 250 à 400 mots, une page.' },
+  { id: 'stage', name: 'Demande de stage', desc: 'Précisez la durée, la date de début et la convention de stage de votre établissement.' },
+  { id: 'relance', name: 'Relance après candidature', desc: 'Une à deux semaines après l\'envoi, sans réponse : courte (80 à 180 mots), polie, rappelle votre atout principal.' },
+  { id: 'remerciement', name: 'Remerciement après entretien', desc: 'Dans les 24 à 48 heures après l\'entretien : courte, rappelle un point précis de l\'échange.' },
+];
+
 const LETTER_STYLES_UI = [
   { id: 'standard', name: 'Standard', desc: 'Lettre de motivation « à la française » : entreprises, ONG, candidatures en ligne.' },
   { id: 'administratif', name: 'Administratif (Sénégal)', desc: '« À Monsieur le Directeur… », objet, formule de haute considération : administrations, sociétés nationales, demande d\'emploi.' },
@@ -280,6 +290,11 @@ function letterEditorHTML(cv) {
     <div class="ed-body">
       <p class="hint">La lettre reprend l'en-tête, les polices et les couleurs de votre modèle de CV (${esc(getTemplate(cv.meta.templateId).name)}).
         Une lettre = une candidature : adaptez-la à chaque employeur.</p>
+      <div class="field">
+        <label for="f-letter-kind">Type de lettre</label>
+        <select id="f-letter-kind" data-path="letter.kind">${LETTER_KINDS_UI.map((k) => `<option value="${k.id}"${L.kind === k.id ? ' selected' : ''}>${esc(k.name)}</option>`).join('')}</select>
+        <p class="hint">${esc((LETTER_KINDS_UI.find((k) => k.id === L.kind) || LETTER_KINDS_UI[0]).desc)}</p>
+      </div>
       <fieldset class="letter-style">
         <legend>Style de lettre</legend>
         ${LETTER_STYLES_UI.map((st) => `<div class="field-check radio"><input type="radio" name="letter-style" id="letter-style-${st.id}" value="${st.id}" data-path="letter.style"${L.style === st.id ? ' checked' : ''} aria-describedby="letter-style-${st.id}-d"><label for="letter-style-${st.id}"><strong>${esc(st.name)}</strong></label><span class="hint" id="letter-style-${st.id}-d">${esc(st.desc)}</span></div>`).join('')}
@@ -309,13 +324,73 @@ function renderEditor() {
   }
   const order = cv.meta.sectionOrder;
   const dossier = cv.meta.country === 'SNFP' ? dossierHTML(cv) : '';
-  $('#sections').innerHTML = identityHTML(cv) + headlineHTML(cv) + dossier + order.map((k, i) => listSectionHTML(cv, k, i, order.length)).join('');
+  $('#sections').innerHTML = identityHTML(cv) + headlineHTML(cv) + dossier
+    + order.map((k, i) => (k.startsWith('custom:') ? customSectionHTML(cv, k, i, order.length) : listSectionHTML(cv, k, i, order.length))).join('')
+    + addCustomHTML(cv);
+}
+
+/** Rubrique personnalisée : titre standard + éléments libres (intitulé, organisme, dates, détails). */
+function customSectionHTML(cv, key, index, total) {
+  const cs = findCustom(cv, key);
+  if (!cs) return '';
+  const ci = cv.custom.indexOf(cs);
+  const base = `custom.${ci}`;
+  const items = cs.items.map((it, ii) => {
+    const ip = `${base}.items.${ii}`;
+    const fields = CUSTOM_ITEM_FIELDS.map((f) => fieldHTML(`${ip}.${f.key}`, f, it[f.key], f.key === 'end' && it.current ? ' disabled' : '')).join('');
+    const label = `élément ${ii + 1}`;
+    return `<li><fieldset class="ed-item${it.hidden ? ' is-hidden' : ''}" data-item="${ip}">
+      <legend>Élément ${ii + 1}${it.title ? ` : ${esc(it.title)}` : ''}${it.hidden ? ' <span class="hidden-label">(masqué sur le CV)</span>' : ''}</legend>
+      <div class="grid">${fields}</div>
+      <div class="item-actions">
+        <button type="button" class="btn btn-small" data-act="citem-hide" data-custom="${ci}" data-index="${ii}" aria-pressed="${it.hidden}" aria-label="Masquer ${label} sur le CV">${it.hidden ? 'Afficher sur le CV' : 'Masquer du CV'}</button>
+        <button type="button" class="btn btn-small" data-act="citem-up" data-custom="${ci}" data-index="${ii}"${ii === 0 ? ' disabled' : ''} aria-label="Monter ${label}">Monter</button>
+        <button type="button" class="btn btn-small" data-act="citem-down" data-custom="${ci}" data-index="${ii}"${ii === cs.items.length - 1 ? ' disabled' : ''} aria-label="Descendre ${label}">Descendre</button>
+        <button type="button" class="btn btn-small btn-danger" data-act="citem-remove" data-custom="${ci}" data-index="${ii}" aria-label="Supprimer ${label}">Supprimer</button>
+      </div>
+    </fieldset></li>`;
+  }).join('');
+  const name = cs.title || 'Rubrique personnalisée';
+  return `<details class="ed-section" data-section="${esc(key)}"${detailsOpen(key)}>
+    <summary><h2>${esc(name)} <span class="count">(${cs.items.length}) · personnalisée</span></h2></summary>
+    <div class="ed-body">
+      <div class="field field-wide">
+        <label for="${fieldId(`${base}.title`)}">Titre de la rubrique (intitulé simple et standard)</label>
+        <input type="text" id="${fieldId(`${base}.title`)}" data-path="${base}.title" value="${esc(cs.title)}" list="dl-custom-titles" aria-describedby="${fieldId(`${base}.title`)}-hint">
+        <p class="hint" id="${fieldId(`${base}.title`)}-hint">Ex. : Stages, Vie associative, Formations complémentaires. Évitez les titres fantaisistes : les logiciels de tri ne les reconnaissent pas.</p>
+      </div>
+      <div class="section-actions">
+        <span class="hint">Position de la rubrique dans le CV :</span>
+        <button type="button" class="btn btn-small" data-act="section-up" data-section="${esc(key)}"${index === 0 ? ' disabled' : ''} aria-label="Monter la rubrique ${esc(name)}">Monter</button>
+        <button type="button" class="btn btn-small" data-act="section-down" data-section="${esc(key)}"${index === total - 1 ? ' disabled' : ''} aria-label="Descendre la rubrique ${esc(name)}">Descendre</button>
+        <button type="button" class="btn btn-small btn-danger" data-act="custom-remove" data-custom="${ci}">Supprimer la rubrique</button>
+      </div>
+      <ol class="items">${items}</ol>
+      <button type="button" class="btn btn-add" data-act="citem-add" data-custom="${ci}">+ Ajouter un élément à « ${esc(name)} »</button>
+    </div>
+  </details>`;
+}
+
+function addCustomHTML(cv) {
+  if (cv.custom.length >= MAX_CUSTOM_SECTIONS) return `<p class="hint">Nombre maximal de rubriques personnalisées atteint (${MAX_CUSTOM_SECTIONS}).</p>`;
+  return `<div class="add-custom ed-section">
+    <div class="ed-body">
+      <h2 class="add-custom-h">Ajouter une rubrique personnalisée</h2>
+      <p class="hint">Pour ce qui n'entre dans aucune rubrique standard : stages séparés, vie associative, mémoire, formations complémentaires…</p>
+      <div class="inline">
+        <label for="new-custom-title" class="sr-only">Titre de la nouvelle rubrique</label>
+        <input type="text" id="new-custom-title" list="dl-custom-titles" placeholder="Ex. : Stages">
+        <button type="button" class="btn" data-act="custom-add">Ajouter la rubrique</button>
+      </div>
+    </div>
+  </div>`;
 }
 
 function renderDocSwitch() {
   document.querySelectorAll('.doc-switch button[data-doc]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.doc === state.doc)));
   $('#btn-print').textContent = state.doc === 'letter' ? 'Télécharger la lettre en PDF' : 'Télécharger en PDF';
   $('#btn-fit').hidden = state.doc === 'letter';
+  $('#btn-docx').textContent = state.doc === 'letter' ? 'Lettre au format Word (.docx)' : 'CV au format Word (.docx)';
   if (state.doc === 'letter') $('#btn-fit-reset').hidden = true;
 }
 
@@ -480,7 +555,9 @@ function goTo(target) {
     return;
   }
   const first = target.split('.')[0];
-  const sectionKey = first === 'identity' ? 'identity' : first === 'privacy' ? 'privacy' : ['targetTitle', 'summary'].includes(first) ? 'headline' : first;
+  const customIndex = first === 'custom' ? Number(target.split('.')[1]) : -1;
+  const sectionKey = customIndex >= 0 && state.cv.custom[customIndex] ? customKey(state.cv.custom[customIndex])
+    : first === 'identity' ? 'identity' : first === 'privacy' ? 'privacy' : ['targetTitle', 'summary'].includes(first) ? 'headline' : first;
   state.openSections.add(sectionKey);
   if (sectionKey === 'privacy') state.openSections.add('identity');
   document.querySelectorAll('#sections details[data-section]').forEach((d) => {
@@ -545,7 +622,7 @@ function onInput(e) {
     }
   }
   const structural = path === 'meta.lang' || path === 'meta.palette' || (path.startsWith('privacy.') && e.type === 'change')
-    || path === 'meta.country' || path === 'letter.style';
+    || path === 'meta.country' || path === 'letter.style' || path === 'letter.kind';
   if (path === 'meta.palette' && state.cv.meta.accent) {
     // Choisir une palette annule la couleur libre, sinon elle masquerait la palette.
     state.cv.meta.accent = '';
@@ -555,9 +632,9 @@ function onInput(e) {
   if (path === 'meta.title') renderPicker();
   if (structural) {
     renderSettings();
-    if (path === 'meta.country' || path === 'letter.style') {
+    if (path === 'meta.country' || path === 'letter.style' || path === 'letter.kind') {
       renderEditor();
-      if (path === 'letter.style') focusAfterRender(`#${CSS.escape(el.id)}`);
+      if (path.startsWith('letter.')) focusAfterRender(`#${CSS.escape(el.id)}`);
     }
   }
 }
@@ -643,6 +720,60 @@ function onEditorClick(e) {
       changed({ structural: true });
       toast('Rubrique triée du plus récent au plus ancien.');
       break;
+    case 'custom-add': {
+      const title = $('#new-custom-title').value.trim();
+      const cs = createCustomSection({ title, items: [createCustomItem()] });
+      cv.custom.push(cs);
+      cv.meta.sectionOrder.push(customKey(cs));
+      state.openSections.add(customKey(cs));
+      changed({ structural: true });
+      const ci = cv.custom.length - 1;
+      focusAfterRender(title ? `#${fieldId(`custom.${ci}.items.0.title`)}` : `#${fieldId(`custom.${ci}.title`)}`);
+      toast(`Rubrique « ${title || 'sans titre'} » ajoutée en fin de CV : déplacez-la avec « Monter ».`);
+      break;
+    }
+    case 'custom-remove': {
+      const ci = Number(btn.dataset.custom);
+      const cs = cv.custom[ci];
+      // eslint-disable-next-line no-alert
+      if (cs.items.length && !window.confirm(`Supprimer la rubrique « ${cs.title || 'sans titre'} » et ses ${cs.items.length} élément(s) ? (Annuler reste possible.)`)) break;
+      cv.custom.splice(ci, 1);
+      cv.meta.sectionOrder = cv.meta.sectionOrder.filter((k) => k !== customKey(cs));
+      changed({ structural: true });
+      focusAfterRender('#new-custom-title');
+      toast(`Rubrique « ${cs.title || 'sans titre'} » supprimée.`);
+      break;
+    }
+    case 'citem-add':
+    case 'citem-remove':
+    case 'citem-up':
+    case 'citem-down':
+    case 'citem-hide': {
+      const ci = Number(btn.dataset.custom);
+      const cs = cv.custom[ci];
+      const key = customKey(cs);
+      state.openSections.add(key);
+      if (act === 'citem-add') {
+        cs.items.push(createCustomItem());
+        changed({ structural: true });
+        focusAfterRender(`#${fieldId(`custom.${ci}.items.${cs.items.length - 1}.title`)}`);
+      } else if (act === 'citem-remove') {
+        cs.items.splice(i, 1);
+        changed({ structural: true });
+        focusAfterRender(`button[data-act="citem-add"][data-custom="${ci}"]`);
+        toast('Élément supprimé.');
+      } else if (act === 'citem-hide') {
+        cs.items[i].hidden = !cs.items[i].hidden;
+        changed({ structural: true });
+        focusAfterRender(`button[data-act="citem-hide"][data-custom="${ci}"][data-index="${i}"]`);
+      } else {
+        const d = act === 'citem-up' ? -1 : 1;
+        cs.items = moveItem(cs.items, i, d);
+        changed({ structural: true });
+        focusAfterRender(`button[data-act="${act}"][data-custom="${ci}"][data-index="${i + d}"]:not([disabled]), [data-item="custom.${ci}.items.${i + d}"] legend`);
+      }
+      break;
+    }
     case 'item-hide': {
       const it = cv[section][i];
       it.hidden = !it.hidden;
@@ -880,8 +1011,8 @@ function newCV(kind) {
   toast(kind === 'empty' ? 'Nouveau CV créé.' : 'Exemple chargé : remplacez les informations par les vôtres.');
 }
 
-function download(filename, text, type = 'application/json') {
-  const blob = new Blob([text], { type: `${type};charset=utf-8` });
+function download(filename, data, type = 'application/json') {
+  const blob = new Blob([data], { type: typeof data === 'string' ? `${type};charset=utf-8` : type });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -935,7 +1066,7 @@ function renderGallery() {
   $('#gallery-grid').innerHTML = list
     .map((t) => `<li class="tpl-card${t.id === state.cv.meta.templateId ? ' is-current' : ''}">
       <button type="button" class="tpl-choose" data-template="${t.id}" aria-describedby="tpl-desc-${t.id}"${t.id === state.cv.meta.templateId ? ' aria-current="true"' : ''}>
-        <span class="thumb" aria-hidden="true"><span class="thumb-inner">${renderCV(state.cv, t.id)}</span></span>
+        <span class="thumb" aria-hidden="true" inert><span class="thumb-inner">${renderCV(state.cv, t.id)}</span></span>
         <span class="tpl-name">${esc(t.name)}${t.id === state.cv.meta.templateId ? ' <span class="current-label">(actuel)</span>' : ''}</span>
       </button>
       <p class="tpl-badges">${templateBadges(t)}</p>
@@ -1150,12 +1281,13 @@ function bind() {
     e.target.value = '';
     if (!file) return;
     try {
-      const { cv, warnings } = importJSON(await file.text());
+      const { cv, warnings, source } = importJSON(await file.text());
       autosaver.flush();
       state.cv = cv;
       saveNow();
       openCV(cv);
-      toast(warnings.length ? `CV importé (${warnings.length} point(s) à vérifier).` : 'CV importé.');
+      const from = source === 'jsonresume' ? ' depuis le format JSON Resume' : '';
+      toast(warnings.length ? `CV importé${from} (${warnings.length} point(s) à vérifier).` : `CV importé${from}.`);
     } catch (err) {
       toast(err.message);
     }
@@ -1182,6 +1314,20 @@ function bind() {
     }
   });
   $('#btn-text').addEventListener('click', openTextDialog);
+  $('#btn-docx').addEventListener('click', () => {
+    autosaver.flush();
+    $('#formats-menu').open = false;
+    const letter = state.doc === 'letter';
+    const bytes = letter ? letterToDocx(state.cv) : cvToDocx(state.cv);
+    download(`${letter ? 'lettre-' : ''}${slug(state.cv.meta.title)}.docx`, bytes, DOCX_MIME);
+    toast(letter ? 'Lettre exportée au format Word.' : 'CV exporté au format Word : une colonne, titres standard, lisible par les ATS.');
+  });
+  $('#btn-jsonresume').addEventListener('click', () => {
+    autosaver.flush();
+    $('#formats-menu').open = false;
+    download(`${slug(state.cv.meta.title)}.resume.json`, JSON.stringify(toJSONResume(state.cv), null, 2));
+    toast('Exporté au format JSON Resume (réutilisable dans d\'autres outils de CV).');
+  });
   $('#text-close').addEventListener('click', closeTextDialog);
   $('#text-copy').addEventListener('click', copyText);
   $('#text-download').addEventListener('click', () => {

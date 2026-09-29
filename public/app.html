@@ -47,6 +47,14 @@
       <input type="file" id="file-import" accept=".json,application/json" hidden>
       <button type="button" class="btn" id="btn-export">Exporter (.json)</button>
       <button type="button" class="btn" id="btn-text">Texte brut</button>
+      <details class="menu" id="formats-menu">
+        <summary class="btn">Autres formats</summary>
+        <div class="menu-panel">
+          <button type="button" class="btn" id="btn-docx">CV au format Word (.docx)</button>
+          <button type="button" class="btn" id="btn-jsonresume">Format JSON Resume (.json)</button>
+          <p class="hint menu-hint">L'import accepte aussi les fichiers JSON Resume.</p>
+        </div>
+      </details>
       <button type="button" class="btn btn-primary" id="btn-print">Télécharger en PDF</button>
       <button type="button" class="btn" id="btn-install" hidden>Installer l'application</button>
     </div>

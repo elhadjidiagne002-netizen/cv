@@ -26,6 +26,8 @@ export function buildView(cv, template, opts = {}) {
   const data = cloneCV(cv);
   // Éléments masqués par l'utilisateur (« versions ciblées ») : conservés dans les données, absents du CV.
   for (const s of LIST_SECTIONS) if (Array.isArray(data[s])) data[s] = data[s].filter((it) => !it.hidden);
+  data.custom = (data.custom || []).map((c) => ({ ...c, items: c.items.filter((it) => !it.hidden) }));
+  const customKeys = data.custom.map((c) => `custom:${c.id}`);
   const p = data.privacy || {};
   const personalAllowed = !template.noPersonal && !anonymous;
   const show = {
@@ -45,7 +47,7 @@ export function buildView(cv, template, opts = {}) {
     if (cv.references.length) data.referencesOnRequest = true;
   }
   const exclude = template.excludeSections || [];
-  const order = (data.meta.sectionOrder || LIST_SECTIONS).filter((k) => LIST_SECTIONS.includes(k) && !exclude.includes(k));
+  const order = (data.meta.sectionOrder || LIST_SECTIONS).filter((k) => (LIST_SECTIONS.includes(k) || customKeys.includes(k)) && !exclude.includes(k));
   return {
     cv: data,
     template,

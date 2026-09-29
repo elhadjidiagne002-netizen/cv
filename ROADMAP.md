@@ -177,16 +177,53 @@ formulaires et WhatsApp) ; (5) des polices qui affichent ŋ, ɓ, ɗ, ƴ.
 - Pas de glisser-déposer ; pas de rubriques personnalisées libres ; pas d'import JSON Resume / LinkedIn.
 - La liste des pièces du dossier de concours est indicative (l'avis de concours fait foi).
 
-## Proposé pour le cycle 4 (priorisé)
-1. **Interopérabilité** : import / export JSON Resume, import d'un export LinkedIn (fichier), export `.docx`
-   minimal (souvent exigé par les cabinets de recrutement au Sénégal) — sans dépendance d'exécution.
-2. **Rubriques personnalisées** (Stages séparés, Associations, Formations complémentaires, Mémoire…) et
-   glisser-déposer accessible au clavier.
-3. **Pagination visuelle réelle** (pages séparées dans l'aperçu, nom rappelé en page 2) et vérification
-   automatique de l'ordre d'extraction du texte du PDF.
-4. **Qualité** : audit d'accessibilité automatisé (axe-core en devDependency), captures de non-régression des
-   33 modèles et de la lettre.
-5. **Lettre** : accords de genre (choix « Madame / Monsieur » pour le candidat), modèles de lettre de relance,
-   de remerciement après entretien, de demande de stage.
-6. **Wolof / anglais pour l'interface** (au moins les aides et messages principaux), et libellés de rubriques en
-   anglais pour les organisations internationales basées à Dakar.
+## Cycle 4 — formats d'échange, rubriques personnalisées, lettres, accessibilité ✅ (terminé le 2026-09-29)
+
+### Priorités retenues (avant de coder)
+Demande : « autres améliorations ». Retenu ce qui manque le plus à l'usage réel : (1) **le fichier Word**, exigé par
+beaucoup de cabinets de recrutement et de plateformes au Sénégal ; (2) les **rubriques personnalisées** (stages
+séparés, vie associative, mémoire…), très courantes dans les CV de jeunes diplômés ; (3) les **autres lettres** du
+parcours de candidature (demande de stage, relance, remerciement) ; (4) l'**interopérabilité** (JSON Resume) ;
+(5) un **audit d'accessibilité automatisé** pour tenir l'exigence WCAG 2.2 AA dans la durée.
+
+### Fait
+- **Export Word (.docx)** du CV et de la lettre (`docx.js`, `zip.js`), sans dépendance : WordprocessingML écrit à la
+  main + archive ZIP (CRC-32). Document ATS : une colonne, styles Word « Titre 1 » pour les rubriques, dates alignées
+  par tabulation, puces en texte, ni tableau ni image, A4 ou Letter selon le modèle, couleur d'accent de la palette,
+  Calibri ou Cambria (modèles à empattements), langue du document, propriétés (titre, auteur — vides en mode anonyme).
+  Vérifié avec python-docx.
+- **Rubriques personnalisées** (jusqu'à 6) : titre avec suggestions standard (Stages, Vie associative, Formations
+  complémentaires, Mémoire et travaux de recherche…), éléments intitulé / organisme / dates / détails, masquables,
+  déplaçables comme les rubriques standard ; rendues dans les 33 modèles (après l'ordre imposé pour Europass et le
+  résumé US), dans le texte brut, Word et JSON Resume. **Contrôles** : titre manquant, doublon d'une rubrique
+  standard, titre fantaisiste (symboles, > 40 caractères), élément sans intitulé, dates ; les stages déclarés
+  comblent les trous du parcours.
+- **Types de lettre** : candidature, **demande de stage** (durée, date, convention ; pièces jointes adaptées en style
+  administratif), **relance**, **remerciement après entretien** — en français standard, administratif et anglais ;
+  longueur attendue adaptée (80 à 180 mots pour relance et remerciement).
+- **JSON Resume** (`jsonresume.js`) : export conforme au schéma v1.0.0 ; l'import habituel reconnaît
+  automatiquement ce format (niveaux de langue déduits de « fluency », langue du CV déduite du contenu, années seules
+  conservées et signalées plutôt qu'un mois inventé).
+- **Blocs documentaires** (`plaintext.js`) : une seule structure alimente le texte brut et Word (même ordre que le PDF).
+- **Accessibilité** : audit **axe-core** (WCAG 2.0 / 2.1 / 2.2 A et AA) sur l'accueil, l'éditeur (toutes rubriques
+  ouvertes), la lettre, la galerie, le dialogue texte brut et l'affichage téléphone. Deux défauts corrigés : liens
+  focalisables dans l'aperçu décoratif de l'accueil et dans les miniatures de la galerie (contrôles imbriqués) →
+  `inert`. Cases à cocher des formulaires alignées sur une ligne.
+- **Tests** : 128 tests unitaires (+10) et 34 tests Playwright (+8, dont 4 d'accessibilité).
+
+### Reste / limites connues
+- Le .docx n'est pas compressé (8 à 15 Ko pour un CV : sans incidence pratique) ; pas de photo dans le .docx
+  (volontaire : ATS), pas de mise en page à colonnes des modèles créatifs.
+- LibreOffice n'a pas pu être utilisé dans l'environnement de test pour un rendu visuel du .docx.
+- Aperçu toujours en une longue page avec repères (pas de pagination visuelle page par page).
+- Pas de glisser-déposer ; pas d'import de l'export LinkedIn (archive CSV).
+
+## Proposé pour le cycle 5 (priorisé)
+1. **Pagination visuelle réelle** (pages séparées dans l'aperçu, nom rappelé en page 2) et vérification automatique
+   de l'ordre d'extraction du texte du PDF.
+2. **Import LinkedIn** (archive « Obtenir une copie de vos données » : Positions.csv, Education.csv, Skills.csv).
+3. **Interface en anglais** (et aides principales en wolof) ; libellés de rubriques anglais pour les organisations
+   internationales basées à Dakar.
+4. **Glisser-déposer accessible** des éléments et rubriques (en plus des boutons Monter / Descendre).
+5. **Suivi des candidatures** local (entreprise, date d'envoi, relance prévue, statut) relié aux lettres de relance.
+6. **Captures de non-régression visuelle** des 33 modèles et de la lettre.

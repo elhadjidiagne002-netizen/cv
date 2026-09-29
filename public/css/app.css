@@ -98,6 +98,8 @@ a { color: var(--primary); }
 .field-check { display: flex; align-items: center; gap: 8px; min-height: 40px; }
 .field-check input { width: 20px; height: 20px; }
 .field-check label { font-weight: 500; }
+/* Case à cocher dans une grille de champs : sur une ligne, alignée avec le bas des champs voisins. */
+.field.field-check { flex-direction: row; align-self: end; }
 .inline { display: flex; gap: 8px; align-items: center; }
 .hint { color: var(--muted); font-size: 0.88rem; margin: 4px 0 8px; }
 .sensitive { margin-top: 14px; border: 1px dashed var(--border); border-radius: var(--radius); }
@@ -252,3 +254,13 @@ dialog#text-dlg::backdrop { background: rgba(10, 15, 25, .6); }
   .helper-lines li { flex-direction: column; align-items: stretch; }
   .topbar-group .btn { min-height: 44px; }
 }
+
+/* ——— Cycle 4 : rubriques personnalisées, autres formats ——— */
+.add-custom { border-style: dashed; }
+.add-custom .ed-body { padding-top: 12px; }
+.add-custom-h { font-size: 1.05rem; margin: 0 0 4px; }
+.add-custom .inline { flex-wrap: wrap; }
+.add-custom input { flex: 1 1 220px; min-height: 40px; padding: 8px 10px; border: 1px solid #8a919c; border-radius: 6px; font: inherit; }
+#formats-menu .menu-panel { left: auto; right: 0; }
+.menu-hint { margin: 4px 4px 0; max-width: 240px; }
+@media (max-width: 700px) { #formats-menu .menu-panel { right: auto; left: 0; } }

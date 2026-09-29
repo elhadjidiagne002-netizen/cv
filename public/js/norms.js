@@ -3,7 +3,7 @@
 // target : chemin du champ à corriger (« experiences.0.start ») — l'éditeur y amène l'utilisateur.
 // fix : action corrective automatique proposée (« sort:experiences », « anonymous », « hide:photo »…).
 
-import { MONTH_RE, EMAIL_RE, CEFR_LEVELS, LIST_SECTIONS, recencyKey, sortAntichronological } from './model.js';
+import { MONTH_RE, EMAIL_RE, CEFR_LEVELS, LIST_SECTIONS, CUSTOM_TITLES, recencyKey, sortAntichronological } from './model.js';
 import { getTemplate } from './templates/index.js';
 import {
   parseSenegalPhone, formatSenegalPhone, findCFAAmounts, convertCFA, foreignDiplomas, hasEquivalentNote, DOSSIER_ITEMS,
@@ -77,7 +77,8 @@ export function findGaps(cv, now, minMonths = 6) {
   const exp = intervals(cv.experiences, now);
   if (!exp.length) return [];
   const firstJob = exp.reduce((m, x) => (x.start < m ? x.start : m), exp[0].start);
-  const all = [...exp, ...intervals(cv.education, now), ...intervals(cv.volunteering, now)]
+  const customItems = (cv.custom || []).flatMap((c) => c.items.filter((it) => !it.hidden));
+  const all = [...exp, ...intervals(cv.education, now), ...intervals(cv.volunteering, now), ...intervals(customItems, now)]
     .filter((x) => x.end >= firstJob)
     .sort((a, b) => a.start.localeCompare(b.start));
   const gaps = [];
@@ -447,6 +448,9 @@ function checkVisible(cv, templateOrId, opts = {}) {
     add('style.spaces', 'info', 'Doubles espaces détectés dans le texte : ils créent des décalages dans le PDF.', { target: 'summary', fix: 'clean:spaces', fixLabel: 'Supprimer les doubles espaces' });
   }
 
+  // ——— Rubriques personnalisées ———
+  checkCustom(cv, add);
+
   // ——— Exemples insérés depuis l'aide à la rédaction, pas encore personnalisés ———
   const placeholderRe = /\[[^\]\n]{1,40}\]/;
   if (textFields(cv).some((v) => placeholderRe.test(v))) {
@@ -645,6 +649,11 @@ function findField(cv, re, sections = LIST_SECTIONS) {
       for (const [k, v] of Object.entries(cv[s][i])) if (k !== 'id' && typeof v === 'string' && re.test(v)) return `${s}.${i}.${k}`;
     }
   }
+  for (const [ci, c] of (cv.custom || []).entries()) {
+    for (const [ii, it] of c.items.entries()) {
+      for (const k of ['title', 'subtitle', 'description']) if (!it.hidden && re.test(it[k])) return `custom.${ci}.items.${ii}.${k}`;
+    }
+  }
   for (const k of ['address', 'nationality', 'maritalStatus']) if (re.test(cv.identity[k] || '')) return `identity.${k}`;
   return '';
 }
@@ -653,9 +662,43 @@ function findField(cv, re, sections = LIST_SECTIONS) {
 function textFields(cv) {
   const out = [cv.targetTitle, cv.summary];
   for (const s of LIST_SECTIONS) {
-    for (const it of cv[s]) for (const v of Object.values(it)) if (typeof v === 'string') out.push(v);
+    for (const it of cv[s]) for (const [k, v] of Object.entries(it)) if (typeof v === 'string' && k !== 'id') out.push(v);
+  }
+  for (const c of cv.custom || []) {
+    out.push(c.title);
+    for (const it of c.items) if (!it.hidden) for (const [k, v] of Object.entries(it)) if (typeof v === 'string' && k !== 'id') out.push(v);
   }
   return out;
+}
+
+/** Titres standard des rubriques intégrées (FR / EN) : une rubrique personnalisée ne doit pas les doubler. */
+const BUILTIN_TITLES = /^(exp[ée]riences?( professionnelles?)?|parcours professionnel|formations?|[ée]tudes|dipl[oô]mes|comp[ée]tences|langues|certifications?|distinctions|publications|projets|b[ée]n[ée]volat|centres? d'int[ée]r[êe]ts?|loisirs|r[ée]f[ée]rences|work experience|experience|education|skills|languages|projects|volunteering|interests|references)$/i;
+
+/** Contrôle des rubriques personnalisées : titre standard, éléments complets, dates lisibles. */
+function checkCustom(cv, add) {
+  const standard = new Set(CUSTOM_TITLES.map((t) => t.toLowerCase()));
+  (cv.custom || []).forEach((c, ci) => {
+    const title = c.title.trim();
+    const visibleItems = c.items.filter((it) => !it.hidden);
+    const p = `custom.${ci}`;
+    if (!title) {
+      if (visibleItems.length) add(`${p}.title`, 'warning', 'Rubrique personnalisée sans titre : elle n\'apparaît pas sur le CV. Donnez-lui un intitulé standard (ex. « Stages »).', { target: `${p}.title` });
+    } else if (BUILTIN_TITLES.test(title)) {
+      add(`${p}.builtin`, 'info', `« ${title} » existe déjà comme rubrique standard : utilisez-la plutôt qu'une rubrique personnalisée (meilleure lecture par les ATS).`, { target: `${p}.title` });
+    } else if (!standard.has(title.toLowerCase()) && (title.length > 40 || /[^\p{L}\p{N}\s'’&,().\/-]/u.test(title))) {
+      add(`${p}.fancy`, 'warning', `Titre de rubrique « ${title} » peu standard : les logiciels de tri reconnaissent des intitulés simples (Stages, Vie associative, Formations complémentaires…).`, { target: `${p}.title` });
+    }
+    c.items.forEach((it, ii) => {
+      if (it.hidden) return;
+      const ip = `${p}.items.${ii}`;
+      const name = it.title || `élément ${ii + 1}`;
+      if (!it.title.trim()) add(`${ip}.title`, 'warning', `« ${title || 'Rubrique personnalisée'} » : élément n° ${ii + 1} sans intitulé.`, { target: `${ip}.title` });
+      for (const k of ['start', 'end']) {
+        if (it[k] && !/^\d{4}$/.test(it[k]) && !MONTH_RE.test(it[k])) add(`${ip}.${k}.format`, 'error', `« ${name} » : date « ${it[k]} » illisible (format attendu mois/année).`, { target: `${ip}.${k}` });
+      }
+      if (it.start && it.end && it.end < it.start) add(`${ip}.end.before`, 'error', `« ${name} » : la date de fin précède la date de début.`, { target: `${ip}.end` });
+    });
+  });
 }
 
 /** Remplace les espaces multiples et tabulations par une espace (préserve les retours à la ligne). */
@@ -690,6 +733,10 @@ export function applyFix(cv, fix) {
     cv.summary = cleanSpaces(cv.summary);
     for (const s of LIST_SECTIONS) {
       for (const it of cv[s]) for (const [k, v] of Object.entries(it)) if (typeof v === 'string' && k !== 'id') it[k] = cleanSpaces(v);
+    }
+    for (const c of cv.custom || []) {
+      c.title = cleanSpaces(c.title);
+      for (const it of c.items) for (const [k, v] of Object.entries(it)) if (typeof v === 'string' && k !== 'id') it[k] = cleanSpaces(v);
     }
   }
   return cv;

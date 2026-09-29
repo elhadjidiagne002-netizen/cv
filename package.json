@@ -10,7 +10,8 @@
     "serve": "node tests/ui/server.mjs"
   },
   "devDependencies": {
-    "@playwright/test": "1.60.0"
+    "@playwright/test": "1.60.0",
+    "axe-core": "^4.13.0"
   },
   "engines": {
     "node": ">=20"
