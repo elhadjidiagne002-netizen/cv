@@ -1,5 +1,17 @@
 # Journal du projet (le plus récent en haut)
 
+## 2026-09-29 — mise en ligne (GitHub Pages)
+**Fait.** Workflow GitHub Actions qui teste puis publie `public/` sur GitHub Pages à chaque mise à jour de `main` ;
+CSP dupliquée en `<meta>` (GitHub Pages ignore `_headers`), avec un test qui garantit qu'elle reste identique ;
+guide `DEPLOIEMENT.md` (GitHub Pages en place, Cloudflare Pages en option).
+
+**Pourquoi.** Demande « mettre le site en ligne d'abord » (avant le tableau de bord admin). Aucun accès Cloudflare
+depuis l'environnement de développement (pas de jeton, API bloquée) : GitHub Pages est publiable directement depuis
+le dépôt public.
+
+**Vérifié.** Site servi sous `/cv/` par un serveur sans en-têtes personnalisés : aucune erreur, CSP active (style en
+ligne bloqué), service worker limité à `/cv/`, rechargement hors ligne. 138 tests unitaires et 40 tests Playwright verts.
+
 ## 2026-09-29 — cycle 5 : aperçu page par page, suivi des candidatures, import LinkedIn
 **Fait.** **Aperçu page par page** fidèle à l'impression (feuilles séparées, blocs jamais coupés, titres jamais
 orphelins), avec un nombre de pages vérifié identique au PDF pour les 33 modèles ; **suivi des candidatures** avec

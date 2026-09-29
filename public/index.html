@@ -3,6 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- CSP aussi en <meta> : certains hébergeurs (GitHub Pages) ignorent public/_headers. frame-ancestors n'est
+       valable qu'en en-tête HTTP (_headers). Garder identique à _headers (vérifié par tests/deploy.test.js). -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'; upgrade-insecure-requests">
+  <meta name="referrer" content="no-referrer">
   <title>CV en ligne — créez un CV conforme aux normes du recrutement</title>
   <meta name="description" content="Créez gratuitement un CV professionnel : modèles ATS, Europass, résumé américain, aperçu en direct, contrôle de conformité et PDF. Sans compte, vos données restent sur votre appareil.">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
