@@ -20,7 +20,7 @@ export default defineConfig({
     { name: 'chromium', use: { ...devices['Desktop Chrome'], viewport: { width: 1400, height: 900 }, launchOptions: LOCAL_CHROMIUM ? { executablePath: LOCAL_CHROMIUM } : {} } },
   ],
   webServer: {
-    command: `node tests/ui/server.mjs ${PORT}`,
+    command: `node --no-warnings tests/ui/server.mjs ${PORT}`,
     url: `http://localhost:${PORT}/index.html`,
     reuseExistingServer: !process.env.CI,
   },

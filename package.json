@@ -5,15 +5,15 @@
   "description": "Création de CV en ligne conformes aux normes du recrutement — site statique, données locales.",
   "type": "module",
   "scripts": {
-    "test": "node --test \"tests/*.test.js\"",
+    "test": "node --no-warnings --test \"tests/*.test.js\"",
     "test:ui": "playwright test",
-    "serve": "node tests/ui/server.mjs"
+    "serve": "node --no-warnings tests/ui/server.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.60.0",
     "axe-core": "^4.13.0"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22.5"
   }
 }

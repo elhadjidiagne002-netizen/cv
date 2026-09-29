@@ -4,7 +4,7 @@
 // sauf les polices « latin étendu » (lettres ŋ, ɓ, ɗ, ƴ des langues nationales) : ~560 Ko rarement utiles,
 // mises en cache à la demande pour ménager les forfaits de données mobiles.
 
-const VERSION = 'cv-2026-09-29-cycle7';
+const VERSION = 'cv-2026-09-29-cycle8';
 const ASSETS = [
   './',
   '404.html',
@@ -52,6 +52,7 @@ const ASSETS = [
   'js/paginate.js',
   'js/phrases.js',
   'js/plaintext.js',
+  'js/premium.js',
   'js/privacy.js',
   'js/pwa.js',
   'js/render.js',
@@ -134,6 +135,8 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
+  // API (offres, commandes, administration) et tableau de bord : toujours le réseau, jamais de cache.
+  if (url.pathname.startsWith('/api/') || /\/(admin\.html|js\/admin\.js|css\/admin\.css)$/.test(url.pathname)) return;
   // Polices et icônes : fichiers immuables, servis depuis le cache (économie de données mobiles).
   if (/\/(fonts|icons)\//.test(url.pathname)) {
     event.respondWith(caches.match(req).then((cached) => cached || fetch(req).then((res) => {

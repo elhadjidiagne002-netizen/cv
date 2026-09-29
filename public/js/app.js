@@ -8,6 +8,10 @@ import {
 } from './model.js';
 import { cvToDocx, letterToDocx, DOCX_MIME } from './docx.js';
 import { paginate, drawPageGaps } from './paginate.js';
+import {
+  FREE_CONFIG, loadConfig, isPremium, isHidden, cheapest, fcfa, access, listEntitlements, saveEntitlement, removeEntitlement, usable,
+  listOrders, saveOrder, forgetOrder, createOrder, orderStatus, redeemCode, consumeCode, track,
+} from './premium.js';
 import { readZipAsync } from './zip.js';
 import { fromLinkedIn } from './linkedin.js';
 import {
@@ -66,6 +70,7 @@ const appStore = createApplicationStore(defaultStorage());
 const state = {
   cv: null, pages: 1, galleryFilter: 'Tous', openSections: new Set(['identity', 'headline']),
   doc: 'cv', helperJob: '', helperTarget: 0,
+  site: FREE_CONFIG, ents: [], printGranted: false,
 };
 let renderTimer = null;
 
@@ -462,7 +467,8 @@ function updatePreview() {
   drawPageGaps(preview, article, layout);
   fitPreview();
   const fitNote = cv.meta.fit ? ` · mise en page resserrée (${cv.meta.fit}/${MAX_FIT})` : '';
-  $('#template-info').innerHTML = `Modèle : <strong>${esc(tpl.name)}</strong> · ${tpl.ats ? 'ATS' : 'créatif'} · ${paper} · ${pages} page${pages > 1 ? 's' : ''}${fitNote}`;
+  const premiumNote = isPremium(state.site, tpl.id) ? ` · <span class="badge badge-premium">${access(state.site, tpl.id, 'pdf', state.ents) ? 'Premium débloqué' : 'Premium'}</span>` : '';
+  $('#template-info').innerHTML = `Modèle : <strong>${esc(tpl.name)}</strong> · ${tpl.ats ? 'ATS' : 'créatif'} · ${paper} · ${pages} page${pages > 1 ? 's' : ''}${fitNote}${premiumNote}`;
   renderNorms(checkCV(cv, tpl, { pages }));
   renderMatch();
 }
@@ -1055,10 +1061,54 @@ function slug(s) {
 
 function preparePrint() {
   const root = $('#print-root');
-  root.innerHTML = state.doc === 'letter' ? renderLetter(state.cv, state.cv.meta.templateId) : renderCV(state.cv, state.cv.meta.templateId);
+  const tplId = state.cv.meta.templateId;
+  // Modèle premium non débloqué (impression par Ctrl+P) : une page d'explication à la place du CV.
+  const acc = state.doc === 'cv' ? access(state.site, tplId, 'pdf', state.ents) : { free: true };
+  if (!acc || (acc.consume && !state.printGranted)) {
+    root.innerHTML = `<article class="cv print-locked"><h1 class="cv-name">Modèle premium</h1><p>Le modèle « ${esc(getTemplate(tplId).name)} » doit être débloqué avant d'être téléchargé.
+      Utilisez le bouton « Télécharger en PDF » de l'éditeur, ou choisissez un modèle gratuit.</p></article>`;
+    return;
+  }
+  root.innerHTML = state.doc === 'letter' ? renderLetter(state.cv, tplId) : renderCV(state.cv, tplId);
   applyAccent(root);
   // Numéros « 1 / 2 » en pied de page, seulement pour un CV de plusieurs pages.
   if (state.doc === 'cv' && state.cv.meta.pageNumbers && state.pages > 1) root.querySelector('.cv').classList.add('numbered');
+}
+
+/**
+ * Téléchargement (PDF ou Word) : libre pour un modèle gratuit ; pour un modèle premium, il faut un code qui le
+ * couvre (un crédit est décompté côté serveur pour les codes à crédits), sinon le dialogue de déblocage s'ouvre.
+ */
+async function gatedDownload(format, run) {
+  const tplId = state.cv.meta.templateId;
+  if (state.doc === 'letter') {
+    run();
+    track(format === 'docx' ? 'docx' : 'letter_pdf', tplId);
+    return;
+  }
+  const acc = access(state.site, tplId, format, state.ents);
+  if (!acc) {
+    openUnlock(`Le modèle « ${getTemplate(tplId).name} » est un modèle premium${format === 'docx' ? ' (export Word)' : ''} : débloquez-le ou choisissez un modèle gratuit.`);
+    return;
+  }
+  if (acc.consume) {
+    // eslint-disable-next-line no-alert
+    if (!window.confirm(`Utiliser 1 téléchargement de votre code ${acc.ent.code} ? (il en reste ${acc.ent.credits})`)) return;
+    try {
+      const { entitlement } = await consumeCode(acc.ent.code, tplId, format);
+      state.ents = saveEntitlement(entitlement);
+    } catch (e) {
+      toast(e.message);
+      return;
+    }
+  }
+  state.printGranted = true;
+  try {
+    run();
+  } finally {
+    setTimeout(() => { state.printGranted = false; }, 1500);
+  }
+  track(format, tplId);
 }
 
 function printCV() {
@@ -1078,6 +1128,11 @@ function printCV() {
 
 function templateBadges(t) {
   const b = [];
+  if (isPremium(state.site, t.id)) {
+    const unlocked = access(state.site, t.id, 'pdf', state.ents);
+    const from = cheapest(state.site);
+    b.push(`<span class="badge badge-premium">${unlocked ? 'Premium débloqué' : `Premium${from ? ` · dès ${fcfa(from)}` : ''}`}</span>`);
+  }
   b.push(t.ats ? '<span class="badge badge-ats">ATS</span>' : '<span class="badge badge-crea">Moins adapté aux ATS</span>');
   b.push(`<span class="badge">${t.columns} colonne${t.columns > 1 ? 's' : ''}</span>`);
   b.push(`<span class="badge">${t.photo ? 'Photo possible' : 'Sans photo'}</span>`);
@@ -1086,11 +1141,13 @@ function templateBadges(t) {
 }
 
 function renderGallery() {
-  const cats = ['Tous', 'ATS', ...new Set(TEMPLATES.map((t) => t.category).filter((c) => c !== 'ATS'))];
+  const cats = ['Tous', 'ATS', ...(state.site.monetization ? ['Premium'] : []), ...new Set(TEMPLATES.map((t) => t.category).filter((c) => c !== 'ATS'))];
   $('#gallery-filters').innerHTML = cats
     .map((c) => `<button type="button" class="btn btn-small" data-filter="${esc(c)}" aria-pressed="${c === state.galleryFilter}">${esc(c === 'ATS' ? 'Compatibles ATS' : c)}</button>`)
     .join('');
-  const list = TEMPLATES.filter((t) => state.galleryFilter === 'Tous' || (state.galleryFilter === 'ATS' ? t.ats : t.category === state.galleryFilter));
+  const list = TEMPLATES
+    .filter((t) => !isHidden(state.site, t.id) || t.id === state.cv.meta.templateId)
+    .filter((t) => state.galleryFilter === 'Tous' || (state.galleryFilter === 'ATS' ? t.ats : state.galleryFilter === 'Premium' ? isPremium(state.site, t.id) : t.category === state.galleryFilter));
   $('#gallery-grid').innerHTML = list
     .map((t) => `<li class="tpl-card${t.id === state.cv.meta.templateId ? ' is-current' : ''}">
       <button type="button" class="tpl-choose" data-template="${t.id}" aria-describedby="tpl-desc-${t.id}"${t.id === state.cv.meta.templateId ? ' aria-current="true"' : ''}>
@@ -1197,6 +1254,7 @@ function backupAll() {
   const d = new Date();
   const stamp = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   download(`sauvegarde-cv-en-ligne-${stamp}.json`, exportBackup(store, appStore.list()));
+  track('backup');
   markBackupDone();
   const n = store.list().length;
   toast(`Sauvegarde complète : ${n} CV et ${appStore.list().length} candidature(s). Gardez ce fichier (e-mail, Google Drive, clé USB) pour tout retrouver sur un autre appareil.`);
@@ -1428,6 +1486,202 @@ function onAppsStatusChange(e) {
   toast(`Statut : ${appLabel(e.target.value)}.`);
 }
 
+// ————————————————————————— Offres premium : déblocage —————————————————————————
+
+const KIND_LABEL = { pass: 'Pass', template: 'À l\'unité', download: 'Téléchargements', subscription: 'Abonnement' };
+
+function entitlementSummary(e) {
+  const scope = e.templates.includes('*') ? 'tous les modèles premium' : e.templates.map((id) => getTemplate(id).name).join(', ');
+  const until = e.expires_at ? `jusqu'au ${new Date(e.expires_at).toLocaleDateString('fr-FR')}` : 'sans limite de durée';
+  const credits = e.credits !== null && e.credits !== undefined ? ` · ${e.credits} téléchargement${e.credits > 1 ? 's' : ''} restant${e.credits > 1 ? 's' : ''}` : '';
+  return `${scope} · ${until}${credits}${usable(e) ? '' : ' · <strong>plus valable</strong>'}`;
+}
+
+function renderUnlock() {
+  const cfg = state.site;
+  const ents = state.ents;
+  const orders = listOrders();
+  const premiumTpls = TEMPLATES.filter((t) => isPremium(cfg, t.id));
+  const channels = [['wave', 'Wave', cfg.payment.wave], ['orange_money', 'Orange Money', cfg.payment.orange_money]].filter((c) => c[2]);
+  $('#unlock-body').innerHTML = `
+    <section class="unlock-sec" aria-labelledby="unlock-code-h">
+      <h3 id="unlock-code-h">J'ai un code</h3>
+      <div class="inline">
+        <label for="unlock-code" class="sr-only">Code de déblocage</label>
+        <input type="text" id="unlock-code" placeholder="CV-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false">
+        <button type="button" class="btn btn-primary" data-unlock="redeem">Valider le code</button>
+      </div>
+    </section>
+    ${ents.length ? `<section class="unlock-sec" aria-labelledby="unlock-mine-h"><h3 id="unlock-mine-h">Mes pass</h3><ul class="unlock-list">${ents.map((e) => `<li>
+      <span><strong>${esc(e.offer_name || KIND_LABEL[e.kind] || 'Pass')}</strong> — <code>${esc(e.code)}</code><br><span class="hint">${entitlementSummary(e)}</span></span>
+      <button type="button" class="btn btn-small" data-unlock="forget" data-code="${esc(e.code)}" aria-label="Retirer le code ${esc(e.code)} de ce navigateur">Retirer</button></li>`).join('')}</ul></section>` : ''}
+    ${orders.length ? `<section class="unlock-sec" aria-labelledby="unlock-orders-h"><h3 id="unlock-orders-h">Mes commandes</h3><ul class="unlock-list">${orders.map((o) => `<li>
+      <span><strong>${esc(o.reference)}</strong> — ${esc(o.amount_label)} par ${o.channel === 'wave' ? 'Wave' : 'Orange Money'} au ${esc(o.pay_to)}</span>
+      <span class="inline"><button type="button" class="btn btn-small btn-primary" data-unlock="check" data-ref="${esc(o.reference)}">J'ai payé : vérifier</button>
+      <button type="button" class="btn btn-small" data-unlock="drop" data-ref="${esc(o.reference)}" aria-label="Oublier la commande ${esc(o.reference)}">Oublier</button></span></li>`).join('')}</ul></section>` : ''}
+    ${cfg.monetization && channels.length ? `<form class="unlock-sec" id="order-form" novalidate aria-labelledby="unlock-buy-h">
+      <h3 id="unlock-buy-h">Acheter un pass</h3>
+      <fieldset class="offer-list"><legend>Choisissez une offre</legend>
+        ${cfg.offers.map((o, i) => `<label class="offer-card"><input type="radio" name="offer" value="${esc(o.id)}" data-kind="${esc(o.kind)}"${i === 0 ? ' checked' : ''}>
+          <span class="offer-name">${esc(o.name)}</span><span class="offer-price">${fcfa(o.price)}</span><span class="offer-desc">${esc(o.description)}</span></label>`).join('')}
+      </fieldset>
+      <div class="field" id="order-template-field" hidden><label for="order-template">Modèle à débloquer</label>
+        <select id="order-template">${premiumTpls.map((t) => `<option value="${t.id}"${t.id === state.cv.meta.templateId ? ' selected' : ''}>${esc(t.name)}</option>`).join('')}</select></div>
+      <fieldset class="pay-list"><legend>Paiement</legend>
+        ${channels.map(([id, name], i) => `<label class="field-check"><input type="radio" name="channel" value="${id}"${i === 0 ? ' checked' : ''}> ${name}</label>`).join('')}
+      </fieldset>
+      <div class="grid">
+        <div class="field"><label for="order-phone">Numéro qui envoie le paiement <span class="req" aria-hidden="true">*</span></label>
+          <input type="tel" id="order-phone" autocomplete="tel" required aria-required="true" value="${esc(state.cv.identity.phone || '')}"></div>
+        <div class="field"><label for="order-name">Nom (facultatif)</label><input type="text" id="order-name" autocomplete="name"></div>
+      </div>
+      <p class="hint">Ce numéro sert uniquement à retrouver votre paiement ; il est effacé automatiquement après quelques mois. Le contenu de votre CV n'est jamais envoyé.</p>
+      <button type="submit" class="btn btn-primary">Commander</button>
+    </form>` : '<p class="hint">Aucune offre n\'est disponible pour le moment.</p>'}
+    <div id="order-result" role="status" aria-live="polite" tabindex="-1"></div>`;
+  syncOrderTemplateField();
+}
+
+function syncOrderTemplateField() {
+  const checked = document.querySelector('#order-form input[name="offer"]:checked');
+  const field = $('#order-template-field');
+  if (field) field.hidden = !(checked && checked.dataset.kind === 'template');
+}
+
+function openUnlock(reason = '') {
+  $('#unlock-reason').textContent = reason;
+  $('#unlock-reason').hidden = !reason;
+  renderUnlock();
+  const dlg = $('#unlock-dlg');
+  if (typeof dlg.showModal === 'function') dlg.showModal();
+  else dlg.setAttribute('open', '');
+  track('unlock_view', state.cv.meta.templateId);
+  requestAnimationFrame(() => {
+    const first = dlg.querySelector('input[name="offer"]:checked') || $('#unlock-code');
+    if (first) first.focus();
+  });
+}
+
+function closeUnlock() {
+  const dlg = $('#unlock-dlg');
+  if (typeof dlg.close === 'function') dlg.close();
+  else dlg.removeAttribute('open');
+  renderPremiumState();
+}
+
+function acceptEntitlement(ent) {
+  state.ents = saveEntitlement(ent);
+  renderUnlock();
+  renderPremiumState();
+  schedulePreview();
+  toast(`Code accepté : ${ent.offer_name || 'pass'} activé dans ce navigateur.`);
+}
+
+async function onUnlockClick(e) {
+  const b = e.target.closest('button[data-unlock]');
+  if (!b) return;
+  const act = b.dataset.unlock;
+  try {
+    if (act === 'redeem') {
+      const code = $('#unlock-code').value.trim();
+      if (!code) {
+        $('#unlock-code').focus();
+        return;
+      }
+      acceptEntitlement((await redeemCode(code)).entitlement);
+      $('#unlock-code').focus();
+    } else if (act === 'forget') {
+      removeEntitlement(b.dataset.code);
+      state.ents = listEntitlements();
+      renderUnlock();
+      renderPremiumState();
+      $('#unlock-code').focus();
+    } else if (act === 'drop') {
+      forgetOrder(b.dataset.ref);
+      renderUnlock();
+      $('#unlock-code').focus();
+    } else if (act === 'check') {
+      const o = listOrders().find((x) => x.reference === b.dataset.ref);
+      const res = await orderStatus(o.reference, o.phone);
+      if (res.status === 'validated' && res.entitlement) {
+        forgetOrder(o.reference);
+        acceptEntitlement(res.entitlement);
+      } else if (res.status === 'refused') {
+        toast(`Commande ${o.reference} refusée${res.note ? ` : ${res.note}` : ''}.`);
+      } else {
+        toast(`Paiement de la commande ${o.reference} pas encore validé : réessayez dans quelques minutes.`);
+      }
+    }
+  } catch (err) {
+    toast(err.message);
+  }
+}
+
+async function onOrderSubmit(e) {
+  e.preventDefault();
+  const form = e.target;
+  const offer = form.querySelector('input[name="offer"]:checked');
+  const channel = form.querySelector('input[name="channel"]:checked');
+  const phone = $('#order-phone');
+  if (!phone.value.trim()) {
+    phone.setAttribute('aria-invalid', 'true');
+    phone.focus();
+    toast('Indiquez le numéro qui envoie le paiement.');
+    return;
+  }
+  phone.removeAttribute('aria-invalid');
+  try {
+    const res = await createOrder({
+      offer_id: offer.value, channel: channel.value, phone: phone.value, name: $('#order-name').value,
+      template_id: offer.dataset.kind === 'template' ? $('#order-template').value : '',
+    });
+    saveOrder({ ...res, phone: phone.value });
+    renderUnlock();
+    $('#order-result').innerHTML = `<div class="pay-box">
+      <p><strong>Commande ${esc(res.reference)} enregistrée.</strong> Envoyez <strong>${esc(res.amount_label)}</strong> par
+      <strong>${res.channel === 'wave' ? 'Wave' : 'Orange Money'}</strong> au <strong>${esc(res.pay_to)}</strong>
+      en indiquant la référence <strong>${esc(res.reference)}</strong>.</p>
+      <p class="hint">${esc(res.instructions)}</p>
+      <p class="hint">Ensuite, cliquez sur « J'ai payé : vérifier » (rubrique « Mes commandes » ci-dessus) : votre pass s'active dès la validation.</p></div>`;
+    $('#order-result').focus();
+  } catch (err) {
+    toast(err.message);
+  }
+}
+
+/** Bouton « Premium » et bannière d'annonce selon la configuration du site. */
+function renderPremiumState() {
+  const cfg = state.site;
+  const btn = $('#btn-premium');
+  btn.hidden = !cfg.monetization && !state.ents.length;
+  const active = state.ents.filter((e) => usable(e)).length;
+  btn.textContent = active ? `Mes pass (${active})` : 'Premium';
+  const bar = $('#announce');
+  let dismissed = '';
+  try {
+    dismissed = sessionStorage.getItem('cvapp.announce') || '';
+  } catch {
+    dismissed = '';
+  }
+  bar.hidden = !cfg.announcement || dismissed === cfg.announcement;
+  $('#announce-text').textContent = cfg.announcement || '';
+}
+
+async function initSite() {
+  state.ents = listEntitlements();
+  state.site = await loadConfig();
+  renderPremiumState();
+  schedulePreview();
+  try {
+    if (!sessionStorage.getItem('cvapp.visit')) {
+      sessionStorage.setItem('cvapp.visit', '1');
+      if (state.site.configured) track('visit');
+    }
+  } catch {
+    /* navigation privée stricte : pas de statistique */
+  }
+}
+
 // ————————————————————————— Texte brut —————————————————————————
 
 function openTextDialog() {
@@ -1566,7 +1820,7 @@ function bind() {
       toast(err.message);
     }
   });
-  $('#btn-print').addEventListener('click', printCV);
+  $('#btn-print').addEventListener('click', () => gatedDownload('pdf', printCV));
   $('#preview').addEventListener('click', onPreviewClick);
   document.querySelector('.doc-switch').addEventListener('click', (e) => {
     const b = e.target.closest('button[data-doc]');
@@ -1589,6 +1843,32 @@ function bind() {
     }
   });
   $('#btn-text').addEventListener('click', openTextDialog);
+  $('#btn-premium').addEventListener('click', () => openUnlock());
+  $('#unlock-close').addEventListener('click', () => {
+    closeUnlock();
+    $('#btn-premium').focus();
+  });
+  $('#unlock-dlg').addEventListener('click', onUnlockClick);
+  $('#unlock-dlg').addEventListener('change', (e) => {
+    if (e.target.name === 'offer') syncOrderTemplateField();
+  });
+  $('#unlock-dlg').addEventListener('submit', (e) => {
+    if (e.target.id === 'order-form') onOrderSubmit(e);
+  });
+  $('#unlock-dlg').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.target.id === 'unlock-code') {
+      e.preventDefault();
+      document.querySelector('button[data-unlock="redeem"]').click();
+    }
+  });
+  $('#announce-close').addEventListener('click', () => {
+    try {
+      sessionStorage.setItem('cvapp.announce', state.site.announcement);
+    } catch {
+      /* rien */
+    }
+    $('#announce').hidden = true;
+  });
   $('#btn-ai-advice').addEventListener('click', aiAdvice);
   $('#ai-close').addEventListener('click', closeAI);
   $('#ai-body').addEventListener('click', onAIClick);
@@ -1608,11 +1888,14 @@ function bind() {
   $('#btn-docx').addEventListener('click', () => {
     autosaver.flush();
     $('#formats-menu').open = false;
+    gatedDownload('docx', exportDocx);
+  });
+  function exportDocx() {
     const letter = state.doc === 'letter';
     const bytes = letter ? letterToDocx(state.cv) : cvToDocx(state.cv);
     download(`${letter ? 'lettre-' : ''}${slug(state.cv.meta.title)}.docx`, bytes, DOCX_MIME);
     toast(letter ? 'Lettre exportée au format Word.' : 'CV exporté au format Word : une colonne, titres standard, lisible par les ATS.');
-  });
+  }
   $('#btn-backup').addEventListener('click', () => {
     $('#formats-menu').open = false;
     backupAll();
@@ -1656,7 +1939,9 @@ function bind() {
       const tpl = getTemplate(c.dataset.template);
       changed({ structural: true });
       closeGallery();
-      toast(`Modèle « ${tpl.name} » appliqué.`);
+      track('template', tpl.id);
+      const locked = isPremium(state.site, tpl.id) && !access(state.site, tpl.id, 'pdf', state.ents);
+      toast(locked ? `Modèle premium « ${tpl.name} » appliqué : essayez-le librement, le téléchargement demande un déblocage.` : `Modèle « ${tpl.name} » appliqué.`);
     }
   });
 
@@ -1727,6 +2012,7 @@ function init() {
   bind();
   updateDueBadge();
   backupReminder();
+  initSite();
   resetHistory();
   renderAll();
   // Les polices embarquées changent la hauteur du texte : nouvelle mesure une fois chargées.

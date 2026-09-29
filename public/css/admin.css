@@ -1,0 +1,105 @@
+/* Tableau de bord d'administration (admin.html) — complète app.css (mêmes variables, mêmes boutons). */
+
+body.admin main { max-width: 1180px; margin: 0 auto; padding: 16px; }
+.admin-tag { background: var(--primary-soft); color: #063d74; border: 1px solid #b9d3ee; border-radius: 999px; padding: 2px 10px; font-size: 0.85rem; font-weight: 600; }
+.admin h1 { font-size: 1.4rem; margin: 0 0 8px; }
+.admin h2 { font-size: 1.05rem; margin: 20px 0 8px; }
+.admin .hint { color: var(--muted); font-size: 0.9rem; }
+.mono { font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; letter-spacing: 0.02em; }
+
+/* ——— Connexion ——— */
+.admin-login { max-width: 440px; margin: 32px auto; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; }
+.admin-login form { display: grid; gap: 12px; margin-top: 12px; }
+.admin-error { color: var(--danger); font-weight: 600; margin: 8px 0 0; }
+.admin-error:empty { display: none; }
+.admin-warn { background: #fff4e0; border: 1px solid #e3b86b; color: #5c3700; border-radius: var(--radius); padding: 10px 14px; margin: 0 0 16px; }
+
+/* ——— Onglets ——— */
+.admin-tabs { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+.admin-tabs button {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 8px 14px; border: 0;
+  border-bottom: 3px solid transparent; background: none; color: var(--text); font: inherit; font-weight: 500; cursor: pointer;
+}
+.admin-tabs button:hover { background: var(--primary-soft); }
+.admin-tabs button[aria-current="page"] { border-bottom-color: var(--primary); color: #063d74; font-weight: 700; }
+.count-badge { background: var(--danger); color: #fff; border-radius: 999px; min-width: 22px; padding: 0 7px; font-size: 0.8rem; font-weight: 700; text-align: center; }
+.admin-panel { outline: none; }
+
+/* ——— Vue d'ensemble ——— */
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.tile { display: flex; flex-direction: column; gap: 2px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
+.tile-label { color: var(--muted); font-size: 0.85rem; }
+.tile-value { font-size: 1.5rem; font-weight: 800; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.tile-sub { color: var(--muted); font-size: 0.85rem; }
+
+.charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; }
+.chart { margin: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
+.chart svg { display: block; width: 100%; height: auto; margin-top: 8px; }
+.chart .bar { fill: var(--primary); }
+.chart .bar:hover { fill: #063d74; }
+.chart .axis { stroke: var(--border); stroke-width: 1; }
+.chart .tick { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.chart details { margin-top: 6px; font-size: 0.9rem; }
+
+.cols-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px 24px; }
+.hbars { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.hbars li { display: grid; grid-template-columns: minmax(90px, 160px) 1fr auto; align-items: center; gap: 8px; }
+.hbar-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hbar-track { display: block; height: 10px; }
+.hbar { display: block; height: 10px; border-radius: 0 4px 4px 0; background: var(--primary); min-width: 2px; }
+.hbar-value { font-variant-numeric: tabular-nums; font-weight: 600; }
+.hbar-0 { width: 0; }
+.hbar-1 { width: 5%; } .hbar-2 { width: 10%; } .hbar-3 { width: 15%; } .hbar-4 { width: 20%; } .hbar-5 { width: 25%; }
+.hbar-6 { width: 30%; } .hbar-7 { width: 35%; } .hbar-8 { width: 40%; } .hbar-9 { width: 45%; } .hbar-10 { width: 50%; }
+.hbar-11 { width: 55%; } .hbar-12 { width: 60%; } .hbar-13 { width: 65%; } .hbar-14 { width: 70%; } .hbar-15 { width: 75%; }
+.hbar-16 { width: 80%; } .hbar-17 { width: 85%; } .hbar-18 { width: 90%; } .hbar-19 { width: 95%; } .hbar-20 { width: 100%; }
+
+/* ——— Tableaux ——— */
+.data-table { width: 100%; border-collapse: collapse; background: var(--surface); font-size: 0.92rem; }
+.data-table th, .data-table td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #e3e6eb; vertical-align: top; }
+.data-table thead th { background: #eef1f5; font-weight: 700; }
+.data-table tbody th { font-weight: 500; }
+.admin-panel > .data-table, .codes-table { display: block; overflow-x: auto; }
+
+/* ——— Commandes ——— */
+.toolbar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 14px; margin-bottom: 10px; }
+.toolbar .field { min-width: 200px; }
+.order-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.order-card { background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
+.order-card.st-pending { border-left-color: var(--mid); }
+.order-card.st-validated { border-left-color: var(--good); }
+.order-card.st-refused { border-left-color: var(--bad); }
+.order-card .amount { font-weight: 800; font-variant-numeric: tabular-nums; }
+.order-card .status { font-weight: 700; color: var(--text); }
+.order-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+td.order-actions { margin: 0; display: table-cell; }
+td.order-actions .btn { margin: 0 4px 4px 0; }
+.order-result:empty { display: none; }
+.pay-ok { background: #e7f4ea; border: 1px solid #9ccaa7; color: #123f1f; border-radius: var(--radius); padding: 10px 12px; margin: 8px 0 0; }
+.pay-ok .btn { margin: 6px 6px 0 0; }
+
+/* ——— Offres, modèles, réglages ——— */
+.offer-admin-list { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 8px; }
+.offer-admin-list details, .new-offer { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; }
+.new-offer { margin-bottom: 14px; }
+.offer-admin-list summary, .new-offer summary { cursor: pointer; min-height: 32px; }
+.offer-form, #gift-form { margin-top: 12px; }
+.on { color: var(--good); font-weight: 700; }
+.off { color: var(--muted); font-weight: 600; }
+.tpl-fam, .settings-form fieldset { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); margin: 0 0 14px; padding: 10px 14px; }
+.tpl-fam legend, .settings-form legend { font-weight: 700; padding: 0 6px; }
+.tpl-fam .data-table td { width: 110px; }
+.tpl-fam input[type="checkbox"] { width: 20px; height: 20px; }
+.settings-form .field + .field { margin-top: 10px; }
+
+@media (max-width: 640px) {
+  body.admin main { padding: 10px; }
+  .admin-tabs { flex-wrap: nowrap; overflow-x: auto; }
+  .admin-tabs button { white-space: nowrap; }
+  .hbars li { grid-template-columns: minmax(80px, 110px) 1fr auto; }
+  .tile-value { font-size: 1.25rem; }
+}
+
+@media print {
+  .admin-tabs, #btn-logout, .toolbar, .order-actions { display: none !important; }
+}

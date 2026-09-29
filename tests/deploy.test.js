@@ -9,7 +9,7 @@ const directives = (csp) => csp.split(';').map((d) => d.trim()).filter(Boolean).
 test('CSP en <meta> identique à _headers (sauf frame-ancestors, réservé aux en-têtes HTTP)', () => {
   const header = read('public/_headers').match(/Content-Security-Policy: (.+)/)[1];
   const expected = directives(header).filter((d) => !d.startsWith('frame-ancestors'));
-  for (const page of ['public/index.html', 'public/app.html', 'public/confidentialite.html', 'public/404.html']) {
+  for (const page of ['public/index.html', 'public/app.html', 'public/confidentialite.html', 'public/404.html', 'public/admin.html']) {
     const meta = read(page).match(/<meta http-equiv="Content-Security-Policy" content="([^"]+)">/);
     assert.ok(meta, page);
     assert.deepEqual(directives(meta[1]), expected, page);
