@@ -3,11 +3,13 @@
 
 import {
   createEmptyCV, createSampleCV, createSampleCVEnglish, createItem, cloneCV, getByPath, setByPath, moveItem,
-  normalizeDate, ITEM_FIELDS, IDENTITY_FIELDS, SENSITIVE_IDENTITY_FIELDS, CEFR_LEVELS,
+  normalizeDate, ITEM_FIELDS, IDENTITY_FIELDS, SENSITIVE_IDENTITY_FIELDS, CEFR_LEVELS, MAX_FIT,
 } from './model.js';
 import { createStore, exportJSON, importJSON, createAutosaver, QuotaError } from './storage.js';
-import { renderCV, TEMPLATES, getTemplate, effectivePaper } from './render.js';
+import { renderCV, TEMPLATES, getTemplate, effectivePaper, applyTheme, effectivePalette } from './render.js';
 import { checkCV, applyFix } from './norms.js';
+import { matchOffer } from './match.js';
+import { registerServiceWorker, setupInstallButton } from './pwa.js';
 import { levelLabel } from './i18n.js';
 import { esc } from './templates/parts.js';
 
@@ -20,6 +22,8 @@ const SECTION_UI = {
   skills: { title: 'Compétences', item: 'Groupe de compétences', add: 'Ajouter un groupe de compétences', itemTitle: (it) => it.name },
   languages: { title: 'Langues', item: 'Langue', add: 'Ajouter une langue', itemTitle: (it) => it.name },
   certifications: { title: 'Certifications', item: 'Certification', add: 'Ajouter une certification', itemTitle: (it) => it.name },
+  awards: { title: 'Distinctions', item: 'Distinction', add: 'Ajouter une distinction', itemTitle: (it) => it.name },
+  publications: { title: 'Publications', item: 'Publication', add: 'Ajouter une publication', itemTitle: (it) => it.title },
   projects: { title: 'Projets', item: 'Projet', add: 'Ajouter un projet', itemTitle: (it) => it.name },
   volunteering: { title: 'Bénévolat', item: 'Engagement', add: 'Ajouter un engagement bénévole', itemTitle: (it) => [it.role, it.organization].filter(Boolean).join(' — ') },
   interests: { title: 'Centres d\'intérêt', item: 'Centre d\'intérêt', add: 'Ajouter un centre d\'intérêt', itemTitle: (it) => it.name },
@@ -32,6 +36,8 @@ const SECTION_HINTS = {
   skills: 'Regroupez par catégorie ; reprenez les mots-clés de l\'offre (les logiciels de tri les recherchent).',
   languages: 'Niveau selon le CECRL (A1 à C2) — pas d\'étoiles ni de barres.',
   interests: 'Soyez précis : « Basket en club depuis 8 ans » plutôt que « Sport ».',
+  awards: 'Prix, bourses, concours, mentions : indiquez l\'organisme et l\'année.',
+  publications: 'Surtout pour un CV académique : articles, communications, ouvrages, du plus récent au plus ancien.',
   references: 'Demandez l\'accord de la personne avant de la citer.',
 };
 
@@ -201,6 +207,14 @@ function renderSettings() {
   $('#set-paper').value = meta.paper;
   $('#set-datestyle').value = meta.dateStyle;
   $('#set-accent').value = meta.accent || '#1f3a5f';
+  $('#set-country').value = meta.country || '';
+  const tpl = getTemplate(meta.templateId);
+  const pal = effectivePalette(state.cv, tpl);
+  $('#set-palette').innerHTML = (tpl.palettes || [])
+    .map((p, i) => `<option value="${esc(p.id)}"${pal && p.id === pal.id ? ' selected' : ''}>${esc(p.name)}${i === 0 ? ' (d\'origine)' : ''}</option>`)
+    .join('');
+  $('#set-palette').disabled = !(tpl.palettes && tpl.palettes.length > 1);
+  $('#btn-fit-reset').hidden = !meta.fit;
   const anon = $('#btn-anon');
   anon.setAttribute('aria-pressed', String(meta.anonymous));
   anon.textContent = meta.anonymous ? 'CV anonyme : activé' : 'CV anonyme';
@@ -217,14 +231,9 @@ function renderPicker() {
 
 const MM = 96 / 25.4;
 
+/** Applique la palette choisie et la couleur d'accent (CSSOM : autorisé par la CSP). */
 function applyAccent(root) {
-  const article = root.querySelector('.cv');
-  if (!article) return;
-  const accent = state.cv.meta.accent;
-  if (accent) {
-    article.style.setProperty('--accent', accent);
-    article.style.setProperty('--accent-2', accent);
-  }
+  root.querySelectorAll('.cv').forEach((article) => applyTheme(article, state.cv, getTemplate(article.dataset.template)));
 }
 
 function measurePages(article, paper) {
@@ -257,8 +266,10 @@ function updatePreview() {
     preview.appendChild(mark);
   }
   fitPreview();
-  $('#template-info').innerHTML = `Modèle : <strong>${esc(tpl.name)}</strong> · ${tpl.ats ? 'ATS' : 'créatif'} · ${paper} · ${pages} page${pages > 1 ? 's' : ''}`;
+  const fitNote = cv.meta.fit ? ` · mise en page resserrée (${cv.meta.fit}/${MAX_FIT})` : '';
+  $('#template-info').innerHTML = `Modèle : <strong>${esc(tpl.name)}</strong> · ${tpl.ats ? 'ATS' : 'créatif'} · ${paper} · ${pages} page${pages > 1 ? 's' : ''}${fitNote}`;
   renderNorms(checkCV(cv, tpl, { pages }));
+  renderMatch();
 }
 
 function fitPreview() {
@@ -306,6 +317,16 @@ function goTo(target) {
   if (!target) return;
   if (target === 'template') {
     openGallery();
+    return;
+  }
+  if (target.startsWith('meta.')) {
+    const settings = document.querySelector('.editor > details');
+    settings.open = true;
+    const el = settings.querySelector(`[data-path="${CSS.escape(target)}"]`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.focus({ preventScroll: true });
+    }
     return;
   }
   const first = target.split('.')[0];
@@ -367,7 +388,11 @@ function onInput(e) {
       }
     }
   }
-  const structural = path === 'meta.lang' || (path.startsWith('privacy.') && e.type === 'change');
+  const structural = path === 'meta.lang' || path === 'meta.palette' || (path.startsWith('privacy.') && e.type === 'change');
+  if (path === 'meta.palette' && state.cv.meta.accent) {
+    // Choisir une palette annule la couleur libre, sinon elle masquerait la palette.
+    state.cv.meta.accent = '';
+  }
   changed({ structural: false });
   if (path === 'meta.title') renderPicker();
   if (structural) renderSettings();
@@ -475,6 +500,87 @@ async function onEditorChange(e) {
   onInput(e);
 }
 
+// ————————————————————————— Ajuster à N pages —————————————————————————
+
+/**
+ * Cherche le plus petit niveau de resserrement (espacements, puis police jusqu'à 9 pt) pour que
+ * le CV tienne en `target` page(s). Mesure hors écran, avec le modèle et la palette réels.
+ */
+async function fitToPages(target = 1) {
+  const cv = state.cv;
+  const tpl = getTemplate(cv.meta.templateId);
+  const paper = effectivePaper(cv, tpl);
+  if (document.fonts && document.fonts.ready) await document.fonts.ready;
+  const probe = document.createElement('div');
+  probe.className = 'fit-probe';
+  probe.setAttribute('aria-hidden', 'true');
+  document.body.appendChild(probe);
+  let chosen = null;
+  try {
+    for (let level = 0; level <= MAX_FIT; level += 1) {
+      probe.innerHTML = renderCV(cv, tpl.id, { fit: level });
+      applyAccent(probe);
+      if (measurePages(probe.firstElementChild, paper).pages <= target) {
+        chosen = level;
+        break;
+      }
+    }
+  } finally {
+    probe.remove();
+  }
+  const label = target === 1 ? '1 page' : `${target} pages`;
+  if (chosen === null) {
+    cv.meta.fit = MAX_FIT;
+    toast(`Même resserré au maximum (police 9 pt), le CV dépasse ${label} : raccourcissez les descriptions les plus anciennes.`);
+  } else {
+    cv.meta.fit = chosen;
+    toast(chosen === 0 ? `Le CV tient déjà sur ${label} : taille normale conservée.` : `Mise en page resserrée (niveau ${chosen}/${MAX_FIT}) : le CV tient sur ${label}.`);
+  }
+  renderSettings();
+  changed();
+}
+
+// ————————————————————————— Correspondance avec une offre —————————————————————————
+
+function renderMatch() {
+  const offer = state.cv.meta.jobOffer || '';
+  const box = $('#match-result');
+  const sub = $('#match-sub');
+  if ($('#job-offer').value !== offer && document.activeElement !== $('#job-offer')) $('#job-offer').value = offer;
+  if (!offer.trim()) {
+    box.innerHTML = '';
+    sub.textContent = 'Collez une annonce pour comparer';
+    return;
+  }
+  const r = matchOffer(state.cv, offer);
+  if (!r.total) {
+    box.innerHTML = '<p class="hint">Aucun mot-clé exploitable dans ce texte.</p>';
+    sub.textContent = 'Aucun mot-clé trouvé';
+    return;
+  }
+  sub.textContent = `Correspondance : ${r.score} % (${r.matched.length} mots-clés sur ${r.total})`;
+  const level = r.score >= 70 ? 'bon' : r.score >= 45 ? 'moyen' : 'faible';
+  box.innerHTML = `<p class="match-score">Taux de correspondance : <strong>${r.score} %</strong> — ${level}
+      (${r.matched.length} mot${r.matched.length > 1 ? 's' : ''}-clé${r.matched.length > 1 ? 's' : ''} sur ${r.total}).</p>
+    <meter class="match-meter" min="0" max="100" low="45" high="70" optimum="100" value="${r.score}" aria-label="Taux de correspondance">${r.score} %</meter>
+    ${r.missing.length ? `<h3>Absents de votre CV (${r.missing.length})</h3>
+    <p class="hint">Si vous les maîtrisez, ajoutez-les à vos compétences ou reformulez vos expériences avec ces mots.</p>
+    <ul class="kw-list kw-missing">${r.missing
+      .map((k) => `<li><span>${esc(k.term)}</span><button type="button" class="btn btn-small" data-add-kw="${esc(k.term)}" aria-label="Ajouter « ${esc(k.term)} » aux compétences">Ajouter</button></li>`)
+      .join('')}</ul>` : '<p class="hint">Tous les mots-clés de l\'annonce figurent dans votre CV.</p>'}
+    ${r.matched.length ? `<h3>Présents dans votre CV (${r.matched.length})</h3><ul class="kw-list kw-ok">${r.matched.map((k) => `<li>${esc(k.term)}</li>`).join('')}</ul>` : ''}`;
+}
+
+/** Ajoute un mot-clé de l'offre au premier groupe de compétences (créé si besoin). */
+function addKeyword(term) {
+  const cv = state.cv;
+  if (!cv.skills.length) cv.skills.push(createItem('skills', { name: cv.meta.lang === 'en' ? 'Skills' : 'Compétences' }));
+  const group = cv.skills[0];
+  if (!group.keywords.some((k) => k.toLowerCase() === term.toLowerCase())) group.keywords.push(term);
+  changed({ structural: true });
+  toast(`« ${term} » ajouté au groupe « ${group.name} ».`);
+}
+
 // ————————————————————————— Gestion des CV —————————————————————————
 
 function openCV(cv) {
@@ -562,7 +668,7 @@ function renderGallery() {
       <p class="tpl-desc" id="tpl-desc-${t.id}">${esc(t.description)}</p>
     </li>`)
     .join('');
-  if (state.cv.meta.accent) document.querySelectorAll('#gallery-grid .thumb-inner').forEach((n) => applyAccent(n));
+  document.querySelectorAll('#gallery-grid .thumb-inner').forEach((n) => applyAccent(n));
   fitThumbs();
 }
 
@@ -703,8 +809,36 @@ function bind() {
     }
   });
 
+  $('#btn-fit').addEventListener('click', () => fitToPages(1));
+  $('#btn-fit-reset').addEventListener('click', () => {
+    state.cv.meta.fit = 0;
+    renderSettings();
+    changed();
+    $('#btn-fit').focus();
+    toast('Taille normale rétablie.');
+  });
+  $('#job-offer').addEventListener('input', (e) => {
+    state.cv.meta.jobOffer = e.target.value;
+    state.cv.meta.updatedAt = new Date().toISOString();
+    autosaver.schedule(state.cv);
+    clearTimeout(renderMatch.t);
+    renderMatch.t = setTimeout(renderMatch, 250);
+  });
+  $('#match-result').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-add-kw]');
+    if (b) {
+      addKeyword(b.dataset.addKw);
+      requestAnimationFrame(() => $('#job-offer').focus());
+    }
+  });
+  setupInstallButton($('#btn-install'), () => toast('Application installée : elle fonctionne aussi sans connexion.'));
+
   $('#norms').addEventListener('click', (e) => {
     const fix = e.target.closest('button[data-fix]');
+    if (fix && /^fit(:\d)?$/.test(fix.dataset.fix)) {
+      fitToPages(Number(fix.dataset.fix.split(':')[1] || 1));
+      return;
+    }
     if (fix) {
       applyFix(state.cv, fix.dataset.fix);
       changed({ structural: true });
@@ -740,7 +874,10 @@ function init() {
   store.setActiveId(cv.id);
   bind();
   renderAll();
-  setStatus('Vos données restent dans ce navigateur');
+  // Les polices embarquées changent la hauteur du texte : nouvelle mesure une fois chargées.
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => schedulePreview());
+  registerServiceWorker();
+  setStatus(navigator.onLine === false ? 'Hors ligne — vos données restent dans ce navigateur' : 'Vos données restent dans ce navigateur');
   // Exposé pour le débogage et les tests d'interface.
   window.__cvApp = { state, store, cloneCV, getByPath, CEFR_LEVELS };
 }

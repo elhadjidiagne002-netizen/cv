@@ -1,5 +1,33 @@
 # Journal du projet (le plus récent en haut)
 
+## 2026-09-29 — cycle 2 : 33 modèles, hors ligne, offre d'emploi, normes par pays
+**Fait.** Catalogue porté de 16 à **33 modèles** en 11 familles (dont colonne de dates, académique,
+fonctionnel / reconversion, étudiant, métiers, Québec / Canada, Lebenslauf), chacun avec 3 à 5 palettes ;
+rubriques Distinctions et Publications ; 6 polices libres OFL embarquées ; **mode hors ligne** installable
+(manifeste + service worker) ; **correspondance avec une offre d'emploi** calculée localement (taux,
+mots-clés présents / manquants, ajout aux compétences) ; ~15 **nouvelles règles** (trous, chevauchements,
+verbes répétés, temps mélangés, mots creux, ponctuation, majuscules, doubles espaces, téléphone
+international, âge déductible) et **profils de 6 pays** ; bouton **« Ajuster à 1 page »** (≥ 9 pt).
+
+**Pourquoi.** Cycle 2 sur 5 : la variété des modèles et l'adaptation au pays / à l'offre sont ce qui
+distingue un bon outil de CV ; le hors ligne compte beaucoup avec une connexion mobile instable.
+
+**Choix notables.**
+- Palettes appliquées par variables CSS via le CSSOM (`themeVars` pur et testé) ; la première palette de
+  chaque modèle = couleurs d'origine, donc aucun changement visuel pour les CV existants.
+- Colonne de dates « à gauche » obtenue en CSS (grille interne à l'élément) : l'ordre HTML titre → dates
+  est conservé, ces modèles restent ATS.
+- L'ajustement mesure le CV hors écran niveau par niveau et enregistre le niveau (`meta.fit`) : l'aperçu et
+  le PDF sont identiques. Les marges d'impression ne bougent jamais.
+- Extraction des mots-clés sans dictionnaire : expressions fréquentes, sigles / noms d'outils, « X de Y »,
+  mots vides et termes génériques d'annonce écartés, racines grossières pour rapprocher les formes.
+- Polices : sous-ensemble latin de Fontsource (licence OFL jointe), 400 / 700 / italique.
+- `playwright.config.mjs` utilise le Chromium préinstallé (`/opt/pw-browsers/chromium`) si la version
+  attendue par Playwright n'est pas téléchargée.
+
+**État.** 97 tests unitaires et 19 tests Playwright verts (sous la vraie CSP). Propositions du cycle 3
+dans `ROADMAP.md` (lettre de motivation en tête).
+
 ## 2026-09-29 — cycle 1 : fondations livrées
 **Fait.** Application statique complète de création de CV, sans serveur ni dépendance d'exécution :
 modèle de données + validation + exemples (profil sénégalais FR et EN), sauvegarde locale de plusieurs

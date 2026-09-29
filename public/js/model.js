@@ -13,11 +13,19 @@ export const LIST_SECTIONS = [
   'skills',
   'languages',
   'certifications',
+  'awards',
+  'publications',
   'projects',
   'volunteering',
   'interests',
   'references',
 ];
+
+/** Pays visés (profils de règles de conformité) : '' = générique. */
+export const COUNTRIES = ['FR', 'SN', 'CA', 'UK', 'US', 'DE'];
+
+/** Niveau maximal de l'ajustement « tenir sur 1 page » (0 = taille normale). */
+export const MAX_FIT = 4;
 
 /** Champs d'identité sensibles : facultatifs, masqués par défaut (non-discrimination). */
 export const SENSITIVE_FIELDS = ['photo', 'birthDate', 'maritalStatus', 'nationality', 'drivingLicence'];
@@ -62,6 +70,19 @@ export const ITEM_FIELDS = {
     { key: 'name', label: 'Certification', type: 'text', required: true },
     { key: 'issuer', label: 'Organisme', type: 'text' },
     { key: 'date', label: 'Date', type: 'month' },
+  ],
+  awards: [
+    { key: 'name', label: 'Distinction (prix, bourse, concours, mention)', type: 'text', required: true },
+    { key: 'issuer', label: 'Décernée par', type: 'text' },
+    { key: 'date', label: 'Date', type: 'month' },
+    { key: 'description', label: 'Précision (facultatif)', type: 'textarea' },
+  ],
+  publications: [
+    { key: 'title', label: 'Titre de la publication', type: 'text', required: true },
+    { key: 'authors', label: 'Auteurs (ex. : Ndiaye A., Sow M.)', type: 'text' },
+    { key: 'venue', label: 'Revue, conférence ou éditeur', type: 'text' },
+    { key: 'date', label: 'Date de publication', type: 'month' },
+    { key: 'url', label: 'Lien (DOI, HAL…)', type: 'url' },
   ],
   projects: [
     { key: 'name', label: 'Projet', type: 'text', required: true },
@@ -142,6 +163,10 @@ export function createEmptyCV(overrides = {}) {
       dateStyle: 'numeric',
       anonymous: false,
       accent: '',
+      palette: '',
+      country: '',
+      fit: 0,
+      jobOffer: '',
       sectionOrder: [...LIST_SECTIONS],
       createdAt: now,
       updatedAt: now,
@@ -235,6 +260,10 @@ export function normalizeCV(raw) {
       dateStyle: m.dateStyle === 'long' ? 'long' : 'numeric',
       anonymous: Boolean(m.anonymous),
       accent: /^#[0-9a-f]{6}$/i.test(str(m.accent)) ? str(m.accent) : '',
+      palette: /^[a-z0-9-]{1,40}$/.test(str(m.palette)) ? str(m.palette) : '',
+      country: COUNTRIES.includes(str(m.country)) ? str(m.country) : '',
+      fit: Number.isInteger(m.fit) && m.fit >= 0 && m.fit <= MAX_FIT ? m.fit : 0,
+      jobOffer: str(m.jobOffer).slice(0, 20000),
       sectionOrder: order,
       createdAt: str(m.createdAt) || now,
       updatedAt: str(m.updatedAt) || now,

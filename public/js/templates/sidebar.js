@@ -2,6 +2,7 @@
 // L'ordre HTML reste logique : en-tête (nom, titre), colonne latérale, puis colonne principale.
 
 import { head, section, sections, sectionTitle, contactList, photo, esc, fullName } from './parts.js';
+import { palettes } from './palettes.js';
 
 const SIDE = ['skills', 'languages', 'certifications', 'interests'];
 
@@ -50,6 +51,8 @@ export const templates = [
     ...base,
     id: 'dakar',
     name: 'Dakar',
+    sideStyle: 'light',
+    palettes: palettes('ocre', 'ocean', 'foret', 'prune', 'brique'),
     description: 'Colonne gauche ocre avec photo, compétences en pastilles. Chaleureux et moderne.',
     render: renderTopName,
   },
@@ -57,6 +60,8 @@ export const templates = [
     ...base,
     id: 'ocean',
     name: 'Océan',
+    sideStyle: 'light',
+    palettes: palettes('ocean', 'petrole', 'indigo', 'corail'),
     sidePosition: 'right',
     description: 'Colonne droite bleu océan, nom en tête : commerce, tourisme, relation client.',
     render: renderTopName,
@@ -65,6 +70,8 @@ export const templates = [
     ...base,
     id: 'ardoise',
     name: 'Ardoise',
+    sideStyle: 'dark',
+    palettes: palettes('ardoise', 'bleu-nuit', 'bordeaux', 'emeraude', 'noir'),
     description: 'Colonne pleine hauteur gris ardoise, nom dans la colonne : profils techniques et numériques.',
     render: renderSideName,
   },
@@ -72,7 +79,19 @@ export const templates = [
     ...base,
     id: 'savane',
     name: 'Savane',
+    sideStyle: 'dark',
+    palettes: palettes('foret', 'ocre', 'petrole', 'prune'),
     description: 'Colonne vert savane pleine hauteur, typographie humaniste : ONG, agriculture, environnement.',
     render: renderSideName,
+  },
+  {
+    ...base,
+    id: 'casamance',
+    name: 'Casamance',
+    sideStyle: 'light',
+    sidePosition: 'right',
+    palettes: palettes('emeraude', 'ocre', 'indigo', 'bordeaux'),
+    description: 'Colonne droite teintée émeraude, typographie Montserrat : tourisme, culture, événementiel, associatif.',
+    render: renderTopName,
   },
 ];

@@ -6,7 +6,11 @@
   <title>Éditeur de CV — CV en ligne</title>
   <meta name="description" content="Rédigez votre CV avec aperçu en direct, contrôle de conformité et export PDF. Vos données restent dans votre navigateur.">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <meta name="theme-color" content="#0b5cad">
   <link rel="stylesheet" href="css/app.css">
+  <link rel="stylesheet" href="css/fonts.css">
   <link rel="stylesheet" href="css/cv-base.css">
   <link rel="stylesheet" href="css/templates.css">
   <script type="module" src="js/app.js"></script>
@@ -38,6 +42,7 @@
       <input type="file" id="file-import" accept=".json,application/json" hidden>
       <button type="button" class="btn" id="btn-export">Exporter (.json)</button>
       <button type="button" class="btn btn-primary" id="btn-print">Télécharger en PDF</button>
+      <button type="button" class="btn" id="btn-install" hidden>Installer l'application</button>
     </div>
     <p class="save-status" id="save-status" role="status" aria-live="polite"></p>
   </header>
@@ -51,6 +56,19 @@
           <div class="field">
             <label for="set-title">Nom du fichier (pour vous)</label>
             <input type="text" id="set-title" data-path="meta.title">
+          </div>
+          <div class="field">
+            <label for="set-country">Pays visé (règles de conformité)</label>
+            <select id="set-country" data-path="meta.country" aria-describedby="set-country-hint">
+              <option value="">Général (francophone)</option>
+              <option value="FR">France</option>
+              <option value="SN">Sénégal</option>
+              <option value="CA">Canada / Québec</option>
+              <option value="UK">Royaume-Uni</option>
+              <option value="US">États-Unis</option>
+              <option value="DE">Allemagne</option>
+            </select>
+            <p class="hint" id="set-country-hint">Adapte les contrôles : photo, informations personnelles, format de papier, longueur.</p>
           </div>
           <div class="field">
             <label for="set-lang">Langue des rubriques du CV</label>
@@ -74,7 +92,11 @@
             </select>
           </div>
           <div class="field">
-            <label for="set-accent">Couleur d'accent (facultatif)</label>
+            <label for="set-palette">Palette de couleurs du modèle</label>
+            <select id="set-palette" data-path="meta.palette"></select>
+          </div>
+          <div class="field">
+            <label for="set-accent">Couleur d'accent libre (facultatif, remplace la palette)</label>
             <div class="inline">
               <input type="color" id="set-accent" data-path="meta.accent">
               <button type="button" class="btn btn-small" id="btn-accent-reset">Couleur du modèle</button>
@@ -88,8 +110,20 @@
     <section class="preview-pane" id="preview-pane" aria-labelledby="preview-title" tabindex="-1">
       <h2 id="preview-title" class="sr-only">Aperçu et conformité</h2>
       <div class="norms" id="norms"></div>
+      <details class="match-box" id="match-box">
+        <summary><span class="match-title">Correspondance avec une offre d'emploi</span><span class="match-sub" id="match-sub">Collez une annonce pour comparer</span></summary>
+        <div class="match-body">
+          <p class="hint">Collez le texte de l'annonce : les mots-clés sont extraits <strong>sur votre appareil</strong> (rien n'est envoyé),
+            comme le font les logiciels de tri. N'ajoutez que des compétences que vous possédez réellement.</p>
+          <label for="job-offer">Texte de l'offre d'emploi</label>
+          <textarea id="job-offer" rows="6" spellcheck="false"></textarea>
+          <div id="match-result" aria-live="polite"></div>
+        </div>
+      </details>
       <div class="preview-toolbar">
         <p id="template-info"></p>
+        <button type="button" class="btn btn-small" id="btn-fit">Ajuster à 1 page</button>
+        <button type="button" class="btn btn-small" id="btn-fit-reset" hidden>Taille normale</button>
         <button type="button" class="btn btn-small" id="btn-gallery-2">Changer de modèle</button>
       </div>
       <div class="preview-scroll" id="preview-scroll">

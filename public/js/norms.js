@@ -3,8 +3,113 @@
 // target : chemin du champ à corriger (« experiences.0.start ») — l'éditeur y amène l'utilisateur.
 // fix : action corrective automatique proposée (« sort:experiences », « anonymous », « hide:photo »…).
 
-import { MONTH_RE, EMAIL_RE, CEFR_LEVELS, recencyKey, sortAntichronological } from './model.js';
+import { MONTH_RE, EMAIL_RE, CEFR_LEVELS, LIST_SECTIONS, recencyKey, sortAntichronological } from './model.js';
 import { getTemplate } from './templates/index.js';
+
+/**
+ * Profils de règles par pays visé (meta.country). '' = règles générales (francophones).
+ * photo / personal : 'forbidden' (à proscrire), 'discouraged' (déconseillé, facultatif),
+ * 'accepted' (usage courant, toujours facultatif). onePageUnder : années d'expérience en dessous
+ * desquelles 1 page est attendue (0 = pas d'exigence).
+ */
+export const COUNTRY_PROFILES = {
+  FR: { name: 'France', paper: 'A4', photo: 'discouraged', personal: 'discouraged', maxPages: 2, onePageUnder: 10, phone: '+33', lang: 'fr', templates: ['sobre', 'chronologique', 'classique', 'moderne-ats'] },
+  SN: { name: 'Sénégal', paper: 'A4', photo: 'accepted', personal: 'accepted', maxPages: 2, onePageUnder: 5, phone: '+221', lang: 'fr', templates: ['sobre', 'teranga', 'registre', 'classique'] },
+  CA: { name: 'Canada / Québec', paper: 'Letter', photo: 'forbidden', personal: 'forbidden', maxPages: 2, onePageUnder: 0, phone: '+1', lang: '', templates: ['quebec', 'canada-en'] },
+  UK: { name: 'Royaume-Uni', paper: 'A4', photo: 'forbidden', personal: 'forbidden', maxPages: 2, onePageUnder: 0, phone: '+44', lang: 'en', templates: ['uk-cv'] },
+  US: { name: 'États-Unis', paper: 'Letter', photo: 'forbidden', personal: 'forbidden', maxPages: 2, onePageUnder: 10, phone: '+1', lang: 'en', templates: ['us-resume'] },
+  DE: { name: 'Allemagne', paper: 'A4', photo: 'accepted', personal: 'accepted', maxPages: 2, onePageUnder: 0, phone: '+49', lang: '', templates: ['lebenslauf', 'lebenslauf-moderne', 'europass'] },
+};
+
+/** Mots creux (« buzzwords ») : affirmations sans preuve que les recruteurs ignorent. */
+const BUZZ_FR = ['dynamique', 'motivé', 'motivée', 'rigoureux', 'rigoureuse', 'passionné', 'passionnée', 'polyvalent', 'polyvalente', 'sérieux', 'sérieuse',
+  'force de proposition', 'esprit d\'équipe', 'bon relationnel', 'orienté résultats', 'orientée résultats', 'proactif', 'proactive', 'perfectionniste',
+  'autonome', 'curieux', 'curieuse', 'travailleur', 'travailleuse', 'bonne capacité d\'adaptation', 'sens du relationnel'];
+const BUZZ_EN = ['hardworking', 'hard-working', 'team player', 'motivated', 'passionate', 'dynamic', 'detail-oriented', 'go-getter', 'results-driven',
+  'self-starter', 'synergy', 'think outside the box', 'proactive', 'perfectionist', 'best of breed', 'go-to person'];
+
+/** Diplômes de fin d'études secondaires : leur année permet de déduire l'âge. */
+const SECONDARY_RE = /(baccalaur|\bbac\b|\bbfem\b|\bcepe\b|brevet des coll|high school|\ba-?levels?\b|\bgcse\b|\babitur\b|dipl[oô]me d'[ée]tudes secondaires|\bdes\b.*secondaire)/i;
+
+/** Nombre de mois entre deux dates AAAA-MM (b - a). */
+export function monthsBetween(a, b) {
+  const [y1, m1] = a.split('-').map(Number);
+  const [y2, m2] = b.split('-').map(Number);
+  return (y2 - y1) * 12 + (m2 - m1);
+}
+
+function ymLabel(ym) {
+  const [y, m] = ym.split('-');
+  return `${m}/${y}`;
+}
+
+/** Intervalles [début, fin] (AAAA-MM) des éléments datés ; « en cours » = mois courant. */
+function intervals(list, now) {
+  return list
+    .filter((it) => MONTH_RE.test(it.start))
+    .map((it) => ({ it, start: it.start, end: it.current ? now : MONTH_RE.test(it.end) ? it.end : null }))
+    .filter((x) => x.end && x.end >= x.start);
+}
+
+/**
+ * Trous de plus de `minMonths` mois dans le parcours (expériences, formations et bénévolat
+ * comblent la chronologie), à partir de la première expérience.
+ */
+export function findGaps(cv, now, minMonths = 6) {
+  const exp = intervals(cv.experiences, now);
+  if (!exp.length) return [];
+  const firstJob = exp.reduce((m, x) => (x.start < m ? x.start : m), exp[0].start);
+  const all = [...exp, ...intervals(cv.education, now), ...intervals(cv.volunteering, now)]
+    .filter((x) => x.end >= firstJob)
+    .sort((a, b) => a.start.localeCompare(b.start));
+  const gaps = [];
+  let coveredUntil = null;
+  for (const x of all) {
+    if (coveredUntil && monthsBetween(coveredUntil, x.start) - 1 > minMonths) {
+      gaps.push({ from: coveredUntil, to: x.start, months: monthsBetween(coveredUntil, x.start) - 1, next: x.it });
+    }
+    if (!coveredUntil || x.end > coveredUntil) coveredUntil = x.end;
+  }
+  return gaps;
+}
+
+/** Chevauchements d'au moins `minMonths` mois entre deux expériences professionnelles. */
+export function findOverlaps(cv, now, minMonths = 2) {
+  const exp = intervals(cv.experiences, now).map((x) => ({ ...x, index: cv.experiences.indexOf(x.it) }));
+  const out = [];
+  for (let i = 0; i < exp.length; i += 1) {
+    for (let j = i + 1; j < exp.length; j += 1) {
+      const a = exp[i];
+      const b = exp[j];
+      const start = a.start > b.start ? a.start : b.start;
+      const end = a.end < b.end ? a.end : b.end;
+      const months = monthsBetween(start, end) + 1;
+      if (end >= start && months >= minMonths) out.push({ a: a.index, b: b.index, months });
+    }
+  }
+  return out;
+}
+
+/** Normalise un numéro : chiffres et « + » initial. */
+export function phoneDigits(phone) {
+  return String(phone || '').replace(/(?!^\+)[^\d]/g, '');
+}
+
+const firstWord = (line) => (line.toLowerCase().normalize('NFC').replace(/^[«"'(\s]+/, '').match(/^[a-zàâçéèêëîïôûùüÿœ'-]+/) || [''])[0];
+
+/** Temps du premier verbe d'une ligne : 'inf' | 'part' (FR) ; 'past' | 'base' (EN) ; '' sinon. */
+export function verbTense(line, lang) {
+  const w = firstWord(line);
+  if (!w || w.length < 3) return '';
+  if (lang === 'en') {
+    if (/ed$/.test(w) || /^(led|built|ran|won|grew|wrote|sold|taught|drove|oversaw|made|began|brought|cut|set|spoke|gave|took|met|held|kept)$/.test(w)) return 'past';
+    if (/ing$/.test(w)) return 'ing';
+    return startsWithActionVerb(line, 'en') ? 'base' : '';
+  }
+  if (/(é|ée|és|ées)$/.test(w)) return 'part';
+  if (/(er|ir|re|oir)$/.test(w)) return 'inf';
+  return '';
+}
 
 export const SEVERITY_WEIGHT = { error: 12, warning: 6, info: 2 };
 
@@ -120,6 +225,8 @@ export function checkCV(cv, templateOrId, opts = {}) {
   const add = (id, severity, message, extra = {}) => issues.push({ id, severity, message, ...extra });
   const idn = cv.identity;
   const anonymous = cv.meta.anonymous;
+  const country = COUNTRY_PROFILES[cv.meta.country] || null;
+  const paper = template.forceFormat ? template.format : cv.meta.paper || 'A4';
 
   // ——— Identité et coordonnées ———
   if (!anonymous && !(idn.firstName || idn.lastName)) add('identity.name', 'error', 'Indiquez votre prénom et votre nom.', { target: 'identity.firstName' });
@@ -135,6 +242,17 @@ export function checkCV(cv, templateOrId, opts = {}) {
     }
   }
   if (!anonymous && !idn.phone) add('identity.phone', 'warning', 'Ajoutez un numéro de téléphone (avec l\'indicatif, ex. +221).', { target: 'identity.phone' });
+  else if (idn.phone) {
+    const digits = phoneDigits(idn.phone).replace(/^\+/, '');
+    if (/[^\d\s+().\-/]/.test(idn.phone) || digits.length < 8 || digits.length > 15) {
+      add('identity.phone.invalid', 'warning', `Numéro de téléphone « ${idn.phone} » incomplet ou illisible (8 à 15 chiffres attendus).`, { target: 'identity.phone' });
+    } else if (!/^\s*(\+|00)/.test(idn.phone)) {
+      const ex = country ? country.phone : '+221 / +33';
+      add('identity.phone.intl', 'info', `Téléphone sans indicatif international : écrivez-le au format ${ex} … pour être joignable depuis l'étranger.`, { target: 'identity.phone' });
+    } else if (country && !phoneDigits(idn.phone).replace(/^00/, '+').startsWith(country.phone) && !anonymous) {
+      add('identity.phone.country', 'info', `Numéro étranger pour une candidature en ${country.name} : précisez votre disponibilité ou ajoutez un numéro local (${country.phone}).`, { target: 'identity.phone' });
+    }
+  }
   if (!anonymous && !idn.city) add('identity.city', 'info', 'Indiquez votre ville : les recruteurs filtrent souvent par localisation.', { target: 'identity.city' });
 
   // ——— Titre et accroche ———
@@ -201,6 +319,20 @@ export function checkCV(cv, templateOrId, opts = {}) {
     }
   }
 
+  // ——— Trous et chevauchements dans le parcours ———
+  for (const g of findGaps(cv, now).slice(0, 3)) {
+    add(`gap.${g.from}`, 'info', `Période sans activité de ${g.months} mois (${ymLabel(g.from)} – ${ymLabel(g.to)}) : les recruteurs la remarqueront. Ajoutez l'activité correspondante (formation, projet, mobilité, bénévolat) ou préparez une explication.`, {
+      target: 'experiences',
+    });
+  }
+  for (const o of findOverlaps(cv, now).slice(0, 3)) {
+    const ta = cv.experiences[o.a].position || `Expérience ${o.a + 1}`;
+    const tb = cv.experiences[o.b].position || `Expérience ${o.b + 1}`;
+    add(`overlap.${o.a}.${o.b}`, 'info', `« ${ta} » et « ${tb} » se chevauchent sur ${o.months} mois : vérifiez les dates, ou précisez « temps partiel » / « en parallèle ».`, {
+      target: `experiences.${o.b}.start`,
+    });
+  }
+
   // ——— Verbes d'action, résultats chiffrés, formulations faibles ———
   const lines = cv.experiences.flatMap((e) => bulletLines(e.description));
   if (lines.length >= 3) {
@@ -217,6 +349,55 @@ export function checkCV(cv, templateOrId, opts = {}) {
     const weak = lines.find((l) => (lang === 'en' ? WEAK_EN : WEAK_FR).test(l));
     if (weak) add('experiences.weak', 'info', `Formulation faible : « ${weak.slice(0, 40)}… » — commencez par un verbe d'action.`, { target: 'experiences' });
   }
+  // Verbes répétés en début de ligne
+  if (lines.length >= 4) {
+    const counts = new Map();
+    for (const l of lines) {
+      if (!startsWithActionVerb(l, lang)) continue;
+      const w = firstWord(l);
+      counts.set(w, (counts.get(w) || 0) + 1);
+    }
+    const repeated = [...counts].filter(([, n]) => n >= 3).sort((a, b) => b[1] - a[1])[0];
+    if (repeated) {
+      add('experiences.repeated', 'info', `Le verbe « ${repeated[0]} » ouvre ${repeated[1]} lignes : variez (${lang === 'en' ? 'led, delivered, improved…' : 'piloter, conduire, améliorer…'}).`, { target: 'experiences' });
+    }
+  }
+  // Temps verbaux homogènes au sein d'une même expérience
+  const mixed = cv.experiences.findIndex((e) => {
+    const tenses = new Set(bulletLines(e.description).map((l) => verbTense(l, lang)).filter(Boolean));
+    return lang === 'en' ? tenses.has('past') && tenses.has('base') : tenses.has('inf') && tenses.has('part');
+  });
+  if (mixed >= 0) {
+    add('experiences.tense', 'info', lang === 'en'
+      ? `« ${cv.experiences[mixed].position || 'Experience'} » mixes tenses: use the past tense for past roles (present tense only for your current role).`
+      : `« ${cv.experiences[mixed].position || 'Expérience'} » mélange infinitifs et participes passés (« Piloter » / « Piloté ») : choisissez une seule forme.`, {
+      target: `experiences.${mixed}.description`,
+    });
+  }
+
+  // ——— Ponctuation, majuscules, espaces ———
+  const allLines = [...lines, ...cv.volunteering.flatMap((v) => bulletLines(v.description))];
+  if (allLines.length >= 3) {
+    const withDot = allLines.filter((l) => /[.;!]$/.test(l)).length;
+    if (withDot && withDot < allLines.length) {
+      add('style.punctuation', 'info', `Ponctuation hétérogène : ${withDot} ligne(s) sur ${allLines.length} finissent par un point. Choisissez une règle (avec ou sans point final) et appliquez-la partout.`, { target: 'experiences' });
+    }
+    const lower = allLines.filter((l) => /^[a-zàâçéèêëîïôûùüÿœ]/.test(l)).length;
+    if (lower && lower < allLines.length) {
+      add('style.capitals', 'info', `Majuscules hétérogènes : ${lower} ligne(s) commencent par une minuscule. Commencez chaque ligne par une majuscule.`, { target: 'experiences' });
+    }
+  }
+  if (textFields(cv).some((v) => / {2,}|\t/.test(v.replace(/^\s+|\s+$/gm, '')))) {
+    add('style.spaces', 'info', 'Doubles espaces détectés dans le texte : ils créent des décalages dans le PDF.', { target: 'summary', fix: 'clean:spaces', fixLabel: 'Supprimer les doubles espaces' });
+  }
+
+  // ——— Mots creux ———
+  const prose = `${cv.summary}\n${cv.experiences.map((e) => e.description).join('\n')}`.toLowerCase();
+  const buzz = (lang === 'en' ? BUZZ_EN : BUZZ_FR).filter((w) => new RegExp(`(^|[^a-zàâçéèêëîïôûùüÿœ])${w.replace(/[-']/g, '[-\' ]')}($|[^a-zàâçéèêëîïôûùüÿœ])`, 'i').test(prose));
+  if (buzz.length) {
+    add('style.buzzwords', 'info', `Mots creux : « ${buzz.slice(0, 4).join(' », « ')} ». Remplacez-les par un fait qui le prouve (ex. « motivé » → « 3 certifications obtenues en 1 an »).`, { target: 'summary' });
+  }
+
   cv.experiences.forEach((e, i) => {
     if (e.description.length > 900) add(`experiences.${i}.long`, 'info', `« ${e.position || 'Expérience'} » : description très longue, gardez 3 à 6 lignes.`, { target: `experiences.${i}.description` });
   });
@@ -234,7 +415,8 @@ export function checkCV(cv, templateOrId, opts = {}) {
     if (p.showBirthDate && idn.birthDate) shown.push('date de naissance');
     if (p.showMaritalStatus && idn.maritalStatus) shown.push('situation familiale');
     if (p.showNationality && idn.nationality) shown.push('nationalité');
-    if (shown.length && !isAnglo) {
+    const personalOk = country && ['accepted', 'forbidden'].includes(country.personal);
+    if (shown.length && !isAnglo && !personalOk) {
       add('sensitive.shown', 'info', `Informations facultatives affichées (${shown.join(', ')}) : aucun recruteur ne peut les exiger ; elles peuvent exposer à une discrimination.`, {
         target: 'privacy',
         fix: 'hide:sensitive',
@@ -254,6 +436,46 @@ export function checkCV(cv, templateOrId, opts = {}) {
     }
   }
 
+  // ——— Âge déductible (année du baccalauréat ou équivalent) ———
+  const hidesAge = anonymous || !p.showBirthDate || isAnglo || (country && country.personal === 'forbidden');
+  if (hidesAge && cv.education.length >= 2) {
+    const i = cv.education.findIndex((e) => SECONDARY_RE.test(`${e.degree} ${e.school}`) && (e.end || e.start));
+    if (i >= 0) {
+      add('age.deducible', anonymous ? 'warning' : 'info', `L'année de « ${cv.education[i].degree} » permet de déduire votre âge : avec un diplôme supérieur, retirez cette ligne ou sa date.`, {
+        target: `education.${i}.end`,
+      });
+    }
+  }
+
+  // ——— Profil du pays visé ———
+  if (country) {
+    const c = country.name;
+    if (paper !== country.paper) {
+      add('country.paper', 'warning', `Format de papier ${paper} : le format ${country.paper} est la norme pour ${c}.`, template.forceFormat
+        ? { target: 'template' }
+        : { target: 'meta.paper', fix: `paper:${country.paper}`, fixLabel: `Passer en ${country.paper}` });
+    }
+    if (country.lang && lang !== country.lang) {
+      add('country.lang', 'warning', `Candidature pour ${c} : rédigez le CV en ${country.lang === 'en' ? 'anglais' : 'français'} (langue des rubriques et du contenu).`, { target: 'meta.lang' });
+    }
+    const photoShown = !anonymous && p.showPhoto && idn.photo && template.photo;
+    if (country.photo === 'forbidden' && photoShown && !isAnglo) {
+      add('country.photo', 'error', `${c} : pas de photo sur le CV (usage anti-discrimination).`, { target: 'privacy', fix: 'hide:photo', fixLabel: 'Retirer la photo' });
+    }
+    if (country.photo === 'accepted' && !photoShown && !anonymous && cv.meta.country === 'DE') {
+      add('country.photo.de', 'info', 'Allemagne : une photo professionnelle reste d\'usage sur le Lebenslauf, mais elle est facultative (loi AGG).', { target: 'privacy' });
+    }
+    if (country.personal === 'forbidden' && !isAnglo && !anonymous && (p.showBirthDate || p.showNationality || p.showMaritalStatus)) {
+      add('country.personal', 'error', `${c} : date de naissance, nationalité et situation familiale ne doivent pas figurer sur le CV.`, { target: 'privacy', fix: 'hide:sensitive', fixLabel: 'Masquer ces informations' });
+    }
+    if (cv.meta.country === 'US' && !template.excludeSections?.includes('interests') && (cv.interests.length || cv.references.length || cv.referencesOnRequest)) {
+      add('country.us.sections', 'info', 'États-Unis : les centres d\'intérêt et les références ne figurent pas sur un résumé.', { target: 'interests' });
+    }
+    if (country.templates && !country.templates.includes(template.id) && ['forbidden'].includes(country.photo)) {
+      add('country.template', 'info', `Pour ${c}, les modèles conseillés sont : ${country.templates.map((id) => getTemplate(id).name).join(', ')}.`, { target: 'template' });
+    }
+  }
+
   // ——— Langue du contenu ———
   if (lang === 'en' && looksFrench(`${cv.summary} ${cv.experiences.map((e) => e.description).join(' ')}`)) {
     add('lang.mismatch', 'warning', 'Le modèle est en anglais mais le contenu semble rédigé en français : traduisez l\'accroche et les expériences.', { target: 'summary' });
@@ -262,9 +484,19 @@ export function checkCV(cv, templateOrId, opts = {}) {
   // ——— Longueur ———
   const pages = opts.pages || estimatePages(cv);
   const years = yearsOfExperience(cv, today);
-  if (pages > 2) add('length.max', 'error', `Le CV fait ${pages} pages : 2 pages au maximum. Raccourcissez les descriptions anciennes.`, { target: 'experiences' });
-  else if (pages === 2 && (isUS ? years < 10 : years < 10)) {
-    add('length.junior', isUS ? 'warning' : 'info', `Le CV fait 2 pages pour ${Math.round(years)} an(s) d'expérience : visez 1 page en dessous de 10 ans d'expérience.`, { target: 'experiences' });
+  const maxPages = country ? country.maxPages : 2;
+  const onePageUnder = country ? country.onePageUnder : 10;
+  const strictOnePage = isUS || cv.meta.country === 'US';
+  if (template.longForm) {
+    if (pages > 6) add('length.academic', 'info', `CV académique de ${pages} pages : sélectionnez les publications les plus significatives.`, { target: 'publications' });
+  } else if (pages > maxPages) {
+    add('length.max', 'error', `Le CV fait ${pages} pages : ${maxPages} pages au maximum. Raccourcissez les descriptions anciennes.`, { target: 'experiences', fix: `fit:${maxPages}`, fixLabel: `Ajuster à ${maxPages} pages` });
+  } else if (pages >= 2 && onePageUnder && years < onePageUnder) {
+    add('length.junior', strictOnePage ? 'warning' : 'info', `Le CV fait ${pages} pages pour ${Math.round(years)} an(s) d'expérience : visez 1 page en dessous de ${onePageUnder} ans d'expérience.`, {
+      target: 'experiences',
+      fix: 'fit:1',
+      fixLabel: 'Ajuster à 1 page',
+    });
   }
 
   // ——— Divers ———
@@ -283,9 +515,24 @@ export function checkCV(cv, templateOrId, opts = {}) {
   return { score, issues, pages, years };
 }
 
+/** Tous les champs texte saisis par l'utilisateur (pour les contrôles de typographie). */
+function textFields(cv) {
+  const out = [cv.targetTitle, cv.summary];
+  for (const s of LIST_SECTIONS) {
+    for (const it of cv[s]) for (const v of Object.values(it)) if (typeof v === 'string') out.push(v);
+  }
+  return out;
+}
+
+/** Remplace les espaces multiples et tabulations par une espace (préserve les retours à la ligne). */
+export function cleanSpaces(text) {
+  return String(text).split('\n').map((l) => l.replace(/[ \t]{2,}/g, ' ').replace(/\t/g, ' ').trim()).join('\n');
+}
+
 /**
  * Applique une correction automatique proposée par le contrôleur. Modifie le CV et le renvoie.
- * Actions : « sort:<rubrique> », « hide:sensitive », « hide:photo », « anonymous:on|off ».
+ * Actions : « sort:<rubrique> », « hide:sensitive », « hide:photo », « anonymous:on|off »,
+ * « paper:A4|Letter », « clean:spaces ». (« fit » est géré par l'éditeur : il faut mesurer l'aperçu.)
  */
 export function applyFix(cv, fix) {
   const [action, arg] = String(fix || '').split(':');
@@ -294,5 +541,13 @@ export function applyFix(cv, fix) {
   else if (action === 'hide' && arg === 'sensitive') {
     Object.assign(cv.privacy, { showPhoto: false, showBirthDate: false, showNationality: false, showMaritalStatus: false });
   } else if (action === 'anonymous') cv.meta.anonymous = arg !== 'off';
+  else if (action === 'paper' && ['A4', 'Letter'].includes(arg)) cv.meta.paper = arg;
+  else if (action === 'clean' && arg === 'spaces') {
+    cv.targetTitle = cleanSpaces(cv.targetTitle);
+    cv.summary = cleanSpaces(cv.summary);
+    for (const s of LIST_SECTIONS) {
+      for (const it of cv[s]) for (const [k, v] of Object.entries(it)) if (typeof v === 'string' && k !== 'id') it[k] = cleanSpaces(v);
+    }
+  }
   return cv;
 }

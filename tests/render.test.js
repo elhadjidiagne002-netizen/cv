@@ -115,8 +115,8 @@ test('ordre de lecture ATS : nom, titre, coordonnées, accroche, expérience, fo
       txt.indexOf(cv.targetTitle),
       txt.indexOf('awa.ndiaye@example.com'),
       txt.indexOf(labels.summary),
-      txt.indexOf(labels.experiences),
-      txt.indexOf(labels.education),
+      // Formation avant l'expérience pour les modèles qui l'annoncent (académique, étudiant).
+      ...(t.educationFirst ? [txt.indexOf(labels.education), txt.indexOf(labels.experiences)] : [txt.indexOf(labels.experiences), txt.indexOf(labels.education)]),
     ];
     assert.ok(pos.every((p) => p >= 0), `${t.id} : élément manquant ${JSON.stringify(pos)}`);
     assert.deepEqual([...pos].sort((a, b) => a - b), pos, `${t.id} : ordre de lecture incorrect ${JSON.stringify(pos)}`);

@@ -7,8 +7,16 @@ import { templates as europass } from './europass.js';
 import { templates as international } from './international.js';
 import { templates as sidebar } from './sidebar.js';
 import { templates as banner } from './banner.js';
+import { templates as dates } from './dates.js';
+import { templates as academic } from './academic.js';
+import { templates as functional } from './functional.js';
+import { templates as student } from './student.js';
+import { templates as trades } from './trades.js';
+import { templates as national } from './national.js';
 
-export const TEMPLATES = [...single, ...europass, ...international, ...sidebar, ...banner];
+export const TEMPLATES = [
+  ...single, ...dates, ...europass, ...international, ...national, ...academic, ...functional, ...student, ...trades, ...sidebar, ...banner,
+];
 
 export const DEFAULT_TEMPLATE_ID = 'sobre';
 

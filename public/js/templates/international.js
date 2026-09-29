@@ -3,8 +3,9 @@
 // (pratique anti-discrimination aux États-Unis et au Royaume-Uni). Une colonne, compatible ATS.
 
 import { head, section, sections } from './parts.js';
+import { palettes } from './palettes.js';
 
-const US_ORDER = ['experiences', 'education', 'skills', 'certifications', 'projects', 'volunteering', 'languages'];
+const US_ORDER = ['experiences', 'education', 'skills', 'certifications', 'awards', 'publications', 'projects', 'volunteering', 'languages'];
 
 function renderUS(view) {
   const order = US_ORDER.filter((k) => view.order.includes(k));
@@ -30,6 +31,7 @@ export const templates = [
     noPersonal: true,
     excludeSections: ['interests', 'references'],
     dateStyle: 'long',
+    palettes: palettes('noir', 'marine', 'bleu-nuit'),
     labels: { en: { experiences: 'Professional Experience', volunteering: 'Volunteer Experience' } },
     description: 'Format américain : papier Letter, en anglais, sans photo ni date de naissance, 1 page conseillée.',
     render: renderUS,
@@ -47,6 +49,7 @@ export const templates = [
     lang: 'en',
     noPersonal: true,
     excludeSections: [],
+    palettes: palettes('marine', 'noir', 'bordeaux', 'foret'),
     labels: { en: { summary: 'Personal Profile', experiences: 'Employment History' } },
     description: 'Format britannique : A4, en anglais, sans photo ni informations personnelles, 2 pages maximum.',
     render: renderUK,

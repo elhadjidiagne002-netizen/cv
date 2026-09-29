@@ -1,5 +1,6 @@
 /* Styles communs à tous les CV (écran + impression). Les couleurs et polices propres à chaque
-   modèle sont dans templates.css. Aucune ressource externe : polices système uniquement. */
+   modèle sont dans templates.css. Aucune ressource externe : polices libres locales (fonts.css)
+   ou polices système. Aucune taille de police sous 9 pt (norme de lisibilité, vérifiée par les tests). */
 
 .cv {
   --accent: #1f3a5f;
@@ -9,7 +10,9 @@
   --rule: #c9ced6;
   --side-bg: #eef1f5;
   --side-ink: #1b1b1b;
-  --font: "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+  --soft: #eef1f5;
+  --deep: #13253d;
+  --font: Inter, "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-head: var(--font);
   --fs: 10pt;
   --gap: 3.6mm;
@@ -30,7 +33,7 @@
 .cv.paper-letter { width: 8.5in; min-height: 11in; padding: 0.5in; }
 .cv *, .cv *::before, .cv *::after { box-sizing: border-box; }
 .cv a { color: inherit; text-decoration: none; }
-.cv h1, .cv h2, .cv h3, .cv p, .cv ul { margin: 0; padding: 0; }
+.cv h1, .cv h2, .cv h3, .cv p, .cv ul, .cv ol { margin: 0; padding: 0; }
 .cv ul { list-style: none; }
 
 /* En-tête (dans le corps du document, jamais dans un en-tête d'impression) */
@@ -43,7 +46,7 @@
 .cv-photo { width: 30mm; height: 30mm; object-fit: cover; border-radius: 50%; flex: none; }
 .cv-contact-list { font-size: 9.3pt; }
 .cv-contact-list li { margin-bottom: 1mm; }
-.cv-c-label { display: block; font-weight: 700; font-size: 8.6pt; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.cv-c-label { display: block; font-weight: 700; font-size: 9pt; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
 
 /* Rubriques */
 .cv-section { margin-top: var(--gap); }
@@ -79,6 +82,12 @@ ul.cv-desc li::before { content: "•"; position: absolute; left: 0.6mm; color: 
 .cv-skill-group { margin-bottom: 2mm; break-inside: avoid; }
 .cv-skill-group .cv-skill-name { display: block; font-size: 9.6pt; margin-bottom: 1mm; }
 
+/* Distinctions et publications */
+.cv-pubs { list-style: decimal; padding-left: 5mm; }
+.cv-pubs li { padding-left: 1mm; }
+.cv-pub-title { font-weight: 600; }
+.cv-award-desc { color: var(--muted); }
+
 /* Famille deux colonnes */
 .cv .cv-cols { display: grid; grid-template-columns: 62mm 1fr; gap: 7mm; align-items: start; }
 .cv .cv-side { color: var(--side-ink); }
@@ -86,6 +95,26 @@ ul.cv-desc li::before { content: "•"; position: absolute; left: 0.6mm; color: 
 .cv .cv-main > .cv-section:first-child { margin-top: 0; }
 .cv .cv-side .cv-photo { display: block; margin: 0 auto var(--gap); width: 36mm; height: 36mm; }
 .cv .cv-side .cv-desc li::before { color: inherit; }
+
+/* « Ajuster à 1 page » : réduction progressive des espacements puis de la police, jamais sous 9 pt.
+   Les marges de page (12 mm) ne changent pas. Niveaux cumulatifs fit-1 à fit-4. */
+.cv.fit-1, .cv.fit-2, .cv.fit-3, .cv.fit-4 { --gap: 2.8mm; line-height: 1.27; }
+.cv.fit-1 .cv-item, .cv.fit-2 .cv-item, .cv.fit-3 .cv-item, .cv.fit-4 .cv-item { margin-bottom: 2mm; }
+.cv.fit-1 .cv-head, .cv.fit-2 .cv-head, .cv.fit-3 .cv-head, .cv.fit-4 .cv-head { margin-bottom: 2.4mm; }
+.cv.fit-2, .cv.fit-3, .cv.fit-4 { --fs: 9.5pt; --gap: 2.4mm; }
+.cv.fit-2 .cv-name, .cv.fit-3 .cv-name, .cv.fit-4 .cv-name { font-size: 20pt; }
+.cv.fit-2 .cv-h, .cv.fit-3 .cv-h, .cv.fit-4 .cv-h { font-size: 10.5pt; margin-bottom: 1.6mm; }
+.cv.fit-2 .cv-photo, .cv.fit-3 .cv-photo, .cv.fit-4 .cv-photo { width: 25mm; height: 25mm; }
+.cv.fit-3, .cv.fit-4 { --fs: 9.2pt; --gap: 2.1mm; line-height: 1.23; }
+.cv.fit-3 .cv-item-title, .cv.fit-4 .cv-item-title { font-size: 9.8pt; }
+.cv.fit-3 .cv-title, .cv.fit-4 .cv-title { font-size: 11pt; }
+.cv.fit-3 .cv-date, .cv.fit-4 .cv-date, .cv.fit-3 .cv-contact, .cv.fit-4 .cv-contact { font-size: 9pt; }
+.cv.fit-4 { --fs: 9pt; --gap: 1.8mm; line-height: 1.2; }
+.cv.fit-4 .cv-item { margin-bottom: 1.4mm; }
+.cv.fit-4 .cv-name { font-size: 18pt; }
+.cv.fit-4 .cv-h { font-size: 10pt; padding-bottom: 0.5mm; margin-bottom: 1.2mm; }
+.cv.fit-4 .cv-item-title { font-size: 9.4pt; }
+.cv.fit-4 ul.cv-desc li { margin-bottom: 0; }
 
 /* Impression : le CV seul, texte réel, sans coupure au milieu d'un bloc. */
 @page { size: A4; margin: 12mm; }

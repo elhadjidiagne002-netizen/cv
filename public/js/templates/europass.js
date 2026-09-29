@@ -3,6 +3,7 @@
 
 import { esc, head, section, sectionTitle } from './parts.js';
 import { levelLabel } from '../i18n.js';
+import { palettes } from './palettes.js';
 
 const LABELS = {
   fr: {
@@ -12,6 +13,8 @@ const LABELS = {
     languages: 'Compétences linguistiques',
     skills: 'Compétences',
     certifications: 'Certifications',
+    awards: 'Distinctions',
+    publications: 'Publications',
     projects: 'Projets',
     volunteering: 'Activités bénévoles',
     interests: 'Loisirs et centres d\'intérêt',
@@ -24,6 +27,8 @@ const LABELS = {
     languages: 'Language skills',
     skills: 'Skills',
     certifications: 'Certifications',
+    awards: 'Honours and awards',
+    publications: 'Publications',
     projects: 'Projects',
     volunteering: 'Volunteering',
     interests: 'Hobbies and interests',
@@ -32,7 +37,7 @@ const LABELS = {
 };
 
 /** Ordre officiel Europass (les rubriques absentes de l'ordre utilisateur sont ignorées). */
-const EUROPASS_ORDER = ['experiences', 'education', 'languages', 'skills', 'certifications', 'projects', 'volunteering', 'interests', 'references'];
+const EUROPASS_ORDER = ['experiences', 'education', 'languages', 'skills', 'certifications', 'publications', 'awards', 'projects', 'volunteering', 'interests', 'references'];
 
 function languagesEuropass(view) {
   const list = view.cv.languages;
@@ -70,6 +75,7 @@ export const templates = [
     photo: true,
     format: 'A4',
     labels: LABELS,
+    palettes: palettes('europe', 'marine', 'petrole', 'anthracite'),
     description: 'Structure et intitulés officiels du CV Europass de l\'Union européenne (études, mobilité, candidatures en Europe).',
     render: renderEuropass,
   },

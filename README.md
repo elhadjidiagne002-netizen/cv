@@ -11,5 +11,9 @@ Europass, résumé anglo-saxon).
 - Site statique : ouvrir `public/` avec n'importe quel serveur, ou `npm run serve` (port 5610, avec la CSP de `_headers`).
 - Tests unitaires : `npm test` — tests d'interface : `npx playwright test` (après `npm install`).
 - Déploiement : Cloudflare Pages, dossier de sortie `public/`, aucune commande de build.
+  **À chaque déploiement, changer `VERSION` dans `public/sw.js`** (sinon les utilisateurs hors ligne gardent l'ancienne version) ;
+  tout nouveau fichier de `public/` doit être ajouté à la liste `ASSETS` (vérifié par `tests/pwa.test.js`).
+- Polices : Inter, Lato, Source Serif 4, Merriweather, Montserrat, EB Garamond (SIL Open Font License 1.1,
+  sous-ensemble latin issu de Fontsource), dans `public/fonts/<police>/` avec leur licence `OFL.txt`.
 
 Voir `CLAUDE.md` (cahier des charges et normes), `ROADMAP.md` (avancement) et `JOURNAL.md` (historique).

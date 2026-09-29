@@ -1,28 +1,30 @@
 /* Identité visuelle de chaque modèle : couleurs, typographies, variantes de disposition.
-   Polices système uniquement (aucun téléchargement). Contrastes texte/fond ≥ 4,5:1. */
+   Polices libres embarquées (fonts.css, licence OFL) avec repli sur les polices système : aucune
+   ressource externe. Les couleurs passent par des variables (--accent, --soft, --deep, --side-bg…)
+   que les palettes remplacent via le CSSOM. Contrastes texte/fond ≥ 4,5:1. */
 
 /* ——— Famille une colonne (ATS) ——— */
 
 /* Sobre : sans empattement, titres soulignés, bleu nuit */
-.tpl-sobre { --accent: #1f3a5f; --accent-2: #33475b; }
+.tpl-sobre { --accent: #1f3a5f; --accent-2: #33475b; --font: Inter, "Segoe UI", Arial, sans-serif; }
 
 /* Classique : Georgia, petites capitales, noir et gris */
 .tpl-classique {
   --accent: #222; --accent-2: #444; --rule: #888;
-  --font: Georgia, Cambria, "Times New Roman", Times, serif;
+  --font: "Source Serif 4", Georgia, Cambria, "Times New Roman", Times, serif;
 }
 .tpl-classique .cv-name { font-variant: small-caps; letter-spacing: 0.04em; font-weight: 400; font-size: 24pt; }
 .tpl-classique .cv-h { font-variant: small-caps; text-transform: none; font-size: 13pt; letter-spacing: 0.05em; border-bottom: 0.25mm solid #888; font-weight: 400; }
 .tpl-classique .cv-item-sub { font-style: italic; font-weight: 400; }
 
 /* Moderne ATS : bleu pétrole, bandeau fin sous les titres */
-.tpl-moderne-ats { --accent: #0b5563; --accent-2: #0b5563; --font: "Segoe UI", "Helvetica Neue", Arial, sans-serif; }
+.tpl-moderne-ats { --accent: #0b5563; --accent-2: #0b5563; --soft: #e3f0f2; --deep: #083f4a; --font: Lato, "Segoe UI", "Helvetica Neue", Arial, sans-serif; }
 .tpl-moderne-ats .cv-name { color: #111; font-size: 24pt; font-weight: 800; }
 .tpl-moderne-ats .cv-title { color: var(--accent); }
-.tpl-moderne-ats .cv-h { border-bottom: none; background: #e3f0f2; color: #083f4a; padding: 1mm 2mm; letter-spacing: 0.08em; }
+.tpl-moderne-ats .cv-h { border-bottom: none; background: var(--soft); color: var(--deep); padding: 1mm 2mm; letter-spacing: 0.08em; }
 
 /* Compact : dense, pour tenir sur une page */
-.tpl-compact { --fs: 9.2pt; --gap: 3mm; --accent: #2d3748; --accent-2: #2d3748; --font: Calibri, Carlito, "Segoe UI", Arial, sans-serif; line-height: 1.28; }
+.tpl-compact { --fs: 9.2pt; --gap: 3mm; --accent: #2d3748; --accent-2: #2d3748; --font: Inter, Calibri, Carlito, "Segoe UI", Arial, sans-serif; line-height: 1.28; }
 .tpl-compact .cv-name { font-size: 18pt; color: #111; }
 .tpl-compact .cv-title { font-size: 11pt; }
 .tpl-compact .cv-h { font-size: 10pt; margin-bottom: 1.4mm; border-bottom-width: 0.25mm; }
@@ -30,14 +32,14 @@
 .tpl-compact .cv-item-title { font-size: 9.6pt; }
 
 /* Exécutif : nom en grand, filets bordeaux, Cambria */
-.tpl-executif { --accent: #6d1a2a; --accent-2: #3a3a3a; --font: Cambria, "Book Antiqua", Georgia, serif; --font-head: "Franklin Gothic Medium", "Segoe UI", Arial, sans-serif; }
+.tpl-executif { --accent: #6d1a2a; --accent-2: #3a3a3a; --font: Merriweather, Cambria, "Book Antiqua", Georgia, serif; --font-head: Montserrat, "Franklin Gothic Medium", "Segoe UI", Arial, sans-serif; --fs: 9.6pt; }
 .tpl-executif .cv-head { border-bottom: 1.2mm solid var(--accent); padding-bottom: 3mm; }
 .tpl-executif .cv-name { font-size: 28pt; color: #1b1b1b; text-transform: uppercase; letter-spacing: 0.03em; }
 .tpl-executif .cv-title { color: var(--accent); font-size: 13pt; }
 .tpl-executif .cv-h { border-bottom: 0.25mm solid var(--accent); }
 
 /* Élégant : centré, Palatino, filets fins */
-.tpl-elegant { --accent: #3b3b58; --accent-2: #3b3b58; --rule: #b7b7c9; --font: "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif; }
+.tpl-elegant { --accent: #3b3b58; --accent-2: #3b3b58; --rule: #b7b7c9; --font: "EB Garamond", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif; --fs: 10.8pt; }
 .tpl-elegant .cv-head { flex-direction: column; text-align: center; }
 .tpl-elegant .cv-name { font-weight: 400; font-size: 26pt; letter-spacing: 0.08em; }
 .tpl-elegant .cv-title { font-style: italic; font-weight: 400; }
@@ -46,23 +48,23 @@
 
 /* ——— Europass ——— */
 .tpl-europass { --accent: #0e47cb; --accent-2: #0e47cb; --rule: #0e47cb; --font: Arial, "Helvetica Neue", Helvetica, sans-serif; }
-.tpl-europass::before { content: "europass"; display: block; font-weight: 700; font-size: 13pt; color: #0e47cb; letter-spacing: 0.02em; margin-bottom: 3mm; }
+.tpl-europass::before { content: "europass"; display: block; font-weight: 700; font-size: 13pt; color: var(--accent); letter-spacing: 0.02em; margin-bottom: 3mm; }
 .tpl-europass .cv-name { color: #1b1b1b; font-size: 20pt; }
 .tpl-europass .cv-head { align-items: flex-start; }
 .tpl-europass .cv-photo { border-radius: 0; width: 28mm; height: 34mm; }
 .tpl-europass .cv-contact-list { display: flex; flex-wrap: wrap; gap: 1mm 6mm; margin-top: 2mm; }
 .tpl-europass .cv-c-label { display: inline; text-transform: none; letter-spacing: 0; color: #1b1b1b; }
 .tpl-europass .cv-c-label::after { content: " :"; }
-.tpl-europass .cv-h { text-transform: uppercase; font-size: 11pt; border-bottom: 0.3mm solid #0e47cb; }
-.tpl-europass .cv-date { order: -1; color: #0e47cb; }
+.tpl-europass .cv-h { text-transform: uppercase; font-size: 11pt; border-bottom: 0.3mm solid var(--accent); }
+.tpl-europass .cv-date { order: -1; color: var(--accent); }
 .tpl-europass .cv-item-head { justify-content: flex-start; flex-direction: column; gap: 0; }
 
 /* ——— International ——— */
-.tpl-us-resume { --accent: #111; --accent-2: #333; --rule: #111; --font: "Times New Roman", Times, Georgia, serif; --fs: 10.5pt; }
+.tpl-us-resume { --accent: #111; --accent-2: #333; --rule: #111; --font: "Source Serif 4", "Times New Roman", Times, Georgia, serif; --fs: 10.5pt; }
 .tpl-us-resume .cv-head { justify-content: center; text-align: center; }
 .tpl-us-resume .cv-name { font-size: 20pt; text-transform: uppercase; letter-spacing: 0.06em; }
 .tpl-us-resume .cv-title { font-weight: 400; }
-.tpl-us-resume .cv-h { font-size: 11pt; border-bottom: 0.3mm solid #111; letter-spacing: 0.08em; }
+.tpl-us-resume .cv-h { font-size: 11pt; border-bottom: 0.3mm solid var(--accent); letter-spacing: 0.08em; }
 .tpl-us-resume .cv-item-sub { font-style: italic; font-weight: 400; color: #222; }
 
 .tpl-uk-cv { --accent: #00386b; --accent-2: #00386b; --font: Arial, "Helvetica Neue", Helvetica, sans-serif; }
@@ -77,7 +79,7 @@
 
 /* Dakar : ocre / terre cuite */
 .tpl-dakar { --accent: #8a3b12; --accent-2: #8a3b12; --side-bg: #fbeee4; --side-ink: #4a1f08; --font: "Trebuchet MS", "Segoe UI", sans-serif; }
-.tpl-dakar .cv-head { border-bottom: 1mm solid #d9824a; padding-bottom: 3mm; }
+.tpl-dakar .cv-head { border-bottom: 1mm solid var(--accent); padding-bottom: 3mm; }
 
 /* Océan : colonne à droite, bleu */
 .tpl-ocean { --accent: #0b4f8a; --accent-2: #0b4f8a; --side-bg: #e6f1fa; --side-ink: #0a2f52; --font: Verdana, "Segoe UI", sans-serif; --fs: 9.3pt; }
@@ -86,11 +88,11 @@
 .tpl-ocean .cv-h { border-bottom: none; border-left: 1.2mm solid var(--accent); padding-left: 2mm; }
 
 /* Ardoise : colonne sombre pleine hauteur, nom dans la colonne */
-.tpl-ardoise { --accent: #2f3e4e; --accent-2: #2f3e4e; --side-bg: #2f3e4e; --side-ink: #ffffff; --font: "Segoe UI", system-ui, sans-serif; }
+.tpl-ardoise { --accent: #2f3e4e; --accent-2: #2f3e4e; --side-bg: #2f3e4e; --side-ink: #ffffff; --font: Inter, "Segoe UI", system-ui, sans-serif; }
 .tpl-ardoise .cv-cols { min-height: 273mm; align-items: stretch; }
 .tpl-ardoise .cv-side { border-radius: 0; }
 .tpl-ardoise .cv-side .cv-name { color: #fff; font-size: 19pt; }
-.tpl-ardoise .cv-side .cv-title { color: #d6e2ee; font-size: 11pt; }
+.tpl-ardoise .cv-side .cv-title { color: #fff; opacity: 0.92; font-size: 11pt; }
 .tpl-ardoise .cv-side .cv-head { display: block; margin-bottom: var(--gap); }
 .tpl-ardoise .cv-side a { color: #fff; }
 
@@ -100,7 +102,7 @@
 .tpl-savane .cv-side { border-radius: 0 6mm 0 0; }
 .tpl-savane .cv-side .cv-head { display: block; margin-bottom: var(--gap); }
 .tpl-savane .cv-side .cv-name { color: #fff; font-size: 20pt; }
-.tpl-savane .cv-side .cv-title { color: #e2efd9; }
+.tpl-savane .cv-side .cv-title { color: #fff; opacity: 0.92; }
 .tpl-savane .cv-main .cv-h { border-bottom: 0.6mm dotted var(--accent); }
 
 /* ——— Famille bandeau ——— */
@@ -114,7 +116,7 @@
 }
 
 /* Frise : indigo, frise chronologique */
-.tpl-frise { --accent: #3730a3; --accent-2: #3730a3; --rule: #c7c9f0; --font: "Segoe UI", system-ui, sans-serif; }
+.tpl-frise { --accent: #3730a3; --accent-2: #3730a3; --rule: #c7c9f0; --font: Inter, "Segoe UI", system-ui, sans-serif; }
 .tpl-frise .cv-s-experiences .cv-item, .tpl-frise .cv-s-education .cv-item, .tpl-frise .cv-s-volunteering .cv-item {
   position: relative; border-left: 0.6mm solid var(--rule); padding-left: 5mm; margin-left: 1.5mm; padding-bottom: 1.5mm; margin-bottom: 0;
 }
@@ -124,7 +126,7 @@
 .tpl-frise .cv-h { border-bottom: none; }
 
 /* Horizon : corail, deux colonnes sous le bandeau */
-.tpl-horizon { --accent: #a3341f; --accent-2: #a3341f; --side-bg: #fdf0ec; --font: "Century Gothic", "Segoe UI", sans-serif; --fs: 9.6pt; }
+.tpl-horizon { --accent: #a3341f; --accent-2: #a3341f; --side-bg: #fdf0ec; --side-ink: #1b1b1b; --font: Montserrat, "Century Gothic", "Segoe UI", sans-serif; --fs: 9.6pt; }
 .tpl-horizon .cv-cols { grid-template-columns: 1fr 58mm; }
 .tpl-horizon .cv-side { background: var(--side-bg); padding: 4mm; border-radius: 1.5mm; }
 .tpl-horizon .cv-h { border-bottom-width: 0.25mm; }
@@ -132,10 +134,112 @@
 /* Minimal : beaucoup de blanc, noir et or */
 .tpl-minimal { --accent: #111; --accent-2: #7a5a12; --rule: #ddd; --font: "Helvetica Neue", Helvetica, Arial, sans-serif; --gap: 6mm; }
 .tpl-minimal .cv-banner { background: #fff; color: #111; padding-top: 12mm; padding-bottom: 4mm; border-bottom: 0.6mm solid #b08a2e; }
-.tpl-minimal .cv-banner .cv-name { color: #111; font-size: 30pt; font-weight: 300; letter-spacing: 0.02em; }
-.tpl-minimal .cv-banner .cv-title { color: #7a5a12; font-weight: 400; text-transform: uppercase; letter-spacing: 0.18em; font-size: 10pt; }
+.tpl-minimal .cv-banner .cv-name { color: var(--accent); font-size: 30pt; font-weight: 300; letter-spacing: 0.02em; }
+.tpl-minimal .cv-banner .cv-title { color: var(--accent-2); font-weight: 400; text-transform: uppercase; letter-spacing: 0.18em; font-size: 10pt; }
 .tpl-minimal .cv-banner .cv-contact, .tpl-minimal .cv-banner a { color: #444; }
 .tpl-minimal .cv-banner .cv-sep { color: #b08a2e; }
-.tpl-minimal .cv-h { border-bottom: none; font-weight: 400; letter-spacing: 0.25em; font-size: 10pt; color: #7a5a12; }
+.tpl-minimal .cv-h { border-bottom: none; font-weight: 400; letter-spacing: 0.25em; font-size: 10pt; color: var(--accent-2); }
 .tpl-minimal .cv-tags li { border: none; padding: 0; }
 .tpl-minimal .cv-tags li + li::before { content: "/"; margin-right: 1.2mm; color: #b08a2e; }
+
+/* ——— Nouveaux modèles (cycle 2) ——— */
+
+/* Teranga : Lato, pastille de couleur devant les titres */
+.tpl-teranga { --accent: #0f6b5c; --accent-2: #0f6b5c; --soft: #e2f3ef; --font: Lato, "Segoe UI", Arial, sans-serif; --fs: 10.2pt; }
+.tpl-teranga .cv-name { color: #1b1b1b; font-size: 24pt; }
+.tpl-teranga .cv-title { color: var(--accent); }
+.tpl-teranga .cv-h { border-bottom: 0.3mm solid var(--soft); display: flex; align-items: center; gap: 2mm; }
+.tpl-teranga .cv-h::before { content: ""; flex: none; width: 3mm; height: 3mm; border-radius: 50%; background: var(--accent); }
+
+/* Colonne de dates à gauche (Chronologique, Registre, Lebenslauf) : grille interne à chaque élément */
+.dates-left .cv-item { display: grid; grid-template-columns: 30mm 1fr; column-gap: 5mm; }
+.dates-left .cv-item-head { display: contents; }
+.dates-left .cv-item-title { grid-column: 2; grid-row: 1; }
+.dates-left .cv-item .cv-date { grid-column: 1; grid-row: 1 / span 2; white-space: normal; font-weight: 600; color: var(--accent); }
+.dates-left .cv-item-sub, .dates-left .cv-item .cv-desc { grid-column: 2; }
+.dates-left .cv-item:not(:has(.cv-date)) > * { grid-column: 2; }
+
+/* Chronologique : Inter, titres en capitales fines */
+.tpl-chronologique { --accent: #1f3a5f; --accent-2: #33475b; --font: Inter, "Segoe UI", Arial, sans-serif; }
+.tpl-chronologique .cv-h { border-bottom-width: 0.25mm; }
+
+/* Registre : empattements, filet double sous le nom */
+.tpl-registre { --accent: #333333; --accent-2: #444; --font: "Source Serif 4", Georgia, "Times New Roman", serif; }
+.tpl-registre .cv-head { border-bottom: 0.9mm double var(--accent); padding-bottom: 3mm; }
+.tpl-registre .cv-name { font-weight: 400; font-size: 24pt; letter-spacing: 0.03em; }
+.tpl-registre .cv-h { font-variant: small-caps; text-transform: none; font-weight: 400; font-size: 13pt; border-bottom-width: 0.2mm; }
+
+/* Académique et Chercheur : CV long, publications numérotées */
+.fam-academic .cv-pubs { list-style: decimal; padding-left: 6mm; }
+.fam-academic .cv-pubs li { padding-left: 1mm; margin-bottom: 1.2mm; }
+.tpl-academique { --accent: #00386b; --accent-2: #00386b; --font: "Source Serif 4", Georgia, serif; --font-head: Inter, "Segoe UI", Arial, sans-serif; }
+.tpl-academique .cv-h { font-size: 11pt; border-bottom-width: 0.25mm; }
+.tpl-chercheur { --accent: #333333; --accent-2: #333333; --rule: #999; --font: "EB Garamond", Garamond, Georgia, serif; --fs: 11pt; }
+.tpl-chercheur .cv-head { flex-direction: column; text-align: center; }
+.tpl-chercheur .cv-name { font-weight: 400; font-size: 24pt; letter-spacing: 0.06em; }
+.tpl-chercheur .cv-title { font-style: italic; font-weight: 400; }
+.tpl-chercheur .cv-h { font-variant: small-caps; text-transform: none; font-weight: 400; font-size: 13pt; letter-spacing: 0.08em; border-bottom: 0.2mm solid var(--rule); }
+
+/* Fonctionnel et Reconversion : compétences en blocs, parcours condensé */
+.fam-functional .cv-skill-block { margin-bottom: 2.4mm; }
+.fam-functional .cv-skill-block .cv-skill-name { font-size: 10.4pt; color: var(--accent); margin-bottom: 0.6mm; }
+.fam-functional .cv-skill-block .cv-desc { margin-top: 0; }
+.cv-timeline-compact li { display: flex; flex-wrap: wrap; gap: 0 2mm; }
+.cv-timeline-compact .cv-date { margin-left: auto; }
+.tpl-fonctionnel { --accent: #0f6b5c; --accent-2: #0f6b5c; --font: Inter, "Segoe UI", Arial, sans-serif; }
+.tpl-reconversion { --accent: #3730a3; --accent-2: #3730a3; --soft: #ecebfb; --font: Lato, "Segoe UI", Arial, sans-serif; }
+.tpl-reconversion .cv-s-skills { background: var(--soft); padding: 3mm 4mm; border-radius: 1.5mm; }
+.tpl-reconversion .cv-s-skills .cv-h { border-bottom-color: var(--accent); }
+
+/* Étudiant et Premier emploi */
+.tpl-etudiant { --accent: #0b4f8a; --accent-2: #0b4f8a; --font: Lato, "Segoe UI", Arial, sans-serif; --fs: 10.2pt; }
+.tpl-etudiant .cv-h { border-bottom: 0.8mm solid var(--accent); display: inline-block; padding-right: 3mm; }
+.tpl-premier-emploi { --accent: #3730a3; --accent-2: #3730a3; --soft: #ecebfb; --deep: #211c6b; --font: Montserrat, "Segoe UI", Arial, sans-serif; --fs: 9.6pt; }
+.cv-head-soft { background: var(--soft); border-radius: 2mm; padding: 5mm 6mm; }
+.tpl-premier-emploi .cv-name { color: var(--deep); }
+.tpl-premier-emploi .cv-h { border-bottom-width: 0.25mm; }
+
+/* Métiers et Technicien : texte plus grand, savoir-faire en tête */
+.tpl-metiers { --accent: #8a3b12; --accent-2: #8a3b12; --font: Lato, "Segoe UI", Arial, sans-serif; --fs: 10.6pt; }
+.tpl-metiers .cv-name { font-size: 25pt; color: #1b1b1b; }
+.tpl-metiers .cv-title { color: var(--accent); font-size: 14pt; }
+.tpl-metiers .cv-h { font-size: 12.5pt; }
+.tpl-technicien { --accent: #0b5563; --accent-2: #0b5563; --font: Inter, "Segoe UI", Arial, sans-serif; }
+.tpl-technicien .cv-h { border-bottom: none; border-left: 1.4mm solid var(--accent); padding-left: 2.4mm; }
+
+/* Québec et Canada (anglais) : Letter, sans photo */
+.tpl-quebec { --accent: #00386b; --accent-2: #00386b; --font: Lato, Arial, "Helvetica Neue", sans-serif; }
+.tpl-quebec .cv-h { border-bottom-width: 0.25mm; }
+.tpl-canada-en { --accent: #9b2c2c; --accent-2: #333; --font: Inter, Arial, "Helvetica Neue", sans-serif; }
+.tpl-canada-en .cv-head { justify-content: center; text-align: center; }
+.tpl-canada-en .cv-h { text-transform: none; letter-spacing: 0; font-size: 12.5pt; border-bottom-width: 0.25mm; }
+
+/* Lebenslauf : photo à droite, coordonnées en liste, informations personnelles, lieu et date */
+.tpl-lebenslauf, .tpl-lebenslauf-moderne { --font: Inter, Arial, "Helvetica Neue", sans-serif; }
+.tpl-lebenslauf { --accent: #333333; --accent-2: #444; }
+.tpl-lebenslauf-moderne { --accent: #0b5563; --accent-2: #0b5563; }
+.fam-national.dates-left .cv-head { flex-direction: row-reverse; align-items: flex-start; }
+.fam-national.dates-left .cv-photo { border-radius: 0; width: 32mm; height: 40mm; }
+.fam-national.dates-left .cv-contact-list { margin-top: 2mm; }
+.fam-national.dates-left .cv-contact-list li, .cv-personal li { display: grid; grid-template-columns: 30mm 1fr; column-gap: 5mm; }
+.fam-national.dates-left .cv-c-label, .cv-personal .cv-c-label { font-size: 9.3pt; text-transform: none; letter-spacing: 0; }
+.tpl-lebenslauf .cv-h { text-transform: none; letter-spacing: 0; font-size: 13pt; }
+.tpl-lebenslauf-moderne .cv-head { border-left: 2mm solid var(--accent); padding-left: 4mm; }
+.tpl-lebenslauf-moderne .cv-h { border-bottom: none; border-left: 1.2mm solid var(--accent); padding-left: 2mm; text-transform: none; letter-spacing: 0.02em; font-size: 12.5pt; }
+.cv-place-date { margin-top: calc(var(--gap) * 2); break-inside: avoid; }
+.cv-signature { display: block; margin-top: 8mm; font-weight: 700; }
+
+/* Casamance : colonne droite teintée */
+.tpl-casamance { --accent: #0f6b5c; --accent-2: #0f6b5c; --side-bg: #e2f3ef; --side-ink: #093f36; --font: Montserrat, "Segoe UI", sans-serif; --fs: 9.4pt; }
+.tpl-casamance .cv-cols { grid-template-columns: 1fr 60mm; }
+.tpl-casamance .cv-name { font-size: 24pt; }
+.tpl-casamance .cv-head { border-bottom: 0.6mm solid var(--accent); padding-bottom: 3mm; }
+
+/* Infographie : bandeau, colonne teintée, jauges de langue décoratives */
+.tpl-infographie { --accent: #0b5563; --accent-2: #0b5563; --side-bg: #e3f0f2; --side-ink: #083f4a; --font: Montserrat, "Segoe UI", sans-serif; --fs: 9.4pt; }
+.tpl-infographie .cv-side { background: var(--side-bg); padding: 4mm; border-radius: 1.5mm; }
+.tpl-infographie .cv-side .cv-h { color: inherit; border-bottom-color: currentColor; font-size: 10pt; }
+.cv-langs-bars li { margin-bottom: 1.6mm; }
+.cv-gauge { display: block; height: 1.6mm; margin-top: 0.8mm; border-radius: 0.8mm; background: linear-gradient(to right, var(--accent) var(--lvl, 0%), rgba(0, 0, 0, 0.12) var(--lvl, 0%)); }
+.cv-gauge.lvl-A1 { --lvl: 16%; } .cv-gauge.lvl-A2 { --lvl: 33%; } .cv-gauge.lvl-B1 { --lvl: 50%; }
+.cv-gauge.lvl-B2 { --lvl: 66%; } .cv-gauge.lvl-C1 { --lvl: 83%; } .cv-gauge.lvl-C2, .cv-gauge.lvl-native { --lvl: 100%; }

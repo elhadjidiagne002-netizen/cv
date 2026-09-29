@@ -53,7 +53,50 @@
 - Pas de rubriques personnalisées (Publications, Distinctions…) ni de masquage d'un élément sans le supprimer.
 - Pas de mode hors ligne (service worker) ni de lettre de motivation.
 
-## Proposé pour le cycle 2 (priorisé)
+## Cycle 2 — variété, hors ligne, offre d'emploi, normes par pays ✅ (terminé le 2026-09-29)
+
+### Fait
+- **33 modèles** (contre 16), chacun avec **3 à 5 palettes** de couleurs (17 palettes, contrastes ≥ 4,5:1 testés),
+  appliquées par le CSSOM (aucun `style=""`). Nouvelles familles :
+  - colonne de dates à gauche : **Chronologique** (ATS), **Registre** (empattements) ;
+  - **Académique** et **Chercheur** (CV long, formation en tête, publications numérotées, plusieurs pages admises) ;
+  - **Fonctionnel** (compétences clés + parcours condensé) et **Reconversion** (hybride) ;
+  - **Étudiant** et **Premier emploi** (formation et projets d'abord) ;
+  - **Métiers** et **Technicien** (savoir-faire, habilitations et permis en tête, gros caractères) ;
+  - **Québec** (FR) et **Canada (anglais)** : Letter, sans photo ni données personnelles ;
+  - **Lebenslauf** et **Lebenslauf moderne** (dates à gauche, photo facultative à droite, informations
+    personnelles regroupées, « Fait à …, le … » + nom) ;
+  - **Teranga** (ATS), **Casamance** (colonne droite), **Infographie** (jauges de langue décoratives, niveau CECRL écrit).
+- **Nouvelles rubriques** : Distinctions et Publications (éditeur, rendu, Europass, résumé US, correspondance).
+- **Polices libres OFL** embarquées (`public/fonts/`, 6 familles, ~480 Ko, licences jointes) : rendu identique
+  partout, aucune ressource externe. Aucune taille < 9 pt (test sur tout le CSS du CV ; 8,6 pt corrigé).
+- **Mode hors ligne (PWA)** : manifeste, icônes 192/512, service worker (précache de tout le site, réseau
+  d'abord pour les pages), bouton « Installer l'application », en-têtes `_headers`.
+- **Correspondance avec une offre** (`match.js`, 100 % local) : extraction des mots-clés (expressions,
+  sigles, outils, « gestion de projet »), taux de correspondance pondéré, mots-clés présents / absents,
+  bouton « Ajouter aux compétences », offre conservée avec le CV.
+- **Nouvelles règles** : trous > 6 mois (formations et bénévolat comblent), chevauchements, verbes répétés,
+  temps verbaux mélangés, mots creux FR/EN, ponctuation et majuscules homogènes, doubles espaces
+  (+ correction), téléphone international / incomplet / indicatif du pays, âge déductible (année du bac).
+  **Profils par pays** (France, Sénégal, Canada, Royaume-Uni, États-Unis, Allemagne) : papier (+ correction),
+  photo, informations personnelles, langue, longueur, rubriques US, modèles conseillés.
+- **Ajuster à 1 page** (et « ajuster à 2 pages » depuis l'alerte de longueur) : 4 niveaux de resserrement
+  mesurés hors écran, police jamais sous 9 pt, marges inchangées, bouton « Taille normale ».
+- **Tests** : 97 tests unitaires (+35) et 19 tests Playwright (+7 : galerie de 33 modèles sans erreur CSP,
+  palette, pays, ajustement, correspondance, publication, hors ligne). Playwright utilise le Chromium
+  préinstallé si la version attendue est absente.
+
+### Reste / limites connues
+- La correspondance avec l'offre est lexicale (pas de synonymes : « comptabilité » ≠ « finance ») ; les noms
+  d'entreprise de l'annonce peuvent ressortir comme mots-clés.
+- Les palettes sont par modèle (changer de modèle revient à sa palette d'origine si la palette n'existe pas).
+- Aperçu toujours en une longue page avec repères (pas de pagination visuelle page par page).
+- Pas d'annuler / rétablir, ni de glisser-déposer, ni de masquage d'un élément sans le supprimer.
+- Sous-ensemble de polices « latin » : certains caractères rares (ŋ du wolof officiel, ɓ du peul) passent par
+  la police système de repli.
+- Pas encore de lettre de motivation, ni d'import/export JSON Resume.
+
+## Proposé pour le cycle 2 (archive : points 1 à 4 et « ajuster à 1 page » faits ; pagination visuelle et points 6 à 9 reportés au cycle 3)
 1. **Plus de modèles et de variété (objectif ≥ 30)** : palettes de couleurs par modèle (3 à 5 chacune),
    nouvelles familles — colonne de dates à gauche (chronologique classique), académique / CV long
    (chercheur, publications), fonctionnel par compétences (reconversion), étudiant / premier emploi,
@@ -77,3 +120,22 @@
 8. **Lettre de motivation** assortie au modèle du CV (même en-tête, même typographie).
 9. **Qualité** : audit d'accessibilité automatisé (axe-core en devDependency Playwright), captures de
    non-régression visuelle par modèle, vérification que le texte du PDF s'extrait dans l'ordre de lecture.
+
+## Proposé pour le cycle 3 (priorisé)
+1. **Lettre de motivation** assortie au modèle (même en-tête et typographie), avec structure guidée
+   (vous / moi / nous), contrôles (longueur 1 page, formule de politesse, destinataire) et réutilisation
+   des mots-clés de l'offre : très demandée au Sénégal et en France, complète naturellement le CV.
+2. **Confort d'édition** : annuler / rétablir (historique local), masquer un élément ou une rubrique sans la
+   supprimer (versions ciblées d'un même CV), glisser-déposer accessible au clavier, rubriques personnalisées.
+3. **Aide à la rédaction par métier** (hors ligne) : exemples de lignes et verbes d'action pour ~30 métiers
+   courants (comptable, infirmier, enseignant, chauffeur, commercial, technicien, agent de sécurité…),
+   suggestion de reformulation d'une ligne faible, synonymes pour la correspondance avec l'offre.
+4. **Pagination visuelle réelle** dans l'aperçu (pages A4/Letter séparées, en-tête de page 2 avec le nom) et
+   aperçu d'impression fidèle ; vérification automatique que le PDF extrait le texte dans l'ordre de lecture.
+5. **Interopérabilité** : import / export JSON Resume, copie en texte brut pour les formulaires en ligne,
+   import d'un profil LinkedIn exporté (fichier), export `.txt` compatible ATS.
+6. **Qualité** : audit d'accessibilité automatisé (axe-core en devDependency), captures de non-régression
+   visuelle des 33 modèles, contrôle des contrastes des modèles dans le navigateur (pas seulement des palettes).
+7. **Polices étendues** : sous-ensemble latin-ext (wolof, peul, pulaar : ŋ, ɓ, ɗ, ƴ) pour les noms et adresses.
+8. **Profils pays supplémentaires** : Côte d'Ivoire, Maroc, Belgique, Suisse, fonction publique sénégalaise
+   (pièces du dossier de concours), et modèle « CV + dossier de concours ».

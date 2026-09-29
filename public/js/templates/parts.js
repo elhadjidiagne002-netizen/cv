@@ -98,12 +98,12 @@ export function photo(view) {
 }
 
 /** Bloc d'en-tête du document (dans le corps : nom, titre visé, coordonnées). */
-export function head(view, { contact = 'inline', withPhoto = true, extraClass = '' } = {}) {
+export function head(view, { contact = 'inline', withPhoto = true, extraClass = '', withPersonal = true } = {}) {
   const name = fullName(view);
   return `<div class="cv-head ${extraClass}">${withPhoto ? photo(view) : ''}<div class="cv-head-text">${
     name ? `<h1 class="cv-name">${esc(name)}</h1>` : ''
   }${view.targetTitle ? `<p class="cv-title">${esc(view.targetTitle)}</p>` : ''}${
-    contact === 'inline' ? contactInline(view) : contact === 'list' ? contactList(view) : ''
+    contact === 'inline' ? contactInline(view) : contact === 'list' ? contactList(view, { withPersonal }) : ''
   }</div></div>`;
 }
 
@@ -135,6 +135,17 @@ export function sectionBody(view, key, variant = 'default') {
   const { lang } = view;
   switch (key) {
     case 'experiences':
+      if (variant === 'compact') {
+        // CV fonctionnel : parcours condensé (poste, employeur, dates), réalisations regroupées ailleurs.
+        return `<ul class="cv-list cv-timeline-compact">${list
+          .map((it) => {
+            const r = range(view, it);
+            return `<li><strong>${esc(it.position)}</strong>${join(it.employer, it.city) ? ` — ${esc(join(it.employer, it.city))}` : ''}${
+              r ? ` <span class="cv-date">${esc(r)}</span>` : ''
+            }</li>`;
+          })
+          .join('')}</ul>`;
+      }
       return list.map((it) => datedItem(view, it.position, join(it.employer, it.city), it, it.description)).join('');
     case 'education':
       return list.map((it) => datedItem(view, it.degree, join(it.school, it.city), it, it.description)).join('');
@@ -152,6 +163,14 @@ export function sectionBody(view, key, variant = 'default') {
         })
         .join('');
     case 'skills':
+      if (variant === 'groups') {
+        // Une catégorie = un sous-titre et une liste à puces (CV fonctionnel).
+        return list
+          .map((g) => `<div class="cv-skill-group cv-skill-block"><h3 class="cv-skill-name">${esc(g.name)}</h3>${
+            g.keywords.length ? `<ul class="cv-desc">${g.keywords.map((k) => `<li>${esc(k)}</li>`).join('')}</ul>` : ''
+          }</div>`)
+          .join('');
+      }
       if (variant === 'tags') {
         return list
           .map((g) => `<div class="cv-skill-group"><h3 class="cv-skill-name">${esc(g.name)}</h3><ul class="cv-tags">${g.keywords
@@ -162,7 +181,33 @@ export function sectionBody(view, key, variant = 'default') {
       return list
         .map((g) => `<p class="cv-skill"><strong class="cv-skill-name">${esc(g.name)}${g.keywords.length ? (lang === 'fr' ? ' :' : ':') : ''}</strong> ${esc(g.keywords.join(', '))}</p>`)
         .join('');
+    case 'awards':
+      return `<ul class="cv-list cv-awards">${list
+        .map((a) => {
+          const meta = join(a.issuer, formatDate(a.date, lang, view.dateStyle));
+          return `<li><strong>${esc(a.name)}</strong>${meta ? ` — ${esc(meta)}` : ''}${a.description ? `<span class="cv-award-desc"> ${esc(a.description.replace(/\s*\n\s*/g, ' '))}</span>` : ''}</li>`;
+        })
+        .join('')}</ul>`;
+    case 'publications':
+      // Présentation bibliographique : Auteurs (année). Titre. Revue. Lien.
+      return `<ol class="cv-list cv-pubs">${list
+        .map((pb) => {
+          const year = (String(pb.date || '').match(/^\d{4}/) || [''])[0];
+          const who = [pb.authors, year ? `(${year})` : ''].filter(Boolean).join(' ');
+          return `<li>${who ? `${esc(who)}. ` : ''}<span class="cv-pub-title">${esc(pb.title)}</span>.${pb.venue ? ` <em class="cv-pub-venue">${esc(pb.venue)}</em>.` : ''}${
+            pb.url ? ` <a href="${esc(safeHref(pb.url))}">${esc(prettyUrl(pb.url))}</a>` : ''
+          }</li>`;
+        })
+        .join('')}</ol>`;
     case 'languages':
+      if (variant === 'bars') {
+        // Infographie modérée : le niveau CECRL reste écrit en toutes lettres ; la jauge est décorative.
+        return `<ul class="cv-langs cv-langs-bars">${list
+          .map((l) => `<li><span class="cv-lang-name">${esc(l.name)}</span>${l.level ? ` <span class="cv-lang-level">— ${esc(levelLabel(lang, l.level))}</span><span class="cv-gauge lvl-${esc(l.level)}" aria-hidden="true"></span>` : ''}${
+            l.certificate ? ` <span class="cv-lang-cert">(${esc(l.certificate)})</span>` : ''
+          }</li>`)
+          .join('')}</ul>`;
+      }
       return `<ul class="cv-langs">${list
         .map((l) => `<li><span class="cv-lang-name">${esc(l.name)}</span>${l.level ? ` <span class="cv-lang-level">— ${esc(levelLabel(lang, l.level))}</span>` : ''}${
           l.certificate ? ` <span class="cv-lang-cert">(${esc(l.certificate)})</span>` : ''
@@ -207,4 +252,19 @@ export function section(view, key, variant = 'default') {
 /** Plusieurs rubriques dans l'ordre choisi par l'utilisateur. */
 export function sections(view, keys, variantFor = () => 'default') {
   return keys.map((k) => section(view, k, variantFor(k))).join('');
+}
+
+/** Ordre imposé par un modèle pour certaines rubriques, puis les autres dans l'ordre de l'utilisateur. */
+export function reorder(view, first) {
+  const head = first.filter((k) => view.order.includes(k));
+  return [...head, ...view.order.filter((k) => !head.includes(k))];
+}
+
+/** Rubrique « Informations personnelles » (uniquement les champs que l'utilisateur a choisi d'afficher). */
+export function personalSection(view) {
+  const items = personalItems(view);
+  if (!items.length) return '';
+  return `<section class="cv-section cv-s-personal">${sectionTitle(view, 'personal')}<ul class="cv-list cv-personal">${items
+    .map((c) => `<li><span class="cv-c-label">${esc(c.label)}</span> <span class="cv-c-value">${esc(c.value)}</span></li>`)
+    .join('')}</ul></section>`;
 }

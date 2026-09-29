@@ -129,3 +129,21 @@ test('moveItem, getByPath, setByPath', () => {
 test('niveaux CECRL complets', () => {
   assert.deepEqual(CEFR_LEVELS, ['A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'native']);
 });
+
+test('cycle 2 : nouvelles rubriques et réglages (palette, pays, ajustement, offre)', () => {
+  const cv = createEmptyCV();
+  assert.deepEqual(cv.awards, []);
+  assert.deepEqual(cv.publications, []);
+  assert.equal(cv.meta.country, '');
+  assert.equal(cv.meta.fit, 0);
+  const n = normalizeCV({ meta: { palette: 'ocean', country: 'SN', jobOffer: 'Offre', sectionOrder: ['experiences'] }, publications: [{ title: 'Article', date: '05/2021' }] });
+  assert.equal(n.meta.palette, 'ocean');
+  assert.equal(n.meta.country, 'SN');
+  assert.equal(n.meta.jobOffer, 'Offre');
+  assert.equal(n.publications[0].date, '2021-05');
+  assert.ok(n.meta.sectionOrder.includes('publications') && n.meta.sectionOrder.includes('awards'));
+  const bad = normalizeCV({ meta: { palette: '<x>', country: 'XX' } });
+  assert.equal(bad.meta.palette, '');
+  assert.equal(bad.meta.country, '');
+  assert.equal(validateCV(n).valid, true);
+});
