@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Éditeur de CV — CV en ligne</title>
+  <meta name="description" content="Rédigez votre CV avec aperçu en direct, contrôle de conformité et export PDF. Vos données restent dans votre navigateur.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/app.css">
+  <link rel="stylesheet" href="css/cv-base.css">
+  <link rel="stylesheet" href="css/templates.css">
+  <script type="module" src="js/app.js"></script>
+</head>
+<body class="app">
+  <a class="skip-link" href="#editor">Aller à l'éditeur</a>
+  <a class="skip-link" href="#preview-pane">Aller à l'aperçu</a>
+
+  <header class="topbar">
+    <a class="brand" href="index.html">CV en ligne</a>
+    <div class="topbar-group" role="group" aria-label="Mes CV">
+      <label for="cv-select" class="sr-only">CV ouvert</label>
+      <select id="cv-select"></select>
+      <details class="menu" id="new-menu">
+        <summary class="btn">Nouveau</summary>
+        <div class="menu-panel">
+          <button type="button" class="btn" data-new="empty">CV vide</button>
+          <button type="button" class="btn" data-new="sample">Exemple en français</button>
+          <button type="button" class="btn" data-new="sample-en">Exemple en anglais (résumé US)</button>
+        </div>
+      </details>
+      <button type="button" class="btn" id="btn-dup">Dupliquer</button>
+      <button type="button" class="btn btn-danger" id="btn-del">Supprimer</button>
+    </div>
+    <div class="topbar-group" role="group" aria-label="Actions">
+      <button type="button" class="btn" id="btn-gallery">Modèles</button>
+      <button type="button" class="btn" id="btn-anon" aria-pressed="false">CV anonyme</button>
+      <button type="button" class="btn" id="btn-import">Importer</button>
+      <input type="file" id="file-import" accept=".json,application/json" hidden>
+      <button type="button" class="btn" id="btn-export">Exporter (.json)</button>
+      <button type="button" class="btn btn-primary" id="btn-print">Télécharger en PDF</button>
+    </div>
+    <p class="save-status" id="save-status" role="status" aria-live="polite"></p>
+  </header>
+
+  <main class="layout">
+    <section class="editor" id="editor" aria-labelledby="editor-title" tabindex="-1">
+      <h1 id="editor-title" class="sr-only">Éditeur du CV</h1>
+      <details class="ed-section" open>
+        <summary><h2>Réglages du document</h2></summary>
+        <div class="ed-body grid">
+          <div class="field">
+            <label for="set-title">Nom du fichier (pour vous)</label>
+            <input type="text" id="set-title" data-path="meta.title">
+          </div>
+          <div class="field">
+            <label for="set-lang">Langue des rubriques du CV</label>
+            <select id="set-lang" data-path="meta.lang">
+              <option value="fr">Français</option>
+              <option value="en">Anglais</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="set-paper">Format de papier</label>
+            <select id="set-paper" data-path="meta.paper">
+              <option value="A4">A4 (Afrique, Europe)</option>
+              <option value="Letter">Letter (États-Unis, Canada)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="set-datestyle">Format des dates</label>
+            <select id="set-datestyle" data-path="meta.dateStyle">
+              <option value="numeric">Numérique (03/2022)</option>
+              <option value="long">En toutes lettres (mars 2022)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="set-accent">Couleur d'accent (facultatif)</label>
+            <div class="inline">
+              <input type="color" id="set-accent" data-path="meta.accent">
+              <button type="button" class="btn btn-small" id="btn-accent-reset">Couleur du modèle</button>
+            </div>
+          </div>
+        </div>
+      </details>
+      <div id="sections"></div>
+    </section>
+
+    <section class="preview-pane" id="preview-pane" aria-labelledby="preview-title" tabindex="-1">
+      <h2 id="preview-title" class="sr-only">Aperçu et conformité</h2>
+      <div class="norms" id="norms"></div>
+      <div class="preview-toolbar">
+        <p id="template-info"></p>
+        <button type="button" class="btn btn-small" id="btn-gallery-2">Changer de modèle</button>
+      </div>
+      <div class="preview-scroll" id="preview-scroll">
+        <div class="preview-stage" id="preview-stage">
+          <div class="preview" id="preview"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="print-root"></div>
+
+  <dialog id="gallery" aria-labelledby="gallery-title">
+    <div class="gallery-head">
+      <h2 id="gallery-title">Choisir un modèle</h2>
+      <button type="button" class="btn" id="gallery-close">Fermer</button>
+    </div>
+    <div class="gallery-filters" role="group" aria-label="Filtrer les modèles" id="gallery-filters"></div>
+    <p class="gallery-note">Les modèles <strong>ATS</strong> (une colonne) sont les plus sûrs pour les candidatures en ligne, lues par des logiciels de tri. Les modèles créatifs conviennent à un envoi direct à un recruteur.</p>
+    <ul class="gallery-grid" id="gallery-grid"></ul>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

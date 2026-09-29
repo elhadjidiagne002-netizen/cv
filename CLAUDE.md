@@ -21,7 +21,13 @@ Toujours répondre et écrire l'interface **en français** (l'anglais est une la
   - `public/js/` : `model.js` (schéma des données + validation), `templates/` (un fichier par famille
     de modèles), `render.js` (données → HTML du CV), `norms.js` (règles de conformité + contrôleur),
     `i18n.js` (libellés de rubriques FR/EN), `storage.js`, `app.js` (éditeur).
-  - `public/css/` : `app.css` (éditeur), `cv-base.css` (commun à tous les CV, impression A4/Letter).
+  - `public/css/` : `app.css` (éditeur + accueil), `cv-base.css` (commun à tous les CV, impression A4/Letter),
+    `templates.css` (couleurs, polices et variantes de chaque modèle, classe `.tpl-<id>`).
+  - Modèles : une famille par fichier dans `public/js/templates/` (`single.js`, `europass.js`,
+    `international.js`, `sidebar.js`, `banner.js`), briques communes dans `parts.js`, registre `index.js`.
+    Tout contenu utilisateur passe par `esc()` ; **jamais d'attribut `style=""`** dans le HTML rendu (bloqué
+    par la CSP) — les réglages dynamiques passent par `element.style.setProperty()` (CSSOM, autorisé).
+  - Serveur de test local : `npm run serve` (sert `public/` avec les en-têtes de `_headers`, donc la vraie CSP).
   - `tests/` : `node --test` (unitaires) et `tests/ui/*.spec.mjs` (Playwright).
 
 ## Normes à respecter rigoureusement (le cœur du produit)

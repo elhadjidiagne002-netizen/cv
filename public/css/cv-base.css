@@ -1,0 +1,101 @@
+/* Styles communs à tous les CV (écran + impression). Les couleurs et polices propres à chaque
+   modèle sont dans templates.css. Aucune ressource externe : polices système uniquement. */
+
+.cv {
+  --accent: #1f3a5f;
+  --accent-2: #4a6a8a;
+  --ink: #1b1b1b;
+  --muted: #4d4d4d;
+  --rule: #c9ced6;
+  --side-bg: #eef1f5;
+  --side-ink: #1b1b1b;
+  --font: "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-head: var(--font);
+  --fs: 10pt;
+  --gap: 3.6mm;
+
+  box-sizing: border-box;
+  position: relative;
+  width: 210mm;
+  min-height: 297mm;
+  padding: 12mm;
+  background: #fff;
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: var(--fs);
+  line-height: 1.33;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.cv.paper-letter { width: 8.5in; min-height: 11in; padding: 0.5in; }
+.cv *, .cv *::before, .cv *::after { box-sizing: border-box; }
+.cv a { color: inherit; text-decoration: none; }
+.cv h1, .cv h2, .cv h3, .cv p, .cv ul { margin: 0; padding: 0; }
+.cv ul { list-style: none; }
+
+/* En-tête (dans le corps du document, jamais dans un en-tête d'impression) */
+.cv-head { display: flex; gap: 5mm; align-items: center; margin-bottom: var(--gap); }
+.cv-head-text { flex: 1; min-width: 0; }
+.cv-name { font-family: var(--font-head); font-size: 22pt; line-height: 1.1; font-weight: 700; color: var(--accent); letter-spacing: 0.01em; }
+.cv-title { font-size: 12.5pt; font-weight: 600; color: var(--ink); margin-top: 1mm; }
+.cv-contact { margin-top: 2mm; color: var(--muted); font-size: 9.3pt; }
+.cv-sep { color: var(--rule); }
+.cv-photo { width: 30mm; height: 30mm; object-fit: cover; border-radius: 50%; flex: none; }
+.cv-contact-list { font-size: 9.3pt; }
+.cv-contact-list li { margin-bottom: 1mm; }
+.cv-c-label { display: block; font-weight: 700; font-size: 8.6pt; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+
+/* Rubriques */
+.cv-section { margin-top: var(--gap); }
+.cv-h {
+  font-family: var(--font-head);
+  font-size: 11.5pt;
+  font-weight: 700;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom: 0.4mm solid var(--accent);
+  padding-bottom: 0.8mm;
+  margin-bottom: 2.2mm;
+  break-after: avoid;
+}
+.cv-item { margin-bottom: 2.8mm; break-inside: avoid; }
+.cv-item:last-child { margin-bottom: 0; }
+.cv-item-head { display: flex; justify-content: space-between; align-items: baseline; gap: 4mm; }
+.cv-item-title { font-size: 10.5pt; font-weight: 700; }
+.cv-date { flex: none; color: var(--muted); font-size: 9.3pt; white-space: nowrap; }
+.cv-item-sub { color: var(--accent-2); font-weight: 600; }
+.cv-desc { margin-top: 0.8mm; }
+ul.cv-desc li { position: relative; padding-left: 4mm; margin-bottom: 0.5mm; }
+ul.cv-desc li::before { content: "•"; position: absolute; left: 0.6mm; color: var(--accent); }
+.cv-summary { text-align: justify; hyphens: auto; }
+.cv-skill { margin-bottom: 1mm; break-inside: avoid; }
+.cv-skill-name { font-weight: 700; }
+.cv-langs li, .cv-list li { margin-bottom: 0.8mm; break-inside: avoid; }
+.cv-lang-name { font-weight: 700; }
+.cv-lang-level, .cv-lang-cert { color: var(--muted); }
+.cv-tags { display: flex; flex-wrap: wrap; gap: 1.2mm; }
+.cv-tags li { border: 0.3mm solid var(--rule); border-radius: 1.2mm; padding: 0.3mm 1.8mm; font-size: 9pt; }
+.cv-skill-group { margin-bottom: 2mm; break-inside: avoid; }
+.cv-skill-group .cv-skill-name { display: block; font-size: 9.6pt; margin-bottom: 1mm; }
+
+/* Famille deux colonnes */
+.cv .cv-cols { display: grid; grid-template-columns: 62mm 1fr; gap: 7mm; align-items: start; }
+.cv .cv-side { color: var(--side-ink); }
+.cv .cv-side .cv-section:first-child { margin-top: 0; }
+.cv .cv-main > .cv-section:first-child { margin-top: 0; }
+.cv .cv-side .cv-photo { display: block; margin: 0 auto var(--gap); width: 36mm; height: 36mm; }
+.cv .cv-side .cv-desc li::before { color: inherit; }
+
+/* Impression : le CV seul, texte réel, sans coupure au milieu d'un bloc. */
+@page { size: A4; margin: 12mm; }
+@page letter { size: letter; margin: 0.5in; }
+@media print {
+  .cv, .cv.paper-letter { width: auto; min-height: 0; padding: 0; box-shadow: none !important; transform: none !important; }
+  .cv.paper-letter { page: letter; }
+  .cv-section { break-inside: auto; }
+  .cv-h { break-after: avoid; }
+  .cv-item, .cv-skill, .cv-skill-group { break-inside: avoid; }
+  .cv a { color: inherit; }
+  .cv { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
