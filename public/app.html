@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <!-- CSP aussi en <meta> : certains hébergeurs (GitHub Pages) ignorent public/_headers. frame-ancestors n'est
        valable qu'en en-tête HTTP (_headers). Garder identique à _headers (vérifié par tests/deploy.test.js). -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'; upgrade-insecure-requests">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://nexusmarket.sn; manifest-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'; upgrade-insecure-requests">
   <meta name="referrer" content="no-referrer">
   <title>Éditeur de CV — CV en ligne</title>
   <meta name="description" content="Rédigez votre CV avec aperçu en direct, contrôle de conformité et export PDF. Vos données restent dans votre navigateur.">
@@ -144,6 +144,10 @@
     <section class="preview-pane" id="preview-pane" aria-labelledby="preview-title" tabindex="-1">
       <h2 id="preview-title" class="sr-only">Aperçu et conformité</h2>
       <div class="norms" id="norms"></div>
+      <div class="ai-box" id="ai-box">
+        <button type="button" class="btn btn-ai" id="btn-ai-advice">✨ Conseils de l'IA pour étoffer mon CV</button>
+        <p class="hint">Accroche, missions reformulées, compétences à valoriser. Rien n'est modifié sans votre accord.</p>
+      </div>
       <details class="match-box" id="match-box">
         <summary><span class="match-title">Correspondance avec une offre d'emploi</span><span class="match-sub" id="match-sub">Collez une annonce pour comparer</span></summary>
         <div class="match-body">
@@ -225,6 +229,29 @@
     <h3 class="apps-list-h">Candidatures enregistrées</h3>
     <ul class="apps-list" id="apps-list"></ul>
     <div class="dlg-actions"><button type="button" class="btn" id="apps-export">Exporter pour Excel (.csv)</button></div>
+  </dialog>
+
+  <dialog id="ai-consent-dlg" aria-labelledby="ai-consent-title">
+    <h2 id="ai-consent-title">Utiliser l'assistant IA ?</h2>
+    <p>Tout le reste du site fonctionne <strong>sans rien envoyer</strong> : vos CV restent dans ce navigateur.</p>
+    <p>L'assistant IA, lui, doit envoyer votre <strong>parcours professionnel</strong> (poste visé, accroche, expériences,
+      formations, compétences, langues) et l'annonce collée au service d'IA de NEXUS Market (nexusmarket.sn), qui
+      l'analyse avec le modèle de langue de Groq. Rien n'est conservé pour vous identifier.</p>
+    <p><strong>Ne sont jamais envoyés :</strong> votre nom, téléphone, e-mail, adresse, photo, date de naissance,
+      nationalité, situation familiale ni vos références.</p>
+    <p class="hint">L'IA peut se tromper : relisez toujours ses propositions. Rien n'est modifié sans votre clic.</p>
+    <div class="dlg-actions">
+      <button type="button" class="btn btn-primary" id="ai-consent-yes">J'accepte, continuer</button>
+      <button type="button" class="btn" id="ai-consent-no">Non merci</button>
+    </div>
+  </dialog>
+
+  <dialog id="ai-dlg" aria-labelledby="ai-dlg-title">
+    <div class="gallery-head">
+      <h2 id="ai-dlg-title">Assistant IA</h2>
+      <button type="button" class="btn" id="ai-close">Fermer</button>
+    </div>
+    <div id="ai-body" aria-live="polite"></div>
   </dialog>
 
   <div id="datalists"></div>

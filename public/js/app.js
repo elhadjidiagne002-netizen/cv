@@ -25,6 +25,7 @@ import { esc } from './templates/parts.js';
 import { SCHOOLS, CITIES, LANGUAGES, DIPLOMAS, DOSSIER_ITEMS, isNationalLanguage } from './senegal.js';
 import { JOBS, getJob } from './phrases.js';
 import { cvPlainText } from './plaintext.js';
+import { AI_CONSENT_KEY, AIError, callAI, letterMessages, adviceMessages, parseAIJson, normalizeLetterAnswer, normalizeAdviceAnswer } from './ai.js';
 import {
   renderLetter, checkLetter, draftLetter, letterText, wordCount, salutationFor, closingFor,
 } from './letter.js';
@@ -311,6 +312,7 @@ function letterEditorHTML(cv) {
       <div class="grid">${['organization', 'recipientTitle', 'recipientName', 'recipientAddress', 'place', 'date'].map((k) => field(k)).join('')}</div>
       <div class="letter-draft">
         <button type="button" class="btn btn-primary" data-act="letter-draft">Proposer un brouillon à partir de mon CV</button>
+        <button type="button" class="btn btn-ai" data-act="letter-ai">✨ Rédiger avec l'IA</button>
         <p class="hint">Structure « vous / moi / nous » construite avec votre poste visé, votre dernière expérience et les mots-clés de l'offre collée à droite. Complétez les passages entre crochets.</p>
       </div>
       <div class="grid">${field('subject', { type: 'text' })}${field('reference')}${field('salutation')}</div>
@@ -821,6 +823,9 @@ function onEditorClick(e) {
       toast('Brouillon proposé : personnalisez les passages entre crochets [ … ].');
       break;
     }
+    case 'letter-ai':
+      aiLetter();
+      break;
     case 'photo-remove':
       cv.identity.photo = '';
       cv.privacy.showPhoto = false;
@@ -1498,6 +1503,9 @@ function bind() {
     }
   });
   $('#btn-text').addEventListener('click', openTextDialog);
+  $('#btn-ai-advice').addEventListener('click', aiAdvice);
+  $('#ai-close').addEventListener('click', closeAI);
+  $('#ai-body').addEventListener('click', onAIClick);
   $('#btn-apps').addEventListener('click', openApps);
   $('#apps-close').addEventListener('click', closeApps);
   $('#apps-form').addEventListener('submit', saveAppFromForm);
@@ -1639,3 +1647,143 @@ function init() {
 }
 
 init();
+
+
+// ─────────────────────────────── Assistant IA (facultatif, avec accord explicite)
+let aiResult = null;
+
+function hasAIConsent() {
+  try { return localStorage.getItem(AI_CONSENT_KEY) === '1'; } catch { return false; }
+}
+
+/** Demande l'accord une fois : le parcours professionnel (sans identité) part vers le service d'IA. */
+function askAIConsent() {
+  if (hasAIConsent()) return Promise.resolve(true);
+  const dlg = $('#ai-consent-dlg');
+  return new Promise((resolve) => {
+    const done = (ok) => {
+      $('#ai-consent-yes').removeEventListener('click', yes);
+      $('#ai-consent-no').removeEventListener('click', no);
+      dlg.removeEventListener('cancel', no);
+      if (typeof dlg.close === 'function') dlg.close();
+      if (ok) { try { localStorage.setItem(AI_CONSENT_KEY, '1'); } catch { /* stockage bloqué : on redemandera */ } }
+      resolve(ok);
+    };
+    const yes = () => done(true);
+    const no = () => done(false);
+    $('#ai-consent-yes').addEventListener('click', yes);
+    $('#ai-consent-no').addEventListener('click', no);
+    dlg.addEventListener('cancel', no);
+    if (typeof dlg.showModal === 'function') dlg.showModal();
+    $('#ai-consent-yes').focus();
+  });
+}
+
+function openAI(title, html) {
+  $('#ai-dlg-title').textContent = title;
+  $('#ai-body').innerHTML = html;
+  const dlg = $('#ai-dlg');
+  if (!dlg.open && typeof dlg.showModal === 'function') dlg.showModal();
+}
+
+function closeAI() {
+  const dlg = $('#ai-dlg');
+  if (typeof dlg.close === 'function') dlg.close();
+}
+
+const aiWait = (what) => `<p class="ai-wait"><span class="spinner" aria-hidden="true"></span> ${esc(what)}… (10 à 30 secondes)</p>`;
+const aiFail = (e) => `<p class="ai-error">${esc(e instanceof AIError ? e.message : 'Réponse inattendue de l\'assistant IA. Réessayez.')}</p>`;
+
+async function aiLetter() {
+  if (!(await askAIConsent())) return;
+  const cv = state.cv;
+  const L = cv.letter;
+  openAI('✨ Lettre rédigée par l\'IA', aiWait('Rédaction de votre lettre'));
+  try {
+    const text = await callAI(letterMessages(cv, { offer: cv.meta.jobOffer || '', organization: L.organization, kind: L.kind || 'candidature', style: L.style || 'standard' }), { maxTokens: 2000 });
+    const ans = normalizeLetterAnswer(parseAIJson(text));
+    if (!ans) throw new Error('format');
+    aiResult = { kind: 'letter', ans };
+    openAI('✨ Lettre rédigée par l\'IA', `
+      <p class="hint">Proposition à relire et à personnaliser (passages entre crochets [ … ]). Votre lettre actuelle n'est remplacée que si vous cliquez sur « Utiliser ».</p>
+      ${ans.subject ? `<p><strong>Objet :</strong> ${esc(ans.subject)}</p>` : ''}
+      <div class="ai-letter">${ans.body.split(/\n{2,}/).map((p) => `<p>${esc(p)}</p>`).join('')}</div>
+      ${ans.tips.length ? `<h3>Pour la personnaliser</h3><ul>${ans.tips.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>` : ''}
+      <div class="dlg-actions">
+        <button type="button" class="btn btn-primary" data-ai="use-letter">Utiliser cette lettre</button>
+        <button type="button" class="btn" data-ai="retry-letter">Proposer une autre version</button>
+      </div>
+      ${cv.meta.jobOffer ? '' : '<p class="hint">Astuce : collez l\'annonce dans « Correspondance avec une offre d\'emploi » pour une lettre ciblée.</p>'}`);
+  } catch (e) {
+    openAI('✨ Lettre rédigée par l\'IA', `${aiFail(e)}<div class="dlg-actions"><button type="button" class="btn" data-ai="retry-letter">Réessayer</button></div>`);
+  }
+}
+
+async function aiAdvice() {
+  if (!(await askAIConsent())) return;
+  const cv = state.cv;
+  openAI('✨ Conseils de l\'IA pour étoffer votre CV', aiWait('Analyse de votre CV'));
+  try {
+    const text = await callAI(adviceMessages(cv, { offer: cv.meta.jobOffer || '' }), { maxTokens: 2400 });
+    const ans = normalizeAdviceAnswer(parseAIJson(text), cv);
+    if (!ans || (!ans.tips.length && !ans.summary && !ans.rewrites.length)) throw new Error('format');
+    aiResult = { kind: 'advice', ans };
+    const prioLabel = { haute: 'Priorité haute', moyenne: 'Priorité moyenne', basse: 'Priorité basse' };
+    openAI('✨ Conseils de l\'IA pour étoffer votre CV', `
+      <p class="hint">Suggestions à vérifier : n'ajoutez que ce qui est vrai. Remplacez les [chiffres] par vos vrais résultats.</p>
+      ${ans.tips.length ? `<h3>Conseils</h3><ul class="ai-tips">${ans.tips.map((t) => `<li class="prio-${esc(t.priority)}"><span class="ai-tag">${esc(prioLabel[t.priority] || '')} · ${esc(t.section)}</span> ${esc(t.text)}</li>`).join('')}</ul>` : ''}
+      ${ans.summary ? `<h3>Accroche proposée</h3><blockquote class="ai-quote">${esc(ans.summary)}</blockquote>
+        <button type="button" class="btn btn-small" data-ai="use-summary">Remplacer mon accroche</button>` : ''}
+      ${ans.rewrites.length ? `<h3>Missions reformulées</h3>${ans.rewrites.map((r, i) => `<div class="ai-rewrite">
+        <p><strong>${esc(r.title)}</strong></p>
+        <div class="ai-cols"><div><span class="ai-tag">Actuel</span><pre>${esc(r.before || '(vide)')}</pre></div><div><span class="ai-tag">Proposé</span><pre>${esc(r.text)}</pre></div></div>
+        <button type="button" class="btn btn-small" data-ai="use-rewrite" data-i="${i}">Utiliser cette version</button></div>`).join('')}` : ''}
+      ${ans.missingSkills.length ? `<h3>Compétences à valoriser (si vous les avez)</h3><p>${ans.missingSkills.map(esc).join(' · ')}</p>` : ''}
+      <div class="dlg-actions"><button type="button" class="btn" data-ai="retry-advice">Relancer l'analyse</button></div>`);
+  } catch (e) {
+    openAI('✨ Conseils de l\'IA pour étoffer votre CV', `${aiFail(e)}<div class="dlg-actions"><button type="button" class="btn" data-ai="retry-advice">Réessayer</button></div>`);
+  }
+}
+
+function onAIClick(e) {
+  const btn = e.target.closest('button[data-ai]');
+  if (!btn) return;
+  const cv = state.cv;
+  switch (btn.dataset.ai) {
+    case 'retry-letter': aiLetter(); break;
+    case 'retry-advice': aiAdvice(); break;
+    case 'use-letter': {
+      const L = cv.letter;
+      // eslint-disable-next-line no-alert
+      if (L.body.trim() && !window.confirm('Remplacer le texte actuel de la lettre ? (« Annuler » en haut reste possible.)')) break;
+      if (aiResult.ans.subject) L.subject = aiResult.ans.subject;
+      L.body = aiResult.ans.body;
+      if (!L.place) L.place = cv.identity.city;
+      closeAI();
+      if (state.doc !== 'letter') { state.doc = 'letter'; renderDocSwitch(); }
+      changed({ structural: true });
+      focusAfterRender('#f-letter-body');
+      toast('Lettre de l\'IA insérée : relisez-la et complétez les passages entre crochets.');
+      break;
+    }
+    case 'use-summary':
+      cv.summary = aiResult.ans.summary;
+      state.openSections.add('headline');
+      changed({ structural: true });
+      btn.disabled = true; btn.textContent = 'Accroche remplacée ✔';
+      toast('Accroche remplacée (« Annuler » en haut pour revenir en arrière).');
+      break;
+    case 'use-rewrite': {
+      const r = aiResult.ans.rewrites[Number(btn.dataset.i)];
+      const exp = r && cv.experiences.find((x) => x.id === r.id);
+      if (!exp) break;
+      exp.description = r.text;
+      state.openSections.add('experiences');
+      changed({ structural: true });
+      btn.disabled = true; btn.textContent = 'Missions remplacées ✔';
+      toast('Missions remplacées : remplacez les [chiffres] par vos vrais résultats.');
+      break;
+    }
+    default:
+  }
+}

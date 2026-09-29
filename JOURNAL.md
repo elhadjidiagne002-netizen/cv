@@ -1,5 +1,37 @@
 # Journal du projet (le plus récent en haut)
 
+## 2026-09-29 — assistant IA (lettre de motivation, conseils pour étoffer le CV) + mise en ligne Cloudflare
+**Fait.** « ✨ Rédiger avec l'IA » dans la lettre (candidature, stage, relance, remerciement ; styles standard,
+administratif, anglais ; tient compte de l'annonce collée) et « ✨ Conseils de l'IA » pour le CV (conseils classés
+par priorité, accroche proposée, missions reformulées, compétences à valoriser). Chaque proposition s'applique d'un
+clic, jamais automatiquement, et « Annuler » reste possible. Module pur `public/js/ai.js` (testé sous Node).
+Site publié sur Cloudflare Pages : projet `cv-en-ligne` (https://cv-en-ligne.pages.dev, domaine `cv.nexusmarket.sn`
+en attente de l'enregistrement DNS).
+
+**Pourquoi.** Demande « ajouter l'IA utilisée dans NEXUS pour aider à rédiger les lettres de motivation et donner des
+conseils pour étoffer le CV ».
+
+**Choix notables.**
+- Réutilise l'API d'IA de NEXUS Market (`https://nexusmarket.sn/api/ai`, Groq, clé côté serveur, anti-abus par IP) :
+  aucune clé dans ce dépôt. Seule origine externe de la CSP (`connect-src`).
+- **Seule exception à « rien ne quitte l'appareil »** : accord explicite demandé une fois (fenêtre dédiée) ;
+  `profileForAI` n'envoie que le parcours professionnel, JAMAIS nom, téléphone, e-mail, adresse, photo, date de
+  naissance, nationalité, situation familiale ni références (test dédié) ; éléments masqués non envoyés.
+- Consignes au modèle : ne rien inventer (outils, chiffres, missions) ; missions seulement REFORMULÉES ; ce que
+  l'annonce demande et que le profil ne montre pas va dans « compétences à valoriser si vous les avez » ; repères
+  [ … ] quand une information manque ; tournures neutres (genre inconnu). Vérifié sur de vraies réponses.
+- Réponse JSON lue de façon tolérante (texte ou ``` autour) ; erreurs en français (hors ligne, 429, panne).
+
+**Incident découvert au passage (côté NEXUS).** L'assistant IA de NEXUS était EN PANNE : Groq a retiré le modèle
+`groq/compound-mini`, et le proxy renvoyait 502 (Cloudflare masquait la cause). Corrigé dans nexus-market : statut
+500 lisible, bascule automatique sur un modèle disponible (liste `/models` du compte Groq), réflexion courte pour
+gpt-oss et plafond 2 500 tokens (les réponses étaient tronquées).
+
+**État.** 144 tests unitaires sur 145 verts (dont `tests/ai.test.js`) et 44 tests Playwright verts (`tests/ui/ai.spec.mjs` :
+accord, refus sans envoi, identité jamais envoyée, application des propositions, erreur 429). Sous Windows, le test
+d'en-têtes de `pwa.test.js` échoue à cause des fins de ligne CRLF (pas un défaut du site) ; les tests
+d'accessibilité demandent `--timeout=120000` sur une machine lente.
+
 ## 2026-09-29 — mise en ligne (GitHub Pages)
 **Fait.** Workflow GitHub Actions qui teste puis publie `public/` sur GitHub Pages à chaque mise à jour de `main` ;
 CSP dupliquée en `<meta>` (GitHub Pages ignore `_headers`), avec un test qui garantit qu'elle reste identique ;

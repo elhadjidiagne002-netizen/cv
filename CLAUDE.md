@@ -9,7 +9,10 @@ Toujours répondre et écrire l'interface **en français** (l'anglais est une la
 ## Architecture (décidée — ne pas changer sans raison forte)
 - **Site statique, sans serveur ni compte** : HTML + CSS + JavaScript (modules ES natifs), aucun framework,
   aucune étape de build obligatoire. Déployable tel quel sur Cloudflare Pages (`public/`).
-- **Les données restent dans le navigateur** (`localStorage`), jamais envoyées à un serveur (RGPD) ;
+- **Les données restent dans le navigateur** (`localStorage`), jamais envoyées à un serveur (RGPD) ; seule
+  exception : l'**assistant IA** (`public/js/ai.js`), facultatif, après accord explicite, qui envoie le parcours
+  professionnel SANS identité ni coordonnées (`profileForAI`) à `https://nexusmarket.sn/api/ai` (Groq, clé côté
+  serveur NEXUS) — seule origine externe autorisée dans `connect-src ;
   export / import d'un fichier `.json` pour les sauvegarder ou changer d'appareil.
 - **Export PDF = impression du navigateur** (`window.print()` + CSS `@page`) : le texte reste du vrai
   texte sélectionnable, lisible par les logiciels de recrutement (ATS). Jamais de PDF « image »
