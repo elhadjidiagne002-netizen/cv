@@ -26,7 +26,7 @@ export const templates = [
     ...base,
     id: 'fonctionnel',
     name: 'Fonctionnel',
-    photo: false,
+    photo: true,
     labels,
     palettes: palettes('emeraude', 'bleu-nuit', 'prune', 'ocre'),
     description: 'CV par compétences : savoir-faire en tête, parcours condensé ensuite. Pour une reconversion ou des périodes d\'inactivité.',

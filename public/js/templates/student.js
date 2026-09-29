@@ -21,7 +21,7 @@ export const templates = [
     ...base,
     id: 'etudiant',
     name: 'Étudiant',
-    photo: false,
+    photo: true,
     palettes: palettes('ocean', 'emeraude', 'indigo', 'corail'),
     description: 'Formation et projets en tête, puis stages et jobs : pour un stage, une alternance ou un premier poste.',
     render: renderStudent,

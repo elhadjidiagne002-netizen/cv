@@ -449,12 +449,13 @@ function updatePreview() {
     updateLetterPreview(cv, tpl, preview);
     return;
   }
-  preview.innerHTML = renderCV(cv, tpl.id);
+  preview.innerHTML = renderCV(cv, tpl.id, { photoSlot: true });
   applyAccent(preview);
   const article = preview.querySelector('.cv');
   const paper = effectivePaper(cv, tpl);
   const layout = paginate(article, paper);
-  const { pages } = layout;
+  // L'emplacement photo n'est pas imprimé : le nombre de pages annoncé est mesuré sans lui (= PDF).
+  const pages = article.querySelector('.cv-photo-slot') ? printedPages(cv, tpl, paper) : layout.pages;
   state.pages = pages;
   drawPageGaps(preview, article, layout);
   fitPreview();
@@ -462,6 +463,34 @@ function updatePreview() {
   $('#template-info').innerHTML = `Modèle : <strong>${esc(tpl.name)}</strong> · ${tpl.ats ? 'ATS' : 'créatif'} · ${paper} · ${pages} page${pages > 1 ? 's' : ''}${fitNote}`;
   renderNorms(checkCV(cv, tpl, { pages }));
   renderMatch();
+}
+
+/** Nombre de pages du PDF, mesuré hors écran sur le rendu d'impression (sans emplacement photo). */
+function printedPages(cv, tpl, paper) {
+  const probe = document.createElement('div');
+  probe.className = 'fit-probe';
+  probe.setAttribute('aria-hidden', 'true');
+  document.body.appendChild(probe);
+  try {
+    probe.innerHTML = renderCV(cv, tpl.id);
+    applyAccent(probe);
+    return paginate(probe.firstElementChild, paper).pages;
+  } finally {
+    probe.remove();
+  }
+}
+
+/** Clic sur l'emplacement photo de l'aperçu : ouvre le choix d'une photo, ou réaffiche celle déjà enregistrée. */
+function onPreviewClick(e) {
+  if (!e.target.closest('[data-photo-slot]')) return;
+  if (state.cv.identity.photo) {
+    state.cv.privacy.showPhoto = true;
+    changed({ structural: true });
+    toast('Photo affichée sur le CV.');
+    return;
+  }
+  const input = document.getElementById('photo-input');
+  if (input) input.click();
 }
 
 function updateLetterPreview(cv, tpl, preview) {
@@ -1060,7 +1089,7 @@ function renderGallery() {
   $('#gallery-grid').innerHTML = list
     .map((t) => `<li class="tpl-card${t.id === state.cv.meta.templateId ? ' is-current' : ''}">
       <button type="button" class="tpl-choose" data-template="${t.id}" aria-describedby="tpl-desc-${t.id}"${t.id === state.cv.meta.templateId ? ' aria-current="true"' : ''}>
-        <span class="thumb" aria-hidden="true" inert><span class="thumb-inner">${renderCV(state.cv, t.id)}</span></span>
+        <span class="thumb" aria-hidden="true" inert><span class="thumb-inner">${renderCV(state.cv, t.id, { photoSlot: true })}</span></span>
         <span class="tpl-name">${esc(t.name)}${t.id === state.cv.meta.templateId ? ' <span class="current-label">(actuel)</span>' : ''}</span>
       </button>
       <p class="tpl-badges">${templateBadges(t)}</p>
@@ -1533,6 +1562,7 @@ function bind() {
     }
   });
   $('#btn-print').addEventListener('click', printCV);
+  $('#preview').addEventListener('click', onPreviewClick);
   document.querySelector('.doc-switch').addEventListener('click', (e) => {
     const b = e.target.closest('button[data-doc]');
     if (b) switchDoc(b.dataset.doc);

@@ -1,5 +1,23 @@
 # Journal du projet (le plus récent en haut)
 
+## 2026-09-29 — cycle 7 : photo sur 41 modèles, 12 modèles raffinés
+**Fait.** Photo facultative activée sur 9 modèles de plus (41 sur 45) ; emplacement « Ajouter une photo » cliquable
+dans l'aperçu et la galerie (jamais imprimé) ; famille « Raffinés » de 12 modèles (6 compatibles ATS) et 3 palettes.
+
+**Pourquoi.** Retour utilisateur : trop de modèles sans partie photo, besoin de designs plus soignés.
+
+**Choix notables.**
+- Photo jamais proposée sur les formats US, UK, Québec et Canada (usage anti-discrimination) : c'est une norme du
+  cahier des charges, pas un oubli.
+- L'emplacement photo est un élément d'aperçu : `aria-hidden`, masqué à l'impression, absent du texte brut et du
+  Word ; le nombre de pages est mesuré sur le rendu d'impression pour rester égal au PDF.
+- « Nordique » : première version en grille CSS (titre sur plusieurs rangées), abandonnée car la fragmentation des
+  grilles à l'impression ne se reproduisait pas fidèlement dans l'aperçu ; remplacée par un titre flottant.
+- Les décors (bande verticale, filets, dégradés, motifs) sont en CSS ; les bandes décoratives en marge sont
+  retirées à l'impression pour respecter les marges de 12 mm.
+
+**État.** 144 tests unitaires et 47 tests Playwright verts. Cycle 8 (admin + monétisation) en attente de décisions.
+
 ## 2026-09-29 — cycle 6 : site en production (mises à jour fiables, sauvegarde complète, confidentialité)
 **Fait.** Service worker « réseau d'abord » avec délai de repli et bandeau « nouvelle version » ; sauvegarde complète
 et restauration sans doublon ; numéros de page à l'impression ; pages Confidentialité (avec effacement des données)

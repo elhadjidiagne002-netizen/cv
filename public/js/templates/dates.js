@@ -13,7 +13,7 @@ export const templates = [
     id: 'chronologique',
     name: 'Chronologique',
     category: 'ATS',
-    photo: false,
+    photo: true,
     palettes: palettes('bleu-nuit', 'petrole', 'bordeaux', 'emeraude', 'anthracite'),
     description: 'Dates dans une colonne à gauche, parcours lisible d\'un coup d\'œil. Le CV chronologique classique.',
   },

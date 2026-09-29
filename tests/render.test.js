@@ -176,7 +176,8 @@ test('les champs sensibles n\'apparaissent que si l\'utilisateur les affiche', (
   const shown = renderCV(withEverything(), 'classique');
   assert.match(shown, /<img class="cv-photo"/);
   assert.match(shown, /12\/04\/1995/);
-  assert.doesNotMatch(renderCV(withEverything(), 'sobre'), /<img/, 'Sobre ne prévoit pas de photo');
+  assert.doesNotMatch(renderCV(withEverything(), 'us-resume'), /<img/, 'Résumé US : jamais de photo');
+  assert.match(renderCV(withEverything(), 'sobre'), /<img class="cv-photo"/, 'Sobre : photo facultative possible');
 });
 
 test('ordre des rubriques choisi par l\'utilisateur respecté', () => {

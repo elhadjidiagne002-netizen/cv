@@ -13,9 +13,10 @@ import { templates as functional } from './functional.js';
 import { templates as student } from './student.js';
 import { templates as trades } from './trades.js';
 import { templates as national } from './national.js';
+import { templates as refined } from './refined.js';
 
 export const TEMPLATES = [
-  ...single, ...dates, ...europass, ...international, ...national, ...academic, ...functional, ...student, ...trades, ...sidebar, ...banner,
+  ...single, ...dates, ...europass, ...international, ...national, ...academic, ...functional, ...student, ...trades, ...refined, ...sidebar, ...banner,
 ];
 
 export const DEFAULT_TEMPLATE_ID = 'sobre';

@@ -243,3 +243,137 @@
 .cv-gauge { display: block; height: 1.6mm; margin-top: 0.8mm; border-radius: 0.8mm; background: linear-gradient(to right, var(--accent) var(--lvl, 0%), rgba(0, 0, 0, 0.12) var(--lvl, 0%)); }
 .cv-gauge.lvl-A1 { --lvl: 16%; } .cv-gauge.lvl-A2 { --lvl: 33%; } .cv-gauge.lvl-B1 { --lvl: 50%; }
 .cv-gauge.lvl-B2 { --lvl: 66%; } .cv-gauge.lvl-C1 { --lvl: 83%; } .cv-gauge.lvl-C2, .cv-gauge.lvl-native { --lvl: 100%; }
+
+/* ————————————————————— Famille « Raffinés » (cycle 7) —————————————————————
+   Couleurs d'origine = première palette de chaque modèle (palettes.js). Décors en CSS uniquement
+   (filets, dégradés, pseudo-éléments décoratifs) : aucun texte porteur d'information hors du HTML. */
+.fam-refined .cv-photo { box-shadow: 0 0 0 0.6mm #fff, 0 0 0 1mm var(--accent); }
+
+/* Prestige : Garamond, capitales espacées, photo centrée, filets or */
+.tpl-prestige { --accent: #7a5a12; --accent-2: #45330a; --soft: #f7f0de; --deep: #45330a; --rule: #d8c89c; --font: "EB Garamond", Garamond, Georgia, serif; --fs: 10.6pt; --gap: 3.2mm; }
+.tpl-prestige .cv-head { flex-direction: column; text-align: center; gap: 2mm; padding-bottom: 3mm; border-bottom: 0.3mm solid var(--rule); position: relative; }
+.tpl-prestige .cv-head::after { content: ""; position: absolute; left: 50%; bottom: -1.1mm; width: 28mm; height: 2mm; transform: translateX(-50%); background: #fff; border-top: 0.3mm solid var(--accent); border-bottom: 0.3mm solid var(--accent); }
+.tpl-prestige .cv-name { font-weight: 400; font-size: 23pt; letter-spacing: 0.16em; text-transform: uppercase; color: var(--deep); }
+.tpl-prestige .cv-title { font-style: italic; font-weight: 400; color: var(--accent); font-size: 13pt; }
+.tpl-prestige .cv-photo { width: 25mm; height: 25mm; }
+.tpl-prestige .cv-h { text-align: center; border-bottom: none; font-weight: 400; letter-spacing: 0.22em; font-size: 11.5pt; display: flex; align-items: center; gap: 3mm; }
+.tpl-prestige .cv-h::before, .tpl-prestige .cv-h::after { content: ""; flex: 1; height: 0.3mm; background: var(--rule); }
+.tpl-prestige .cv-item-title { font-size: 11.5pt; }
+.tpl-prestige .cv-item-sub { font-style: italic; font-weight: 400; color: var(--accent); }
+.tpl-prestige .cv-summary { text-align: center; font-style: italic; }
+
+/* Corporate : filet en haut de page, photo à droite, titres sobres */
+.tpl-corporate { --accent: #00386b; --accent-2: #00386b; --soft: #e5eef7; --deep: #00213f; --font: Inter, "Segoe UI", Arial, sans-serif; }
+.tpl-corporate::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 4mm; background: var(--accent); }
+.tpl-corporate .cv-head { flex-direction: row-reverse; align-items: flex-start; padding-top: 3mm; }
+.tpl-corporate .cv-photo { border-radius: 2mm; width: 25mm; height: 30mm; }
+.tpl-corporate .cv-name { color: var(--deep); font-size: 24pt; }
+.tpl-corporate .cv-title { color: var(--accent); text-transform: uppercase; letter-spacing: 0.08em; font-size: 10.5pt; }
+.tpl-corporate .cv-h { border-bottom: none; background: var(--soft); color: var(--deep); padding: 0.6mm 2.5mm; border-left: 1.2mm solid var(--accent); letter-spacing: 0.08em; }
+@media print { .tpl-corporate::before { display: none; } .tpl-corporate .cv-head { border-top: 2.5mm solid var(--accent); } }
+
+/* Nordique : titres dans la marge gauche, beaucoup d'air */
+.tpl-nordique { --accent: #333333; --accent-2: #555555; --soft: #efefef; --deep: #1a1a1a; --rule: #d9d9d9; --font: Inter, "Segoe UI", Arial, sans-serif; --gap: 3.6mm; }
+.tpl-nordique .cv-name { font-weight: 300; font-size: 27pt; color: var(--deep); letter-spacing: -0.01em; }
+.tpl-nordique .cv-title { font-weight: 400; color: var(--accent); }
+.tpl-nordique .cv-photo { border-radius: 0; width: 26mm; height: 26mm; filter: grayscale(0.15); }
+.tpl-nordique .cv-section { display: flow-root; border-top: 0.25mm solid var(--rule); padding-top: 2.5mm; }
+/* Titre dans la marge : flottant (flux normal, pagination et impression identiques), contenu en retrait. */
+.tpl-nordique .cv-section > .cv-h { float: left; width: 38mm; border: none; padding: 0; margin: 0; font-size: 9pt; letter-spacing: 0.06em; color: var(--accent); overflow-wrap: normal; hyphens: manual; }
+.tpl-nordique .cv-section > :not(.cv-h) { margin-left: 43mm; }
+.tpl-nordique ul.cv-desc li::before { content: "–"; color: var(--accent); }
+
+/* Santé : bandes claires, lecture nette */
+.tpl-sante { --accent: #0f6b5c; --accent-2: #0f6b5c; --soft: #e2f3ef; --deep: #093f36; --font: Lato, "Segoe UI", Arial, sans-serif; --fs: 10.2pt; }
+.tpl-sante .cv-head { background: var(--soft); border-radius: 3mm; padding: 3.5mm 5mm; }
+.tpl-sante .cv-photo { width: 26mm; height: 26mm; }
+.tpl-sante .cv-name { color: var(--deep); font-size: 23pt; }
+.tpl-sante .cv-title { color: var(--accent); }
+.tpl-sante .cv-h { border-bottom: none; border-radius: 1.5mm; background: var(--soft); color: var(--deep); padding: 0.7mm 3mm; font-size: 10.5pt; }
+.tpl-sante .cv-item { padding-left: 3mm; border-left: 0.6mm solid var(--soft); }
+
+/* Atelier : bande verticale en marge, Montserrat */
+.tpl-atelier { --accent: #9a3b1b; --accent-2: #9a3b1b; --soft: #fbece4; --deep: #4f1c0b; --font: Lato, "Segoe UI", Arial, sans-serif; --font-head: Montserrat, "Segoe UI", sans-serif; padding-left: 18mm; }
+.tpl-atelier::before { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 7mm; background: repeating-linear-gradient(180deg, var(--accent) 0 18mm, var(--deep) 18mm 21mm); }
+.tpl-atelier .cv-name { font-weight: 800; text-transform: uppercase; font-size: 22pt; letter-spacing: 0.02em; color: var(--deep); }
+.tpl-atelier .cv-title { color: var(--accent); }
+.tpl-atelier .cv-photo { border-radius: 4mm; width: 26mm; height: 26mm; }
+.tpl-atelier .cv-h { border-bottom: 0.8mm solid var(--accent); display: inline-block; padding-right: 6mm; }
+@media print { .tpl-atelier { padding-left: 0; } .tpl-atelier::before { display: none; } .tpl-atelier .cv-head { border-left: 3mm solid var(--accent); padding-left: 4mm; } }
+
+/* Gorée : frise avec dates à gauche */
+.tpl-goree { --accent: #0b5a73; --accent-2: #0b5a73; --soft: #e3f1f5; --deep: #063846; --rule: #bcd9e2; --font: Inter, "Segoe UI", Arial, sans-serif; --font-head: "Source Serif 4", Georgia, serif; }
+.tpl-goree { --gap: 3.2mm; }
+.tpl-goree .cv-photo { width: 26mm; height: 26mm; }
+.tpl-goree .cv-name { font-weight: 700; font-size: 24pt; color: var(--deep); }
+.tpl-goree .cv-title { color: var(--accent); font-weight: 600; }
+.tpl-goree .cv-h { border-bottom-width: 0.25mm; text-transform: none; letter-spacing: 0.02em; font-size: 12.5pt; margin-bottom: 1.6mm; }
+.tpl-goree.dates-left .cv-item { position: relative; padding-bottom: 1.5mm; margin-bottom: 0; }
+.tpl-goree.dates-left .cv-item::before { content: ""; position: absolute; left: 32.3mm; top: 0; bottom: 0; width: 0.5mm; background: var(--rule); }
+.tpl-goree.dates-left .cv-item::after { content: ""; position: absolute; left: 31.3mm; top: 1.2mm; width: 2.5mm; height: 2.5mm; border-radius: 50%; background: var(--accent); }
+.tpl-goree.dates-left .cv-item > :not(.cv-item-head), .tpl-goree.dates-left .cv-item-title { padding-left: 2mm; }
+.tpl-goree.dates-left .cv-item .cv-date { font-size: 9.3pt; }
+
+/* Diplomate : bandeau marine, photo encadrée, empattements */
+.tpl-diplomate { --accent: #00386b; --accent-2: #00386b; --soft: #e5eef7; --deep: #00213f; --font: "Source Serif 4", Georgia, serif; --font-head: "Source Serif 4", Georgia, serif; }
+.tpl-diplomate .cv-banner { background: var(--deep); background: linear-gradient(90deg, var(--deep), var(--accent)); }
+.tpl-diplomate .cv-banner .cv-photo { border-radius: 1mm; width: 25mm; height: 30mm; box-shadow: none; border: 0.8mm solid #fff; }
+.tpl-diplomate .cv-name { font-weight: 400; font-size: 25pt; letter-spacing: 0.04em; }
+.tpl-diplomate .cv-h { border-bottom: 0.25mm solid var(--accent); font-variant: small-caps; text-transform: none; font-size: 13pt; letter-spacing: 0.05em; }
+.tpl-diplomate .cv-h::before { content: ""; display: inline-block; width: 2mm; height: 2mm; margin-right: 2mm; background: var(--accent); transform: rotate(45deg) translateY(-0.4mm); }
+
+/* Sahel : bandeau dégradé terre cuite */
+.tpl-sahel { --accent: #9a3b1b; --accent-2: #9a3b1b; --soft: #fbece4; --deep: #4f1c0b; --font: Lato, "Segoe UI", Arial, sans-serif; --font-head: Montserrat, "Segoe UI", sans-serif; }
+.tpl-sahel .cv-banner { background: var(--accent); background: linear-gradient(120deg, var(--deep) 0%, var(--accent) 70%); border-bottom: 1.5mm solid var(--soft); }
+.tpl-sahel .cv-banner .cv-photo { box-shadow: 0 0 0 1mm #fff; border: none; }
+.tpl-sahel .cv-name { font-weight: 800; font-size: 24pt; }
+.tpl-sahel .cv-h { border-bottom: none; background: var(--soft); color: var(--deep); padding: 0.7mm 3mm; border-radius: 0 3mm 3mm 0; border-left: 1.5mm solid var(--accent); }
+
+/* Baobab : colonne sable avec motif discret */
+.tpl-baobab { --accent: #7c5418; --accent-2: #7c5418; --soft: #f6eedf; --deep: #402a09; --side-bg: #f6eedf; --side-ink: #402a09; --font: Lato, "Segoe UI", Arial, sans-serif; --font-head: "Source Serif 4", Georgia, serif; }
+.tpl-baobab .cv-cols { grid-template-columns: 62mm 1fr; min-height: 273mm; align-items: stretch; }
+.tpl-baobab .cv-side { background: var(--side-bg); color: var(--side-ink); padding: 6mm 5mm; border-radius: 0 0 8mm 0; background-image: linear-gradient(135deg, color-mix(in srgb, var(--accent) 16%, transparent) 25%, transparent 25%), linear-gradient(225deg, color-mix(in srgb, var(--accent) 16%, transparent) 25%, transparent 25%); background-size: 6mm 6mm; background-repeat: repeat-x; background-position: 0 0, 3mm 0; }
+.tpl-baobab .cv-side .cv-photo { display: block; margin: 4mm auto var(--gap); width: 36mm; height: 36mm; }
+.tpl-baobab .cv-side .cv-head { display: block; text-align: center; margin-bottom: var(--gap); }
+.tpl-baobab .cv-side .cv-name { color: var(--side-ink); font-size: 19pt; }
+.tpl-baobab .cv-side .cv-title { color: var(--accent); }
+.tpl-baobab .cv-side .cv-h { color: var(--accent); border-bottom: 0.3mm solid var(--accent); font-size: 10pt; }
+.tpl-baobab .cv-main .cv-h { border-bottom: 0.3mm solid var(--rule); color: var(--deep); }
+.tpl-baobab .cv-main .cv-h::first-letter { color: var(--accent); }
+.tpl-baobab .cv-side .cv-tags li { border-color: var(--accent); }
+
+/* Saint-Louis : colonne droite bleu pâle, petites capitales */
+.tpl-saint-louis { --accent: #0b5a73; --accent-2: #0b5a73; --soft: #e3f1f5; --deep: #063846; --side-bg: #e3f1f5; --side-ink: #063846; --font: "Source Serif 4", Georgia, serif; --font-head: Inter, "Segoe UI", sans-serif; }
+.tpl-saint-louis .cv-cols { grid-template-columns: 1fr 60mm; }
+.tpl-saint-louis .cv-side { background: var(--side-bg); color: var(--side-ink); padding: 5mm; border-radius: 30mm 30mm 2mm 2mm; }
+.tpl-saint-louis .cv-side .cv-photo { display: block; margin: 0 auto var(--gap); width: 38mm; height: 38mm; }
+.tpl-saint-louis .cv-name { color: var(--deep); font-variant: small-caps; font-weight: 600; font-size: 26pt; letter-spacing: 0.04em; }
+.tpl-saint-louis .cv-title { color: var(--accent); }
+.tpl-saint-louis .cv-h { font-variant: small-caps; text-transform: none; letter-spacing: 0.08em; font-size: 12pt; border-bottom-width: 0.25mm; }
+.tpl-saint-louis .cv-side .cv-h { color: var(--deep); border-bottom-color: var(--deep); }
+
+/* Magazine : grand nom, photo portrait, filets épais */
+.tpl-magazine { --accent: #111111; --accent-2: #111111; --soft: #f0f0f0; --deep: #000000; --font: Inter, "Segoe UI", Arial, sans-serif; --font-head: "EB Garamond", Georgia, serif; }
+.tpl-magazine .cv-head { flex-direction: row-reverse; align-items: flex-end; border-bottom: 1.6mm solid var(--accent); padding-bottom: 4mm; }
+.tpl-magazine .cv-photo { border-radius: 0; width: 30mm; height: 38mm; box-shadow: none; }
+.tpl-magazine .cv-name { font-size: 34pt; line-height: 0.95; font-weight: 700; color: var(--accent); letter-spacing: -0.01em; }
+.tpl-magazine .cv-title { font-family: var(--font); text-transform: uppercase; letter-spacing: 0.2em; font-size: 10pt; font-weight: 600; margin-top: 2mm; }
+.tpl-magazine .cv-cols { grid-template-columns: 1fr 52mm; gap: 8mm; }
+.tpl-magazine .cv-h { border-bottom: none; border-top: 0.8mm solid var(--accent); padding-top: 1.2mm; font-size: 12pt; }
+.tpl-magazine .cv-side .cv-h { border-top-width: 0.3mm; font-size: 10.5pt; }
+.tpl-magazine .cv-summary { font-family: var(--font-head); font-size: 12pt; font-style: italic; }
+
+/* Ingénieur : colonne sombre, titres techniques */
+.tpl-ingenieur { --accent: #2f3e4e; --accent-2: #2f3e4e; --soft: #eceff3; --deep: #1c2630; --side-bg: #2f3e4e; --side-ink: #ffffff; --font: Inter, "Segoe UI", Arial, sans-serif; --font-head: ui-monospace, "Cascadia Mono", Consolas, "Courier New", monospace; }
+.tpl-ingenieur .cv-cols { grid-template-columns: 60mm 1fr; min-height: 273mm; align-items: stretch; }
+.tpl-ingenieur .cv-side { background: var(--side-bg); color: var(--side-ink); padding: 6mm 5mm; }
+.tpl-ingenieur .cv-side .cv-photo { display: block; margin: 0 auto var(--gap); width: 34mm; height: 34mm; box-shadow: 0 0 0 0.8mm #fff; }
+.tpl-ingenieur .cv-side .cv-head { display: block; margin-bottom: var(--gap); }
+.tpl-ingenieur .cv-side .cv-name { color: #fff; font-family: var(--font); font-size: 19pt; }
+.tpl-ingenieur .cv-side .cv-title { color: #fff; opacity: 0.92; }
+.tpl-ingenieur .cv-side a { color: #fff; }
+.tpl-ingenieur .cv-side .cv-h { color: #fff; border-bottom-color: rgba(255, 255, 255, 0.6); font-size: 10pt; }
+.tpl-ingenieur .cv-side .cv-tags li { border-color: rgba(255, 255, 255, 0.7); }
+.tpl-ingenieur .cv-side .cv-c-label, .tpl-ingenieur .cv-side .cv-lang-level, .tpl-ingenieur .cv-side .cv-lang-cert { color: #fff; opacity: 0.9; }
+.tpl-ingenieur .cv-main .cv-h { text-transform: none; letter-spacing: 0; font-size: 12pt; }
+.tpl-ingenieur .cv-main .cv-h::before { content: "// "; color: #6b7b8c; }

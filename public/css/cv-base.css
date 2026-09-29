@@ -48,6 +48,15 @@
 .cv-contact-list li { margin-bottom: 1mm; }
 .cv-c-label { display: block; font-weight: 700; font-size: 9pt; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
 
+/* Emplacement photo (aperçu / galerie) : cercle pointillé, même taille que la photo, jamais imprimé. */
+.cv-photo-slot {
+  display: inline-flex; align-items: center; justify-content: center; text-align: center; padding: 2mm;
+  border: 0.5mm dashed color-mix(in srgb, var(--accent) 55%, #fff); background: color-mix(in srgb, var(--accent) 7%, #fff);
+  color: var(--accent); font-size: 9pt; font-weight: 600; line-height: 1.2; cursor: pointer;
+}
+.cv-banner .cv-photo-slot, .cv-side .cv-photo-slot { color: inherit; border-color: currentColor; background: transparent; }
+@media print { .cv-photo-slot { display: none !important; } }
+
 /* Rubriques */
 .cv-section { margin-top: var(--gap); }
 .cv-h {

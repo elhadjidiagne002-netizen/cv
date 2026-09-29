@@ -38,6 +38,8 @@ export function buildView(cv, template, opts = {}) {
     drivingLicence: !template.noPersonal && p.showDrivingLicence,
   };
   const photo = template.photo && !anonymous && p.showPhoto && data.identity.photo ? data.identity.photo : '';
+  // Emplacement photo (aperçu et galerie seulement, jamais imprimé) : montre où la photo facultative irait.
+  const photoSlot = Boolean(opts.photoSlot && template.photo && !anonymous && !photo);
   if (anonymous) {
     // CV anonyme : nom, photo, adresse, âge, situation familiale, nationalité et références masqués.
     data.identity = {
@@ -62,6 +64,8 @@ export function buildView(cv, template, opts = {}) {
     today: opts.today instanceof Date ? opts.today : new Date(),
     show,
     photo,
+    photoSlot,
+    photoSlotLabel: data.identity.photo ? 'Afficher la photo' : 'Ajouter une photo',
     order,
   };
 }
@@ -110,7 +114,7 @@ export function applyTheme(article, cv, template = getTemplate(cv.meta.templateI
 
 /**
  * Rendu complet d'un CV. Renvoie une chaîne HTML (un seul élément <article>).
- * opts : { anonymous?: boolean, extraClass?: string, fit?: number (0 à MAX_FIT) }
+ * opts : { anonymous?: boolean, extraClass?: string, fit?: number (0 à MAX_FIT), photoSlot?: boolean (aperçu) }
  */
 export function renderCV(cv, templateId, opts = {}) {
   const template = typeof templateId === 'object' && templateId ? templateId : getTemplate(templateId || cv.meta.templateId);

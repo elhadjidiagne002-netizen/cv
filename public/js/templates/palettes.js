@@ -20,6 +20,9 @@ export const PALETTES = {
   europe: { name: 'Bleu Europe', accent: '#0e47cb', soft: '#e7eefc', deep: '#0a2f86' },
   marine: { name: 'Bleu marine', accent: '#00386b', soft: '#e5eef7', deep: '#00213f' },
   noir: { name: 'Noir', accent: '#111111', soft: '#f0f0f0', deep: '#000000' },
+  terracotta: { name: 'Terre cuite', accent: '#9a3b1b', soft: '#fbece4', deep: '#4f1c0b' },
+  lagune: { name: 'Lagune', accent: '#0b5a73', soft: '#e3f1f5', deep: '#063846' },
+  sable: { name: 'Sable et or', accent: '#7c5418', soft: '#f6eedf', deep: '#402a09' },
 };
 
 /** Liste de palettes (objets complets avec leur identifiant) à partir de leurs identifiants. */
