@@ -15,7 +15,10 @@ import {
   dueFollowUps, sortApplications, stats as appStats, toCSV, addDays, FOLLOW_UP_DAYS,
 } from './applications.js';
 import { toJSONResume } from './jsonresume.js';
-import { createStore, exportJSON, importJSON, createAutosaver, QuotaError, defaultStorage } from './storage.js';
+import {
+  createStore, exportJSON, importJSON, createAutosaver, QuotaError, defaultStorage,
+  exportBackup, restoreBackup, isBackup, lastBackupDate, markBackupDone,
+} from './storage.js';
 import { renderCV, TEMPLATES, getTemplate, effectivePaper, applyTheme, effectivePalette } from './render.js';
 import { checkCV, applyFix } from './norms.js';
 import { matchOffer } from './match.js';
@@ -410,6 +413,7 @@ function renderSettings() {
   $('#set-datestyle').value = meta.dateStyle;
   $('#set-accent').value = meta.accent || '#1f3a5f';
   $('#set-country').value = meta.country || '';
+  $('#set-pagenumbers').checked = meta.pageNumbers;
   const tpl = getTemplate(meta.templateId);
   const pal = effectivePalette(state.cv, tpl);
   $('#set-palette').innerHTML = (tpl.palettes || [])
@@ -1019,6 +1023,8 @@ function preparePrint() {
   const root = $('#print-root');
   root.innerHTML = state.doc === 'letter' ? renderLetter(state.cv, state.cv.meta.templateId) : renderCV(state.cv, state.cv.meta.templateId);
   applyAccent(root);
+  // Numéros « 1 / 2 » en pied de page, seulement pour un CV de plusieurs pages.
+  if (state.doc === 'cv' && state.cv.meta.pageNumbers && state.pages > 1) root.querySelector('.cv').classList.add('numbered');
 }
 
 function printCV() {
@@ -1147,6 +1153,54 @@ function travel(direction) {
   renderAll();
   updateHistoryButtons();
   toast(direction === 'undo' ? 'Modification annulée.' : 'Modification rétablie.');
+}
+
+// ————————————————————————— Sauvegarde complète —————————————————————————
+
+function backupAll() {
+  autosaver.flush();
+  saveNow();
+  const d = new Date();
+  const stamp = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  download(`sauvegarde-cv-en-ligne-${stamp}.json`, exportBackup(store, appStore.list()));
+  markBackupDone();
+  const n = store.list().length;
+  toast(`Sauvegarde complète : ${n} CV et ${appStore.list().length} candidature(s). Gardez ce fichier (e-mail, Google Drive, clé USB) pour tout retrouver sur un autre appareil.`);
+}
+
+/** Si le fichier est une sauvegarde complète, la restaure (sans rien écraser de plus récent) et renvoie true. */
+function restoreIfBackup(text) {
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    return false;
+  }
+  if (!isBackup(data)) return false;
+  autosaver.flush();
+  saveNow();
+  const report = restoreBackup(store, data);
+  const apps = appStore.merge(report.applications);
+  const newest = store.list()[0];
+  if (newest) openCV(store.load(newest.id));
+  updateDueBadge();
+  const parts = [
+    report.added && `${report.added} CV ajouté${report.added > 1 ? 's' : ''}`,
+    report.updated && `${report.updated} mis à jour`,
+    report.kept && `${report.kept} déjà à jour`,
+    apps && `${apps} candidature${apps > 1 ? 's' : ''}`,
+  ].filter(Boolean);
+  toast(`Sauvegarde restaurée : ${parts.join(', ') || 'rien de nouveau'}.`);
+  return true;
+}
+
+/** Rappel discret : aucune sauvegarde complète depuis 30 jours alors que des CV existent. */
+function backupReminder() {
+  const last = lastBackupDate();
+  const ownCVs = store.list().filter((e) => !/^Exemple/.test(e.title || '')).length;
+  if (!ownCVs) return;
+  if (last && Date.now() - Date.parse(last) < 30 * 24 * 3600 * 1000) return;
+  setTimeout(() => toast('Conseil : faites une « Sauvegarde complète » (menu Autres formats). Vos CV ne sont stockés que dans ce navigateur.'), 2500);
 }
 
 // ————————————————————————— Import LinkedIn —————————————————————————
@@ -1465,7 +1519,9 @@ function bind() {
         await importLinkedIn(files);
         return;
       }
-      const { cv, warnings, source } = importJSON(await file.text());
+      const text = await file.text();
+      if (restoreIfBackup(text)) return;
+      const { cv, warnings, source } = importJSON(text);
       autosaver.flush();
       state.cv = cv;
       saveNow();
@@ -1518,6 +1574,10 @@ function bind() {
     const bytes = letter ? letterToDocx(state.cv) : cvToDocx(state.cv);
     download(`${letter ? 'lettre-' : ''}${slug(state.cv.meta.title)}.docx`, bytes, DOCX_MIME);
     toast(letter ? 'Lettre exportée au format Word.' : 'CV exporté au format Word : une colonne, titres standard, lisible par les ATS.');
+  });
+  $('#btn-backup').addEventListener('click', () => {
+    $('#formats-menu').open = false;
+    backupAll();
   });
   $('#btn-jsonresume').addEventListener('click', () => {
     autosaver.flush();
@@ -1628,11 +1688,20 @@ function init() {
   renderDatalists();
   bind();
   updateDueBadge();
+  backupReminder();
   resetHistory();
   renderAll();
   // Les polices embarquées changent la hauteur du texte : nouvelle mesure une fois chargées.
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => schedulePreview());
-  registerServiceWorker();
+  registerServiceWorker(() => {
+    // Nouvelle version installée pendant l'utilisation : on enregistre tout, puis on propose de recharger.
+    autosaver.flush();
+    $('#update-bar').hidden = false;
+  });
+  $('#btn-reload').addEventListener('click', () => {
+    autosaver.flush();
+    window.location.reload();
+  });
   setStatus(navigator.onLine === false ? 'Hors ligne — vos données restent dans ce navigateur' : 'Vos données restent dans ce navigateur');
   // Exposé pour le débogage et les tests d'interface.
   window.__cvApp = { state, store, cloneCV, getByPath, CEFR_LEVELS, undoHistory };

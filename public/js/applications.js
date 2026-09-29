@@ -128,5 +128,20 @@ export function createApplicationStore(storage) {
     remove(id) {
       write(read().filter((x) => x.id !== id));
     },
+    /** Fusionne une liste (restauration) : ajoute les absentes, remplace par la version la plus récente. Renvoie le nombre de changements. */
+    merge(list) {
+      const current = new Map(read().map((a) => [a.id, a]));
+      let changed = 0;
+      for (const raw of Array.isArray(list) ? list : []) {
+        const a = normalizeApplication(raw);
+        const here = current.get(a.id);
+        if (!here || a.updatedAt > here.updatedAt) {
+          current.set(a.id, a);
+          changed += 1;
+        }
+      }
+      write([...current.values()]);
+      return changed;
+    },
   };
 }

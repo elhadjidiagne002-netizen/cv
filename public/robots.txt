@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://cv-en-ligne.pages.dev/sitemap.xml

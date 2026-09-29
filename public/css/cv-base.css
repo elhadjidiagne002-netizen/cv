@@ -119,9 +119,20 @@ ul.cv-desc li::before { content: "•"; position: absolute; left: 0.6mm; color: 
 /* Impression : le CV seul, texte réel, sans coupure au milieu d'un bloc. */
 @page { size: A4; margin: 12mm; }
 @page letter { size: letter; margin: 0.5in; }
+/* Numéros de page (CV de 2 pages ou plus) : dans la marge basse, jamais les coordonnées (norme ATS). */
+@page numbered {
+  size: A4; margin: 12mm;
+  @bottom-right { content: counter(page) " / " counter(pages); font: 9pt Inter, Arial, sans-serif; color: #555; vertical-align: middle; }
+}
+@page letter-numbered {
+  size: letter; margin: 0.5in;
+  @bottom-right { content: counter(page) " / " counter(pages); font: 9pt Inter, Arial, sans-serif; color: #555; vertical-align: middle; }
+}
 @media print {
   .cv, .cv.paper-letter { width: auto; min-height: 0; padding: 0; box-shadow: none !important; transform: none !important; }
   .cv.paper-letter { page: letter; }
+  .cv.numbered { page: numbered; }
+  .cv.paper-letter.numbered { page: letter-numbered; }
   .cv-section { break-inside: auto; }
   .cv-h { break-after: avoid; }
   .cv-item, .cv-skill, .cv-skill-group { break-inside: avoid; }

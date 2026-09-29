@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'; upgrade-insecure-requests">
+  <meta name="referrer" content="no-referrer">
+  <title>Confidentialité — CV en ligne</title>
+  <meta name="description" content="Politique de confidentialité de CV en ligne : aucune donnée collectée, vos CV restent dans votre navigateur.">
+  <link rel="canonical" href="https://cv-en-ligne.pages.dev/confidentialite.html">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#0b5cad">
+  <link rel="stylesheet" href="css/app.css">
+  <script type="module" src="js/privacy.js"></script>
+</head>
+<body class="home">
+  <a class="skip-link" href="#contenu">Aller au contenu</a>
+  <header class="home-header">
+    <a class="brand" href="index.html">CV en ligne</a>
+    <a class="btn btn-primary" href="app.html">Ouvrir l'éditeur</a>
+  </header>
+  <main class="prose" id="contenu" tabindex="-1">
+    <h1>Confidentialité et données personnelles</h1>
+    <p class="lead">En bref : <strong>nous ne collectons aucune donnée</strong>. Votre CV, vos lettres et votre suivi de candidatures
+      restent dans votre navigateur, sur votre appareil. Rien n'est envoyé à un serveur.</p>
+
+    <h2>Où sont vos données ?</h2>
+    <ul>
+      <li>Dans le <strong>stockage local de votre navigateur</strong> (localStorage), uniquement sur l'appareil utilisé.</li>
+      <li>Les fichiers du site (pages, scripts, polices) sont gardés en cache pour fonctionner <strong>sans connexion</strong> ;
+        ce cache ne contient aucune donnée personnelle.</li>
+      <li>Les PDF, fichiers Word, sauvegardes et exports sont créés <strong>sur votre appareil</strong> et enregistrés là où vous le choisissez.</li>
+    </ul>
+
+    <h2>Ce que le site ne fait pas</h2>
+    <ul>
+      <li>Aucun compte, aucune inscription, aucun cookie, aucune publicité.</li>
+      <li>Aucun outil de mesure d'audience ni traceur, aucune ressource chargée depuis un autre site (polices et scripts sont hébergés ici).</li>
+      <li>L'analyse d'une offre d'emploi, l'import LinkedIn et le contrôle de conformité sont calculés sur votre appareil.</li>
+    </ul>
+
+    <h2>Hébergement</h2>
+    <p>Le site est hébergé par Cloudflare Pages. Comme tout hébergeur, Cloudflare traite des données techniques de connexion
+      (adresse IP, navigateur) pour acheminer les pages et protéger le service, selon sa propre politique de confidentialité.
+      Ces données ne contiennent pas le contenu de vos CV.</p>
+
+    <h2>Vos droits et vos données</h2>
+    <p>Vos données étant uniquement chez vous, vous en gardez le contrôle total : exportez-les (« Sauvegarde complète » dans
+      l'éditeur) ou effacez-les à tout moment.</p>
+    <div class="danger-zone">
+      <h3>Effacer toutes mes données de ce navigateur</h3>
+      <p>Supprime tous vos CV, lettres et candidatures enregistrés ici, ainsi que le cache hors ligne. Faites d'abord une sauvegarde complète si vous voulez les garder.</p>
+      <button type="button" class="btn btn-danger" id="btn-wipe">Effacer mes données</button>
+      <p class="hint" id="wipe-status" role="status" aria-live="polite"></p>
+    </div>
+
+    <h2>Recommandations pour votre CV</h2>
+    <p>Photo, date de naissance, nationalité et situation familiale ne sont jamais obligatoires : l'éditeur les masque par défaut.
+      Ne mettez jamais sur un CV un numéro de carte d'identité, de passeport ou de sécurité sociale.</p>
+
+    <h2>Contact</h2>
+    <p>Question ou problème : ouvrez un ticket sur la page du <a href="https://github.com/elhadjidiagne002-netizen/cv/issues">projet GitHub</a>.</p>
+  </main>
+  <footer class="home-footer">
+    <p>CV en ligne — application libre et sans publicité. <a href="confidentialite.html">Confidentialité</a> ·
+      <a href="https://github.com/elhadjidiagne002-netizen/cv">Code source</a></p>
+  </footer>
+</body>
+</html>

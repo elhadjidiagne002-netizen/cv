@@ -9,6 +9,7 @@
   <meta name="referrer" content="no-referrer">
   <title>Éditeur de CV — CV en ligne</title>
   <meta name="description" content="Rédigez votre CV avec aperçu en direct, contrôle de conformité et export PDF. Vos données restent dans votre navigateur.">
+  <link rel="canonical" href="https://cv-en-ligne.pages.dev/app.html">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -55,9 +56,10 @@
       <details class="menu" id="formats-menu">
         <summary class="btn">Autres formats</summary>
         <div class="menu-panel">
+          <button type="button" class="btn" id="btn-backup">Sauvegarde complète (tous les CV, lettres, candidatures)</button>
           <button type="button" class="btn" id="btn-docx">CV au format Word (.docx)</button>
           <button type="button" class="btn" id="btn-jsonresume">Format JSON Resume (.json)</button>
-          <p class="hint menu-hint">« Importer » accepte aussi les fichiers JSON Resume et l'archive LinkedIn (.zip ou fichiers .csv).</p>
+          <p class="hint menu-hint">« Importer » accepte aussi une sauvegarde complète, les fichiers JSON Resume et l'archive LinkedIn (.zip ou fichiers .csv).</p>
         </div>
       </details>
       <button type="button" class="btn btn-primary" id="btn-print">Télécharger en PDF</button>
@@ -124,6 +126,10 @@
               <option value="numeric">Numérique (03/2022)</option>
               <option value="long">En toutes lettres (mars 2022)</option>
             </select>
+          </div>
+          <div class="field field-check">
+            <input type="checkbox" id="set-pagenumbers" data-path="meta.pageNumbers">
+            <label for="set-pagenumbers">Numéroter les pages à l'impression (CV de 2 pages ou plus)</label>
           </div>
           <div class="field">
             <label for="set-palette">Palette de couleurs du modèle</label>
@@ -228,6 +234,11 @@
   </dialog>
 
   <div id="datalists"></div>
+
+  <div class="update-bar" id="update-bar" role="status" hidden>
+    <span>Une nouvelle version de l'application est disponible. Vos CV sont enregistrés.</span>
+    <button type="button" class="btn btn-small" id="btn-reload">Recharger maintenant</button>
+  </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </body>

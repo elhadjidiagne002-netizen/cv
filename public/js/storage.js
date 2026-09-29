@@ -71,9 +71,10 @@ export function createStore(storage = defaultStorage()) {
       const raw = readJSON(docKey(id), null);
       return raw ? normalizeCV(raw) : null;
     },
-    save(cv) {
+    /** Enregistre un CV. { keepDate: true } conserve sa date de modification (restauration d'une sauvegarde). */
+    save(cv, { keepDate = false } = {}) {
       const doc = normalizeCV(cv);
-      doc.meta.updatedAt = new Date().toISOString();
+      if (!keepDate || !doc.meta.updatedAt) doc.meta.updatedAt = new Date().toISOString();
       write(docKey(doc.id), doc);
       const index = readJSON(INDEX_KEY, []).filter((e) => e && e.id !== doc.id);
       index.push({ id: doc.id, title: doc.meta.title, updatedAt: doc.meta.updatedAt, templateId: doc.meta.templateId });
@@ -160,4 +161,61 @@ export function createAutosaver(fn, delay = 600) {
       return pending !== null;
     },
   };
+}
+
+// ————————————————————————— Sauvegarde complète —————————————————————————
+
+export const BACKUP_FORMAT = 'cv-en-ligne-sauvegarde';
+const LAST_BACKUP_KEY = `${PREFIX}lastBackup`;
+
+/**
+ * Sauvegarde complète : tous les CV (avec leurs lettres) + le suivi des candidatures, en un seul fichier .json.
+ * `applications` : liste déjà lue (le module de suivi reste indépendant du stockage des CV).
+ */
+export function exportBackup(store, applications = []) {
+  const cvs = store.list().map((e) => store.load(e.id)).filter(Boolean);
+  return JSON.stringify({ format: BACKUP_FORMAT, schemaVersion: SCHEMA_VERSION, exportedAt: new Date().toISOString(), cvs, applications }, null, 2);
+}
+
+export function isBackup(data) {
+  return Boolean(data && typeof data === 'object' && data.format === BACKUP_FORMAT && Array.isArray(data.cvs));
+}
+
+/**
+ * Restaure une sauvegarde sans rien perdre : un CV absent est ajouté ; un CV déjà présent (même identifiant)
+ * n'est remplacé que si la sauvegarde est plus récente. Renvoie { added, updated, kept, applications }.
+ */
+export function restoreBackup(store, data) {
+  if (!isBackup(data)) throw new Error('Ce fichier n\'est pas une sauvegarde complète de CV en ligne.');
+  const report = { added: 0, updated: 0, kept: 0, applications: Array.isArray(data.applications) ? data.applications : [] };
+  const existing = new Map(store.list().map((e) => [e.id, e]));
+  for (const raw of data.cvs) {
+    const cv = normalizeCV(raw);
+    const here = existing.get(cv.id);
+    if (!here) {
+      store.save(cv, { keepDate: true });
+      report.added += 1;
+    } else if (String(cv.meta.updatedAt) > String(here.updatedAt)) {
+      store.save(cv, { keepDate: true });
+      report.updated += 1;
+    } else report.kept += 1;
+  }
+  return report;
+}
+
+/** Date de la dernière sauvegarde complète (rappel périodique dans l'éditeur). */
+export function lastBackupDate(storage = defaultStorage()) {
+  try {
+    return storage.getItem(LAST_BACKUP_KEY) || '';
+  } catch {
+    return '';
+  }
+}
+
+export function markBackupDone(storage = defaultStorage(), when = new Date()) {
+  try {
+    storage.setItem(LAST_BACKUP_KEY, when.toISOString());
+  } catch {
+    /* stockage indisponible : le rappel réapparaîtra, sans conséquence */
+  }
 }

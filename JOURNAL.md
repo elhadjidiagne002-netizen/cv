@@ -1,5 +1,27 @@
 # Journal du projet (le plus récent en haut)
 
+## 2026-09-29 — cycle 6 : site en production (mises à jour fiables, sauvegarde complète, confidentialité)
+**Fait.** Service worker « réseau d'abord » avec délai de repli et bandeau « nouvelle version » ; sauvegarde complète
+et restauration sans doublon ; numéros de page à l'impression ; pages Confidentialité (avec effacement des données)
+et 404, `robots.txt`, `sitemap.xml`, Open Graph ; intégration continue sur chaque push.
+
+**Pourquoi.** Le site est déployé sur https://cv-en-ligne.pages.dev. L'ancien service worker servait les scripts
+« cache d'abord » et les mettait à jour un par un : après un déploiement, un visiteur pouvait obtenir une page neuve
+avec des modules anciens ou mélangés, et l'éditeur pouvait planter. Sur téléphone, changer d'appareil faisait perdre
+les CV faute de sauvegarde globale.
+
+**Choix notables.**
+- Réseau d'abord avec délai de 3,5 s : cohérence des versions en ligne, application utilisable sur réseau lent ou
+  hors ligne. Les requêtes passent par le cache HTTP (`max-age=300`, `must-revalidate`) : revalidations légères.
+- Restauration : un CV n'est remplacé que si la sauvegarde est plus récente (`updatedAt` conservé à la
+  restauration) ; les candidatures sont fusionnées de même.
+- Numéros de page par pages nommées CSS (`@page numbered { @bottom-right … }`), ajoutées seulement au moment de
+  l'impression si le CV fait au moins 2 pages ; vérifiés dans le texte du PDF (pypdf).
+- Le site en ligne n'est pas joignable depuis l'environnement de développement (politique réseau) : vérifications
+  faites sur le serveur local qui applique `_headers`.
+
+**État.** 140 tests unitaires et 45 tests Playwright verts. Propositions du cycle 7 dans `ROADMAP.md`.
+
 ## 2026-09-29 — mise en ligne (GitHub Pages)
 **Fait.** Workflow GitHub Actions qui teste puis publie `public/` sur GitHub Pages à chaque mise à jour de `main` ;
 CSP dupliquée en `<meta>` (GitHub Pages ignore `_headers`), avec un test qui garantit qu'elle reste identique ;
