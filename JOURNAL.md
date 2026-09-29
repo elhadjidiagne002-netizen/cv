@@ -1,5 +1,31 @@
 # Journal du projet (le plus récent en haut)
 
+## 2026-09-29 — cycle 8 : tableau de bord admin (compte Devizo) et monétisation
+**Fait.** Serveur minimal (Cloudflare Pages Functions + D1) et tableau de bord `/admin.html` : connexion avec le
+compte Devizo, vue d'ensemble des ventes et de l'usage, validation des paiements Wave / Orange Money, gestion des
+4 types de pass (durée, modèle à l'unité, crédits, abonnement), modèles premium ou masqués, codes offerts,
+annonce, journal. Côté candidat : modèles premium signalés, fenêtre de déblocage, « Mes pass ».
+
+**Pourquoi.** Demande : que l'administrateur puisse tout gérer et monétiser depuis son tableau de bord, avec le même
+compte que Devizo. Décisions de l'utilisateur : les quatre types de pass, paiement Wave / Orange Money manuel,
+même base D1 que Devizo.
+
+**Choix notables.**
+- Le contenu des CV ne quitte toujours pas le navigateur : le serveur ne connaît que offres, commandes (numéro de
+  paiement effacé après 180 jours par défaut), codes et compteurs anonymes par jour (sans IP ni identifiant).
+- Monétisation **désactivée par défaut** et offres d'exemple inactives ; sans base configurée, `/api/config` répond
+  « non configuré » et tout reste gratuit (aucune régression pour le site en ligne).
+- Connexion admin : vérification PBKDF2 et TOTP compatibles Devizo, anti-rejeu partagé (`last_step`), session
+  HttpOnly limitée à `/api/admin`, SameSite=Strict, contrôle d'origine sur chaque écriture.
+- Le blocage PDF des modèles premium est côté navigateur (contournable par un utilisateur averti) ; les crédits de
+  téléchargement sont décomptés côté serveur. Assumé : paiement manuel, montants modestes.
+- Le service worker ne met jamais en cache `/api/*` ni le tableau de bord.
+- Bug trouvé par les tests d'interface : la recherche de codes mettait la note en majuscules (« LYCÉE » ≠ « lycée »
+  pour `LIKE` de SQLite) ; corrigé.
+
+**État.** 171 tests unitaires et 55 tests Playwright verts (axe-core : zéro violation sur l'administration et la
+fenêtre de déblocage). À faire par le propriétaire : liaisons D1 `DB` / `AUTH_DB` et secret `ADMIN_EMAILS`.
+
 ## 2026-09-29 — cycle 7 : photo sur 41 modèles, 12 modèles raffinés
 **Fait.** Photo facultative activée sur 9 modèles de plus (41 sur 45) ; emplacement « Ajouter une photo » cliquable
 dans l'aperçu et la galerie (jamais imprimé) ; famille « Raffinés » de 12 modèles (6 compatibles ATS) et 3 palettes.

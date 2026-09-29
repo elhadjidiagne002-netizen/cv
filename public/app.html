@@ -47,6 +47,7 @@
     </div>
     <div class="topbar-group" role="group" aria-label="Actions">
       <button type="button" class="btn" id="btn-gallery">Modèles</button>
+      <button type="button" class="btn btn-premium" id="btn-premium" hidden>Premium</button>
       <button type="button" class="btn" id="btn-apps">Mes candidatures <span class="due-badge" id="due-badge" hidden></span></button>
       <button type="button" class="btn" id="btn-anon" aria-pressed="false">CV anonyme</button>
       <button type="button" class="btn" id="btn-import">Importer</button>
@@ -67,6 +68,11 @@
     </div>
     <p class="save-status" id="save-status" role="status" aria-live="polite"></p>
   </header>
+
+  <div class="announce" id="announce" role="region" aria-label="Annonce" hidden>
+    <p id="announce-text"></p>
+    <button type="button" class="btn btn-small" id="announce-close">Masquer l'annonce</button>
+  </div>
 
   <main class="layout">
     <section class="editor" id="editor" aria-labelledby="editor-title" tabindex="-1">
@@ -258,6 +264,17 @@
       <button type="button" class="btn" id="ai-close">Fermer</button>
     </div>
     <div id="ai-body" aria-live="polite"></div>
+  </dialog>
+
+  <dialog id="unlock-dlg" aria-labelledby="unlock-title">
+    <div class="gallery-head">
+      <h2 id="unlock-title">Modèles premium</h2>
+      <button type="button" class="btn" id="unlock-close">Fermer</button>
+    </div>
+    <p class="unlock-reason" id="unlock-reason" hidden></p>
+    <p class="hint">Les modèles gratuits restent entièrement gratuits. Les modèles premium s'essaient librement ; leur téléchargement
+      se débloque avec un code, obtenu après paiement par Wave ou Orange Money.</p>
+    <div id="unlock-body"></div>
   </dialog>
 
   <div id="datalists"></div>

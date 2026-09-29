@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://nexusmarket.sn; manifest-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'; upgrade-insecure-requests">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Administration — CV en ligne</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/app.css">
+  <link rel="stylesheet" href="css/admin.css">
+  <script type="module" src="js/admin.js"></script>
+</head>
+<body class="admin">
+  <a class="skip-link" href="#main">Aller au contenu</a>
+  <header class="topbar">
+    <a class="brand" href="index.html">CV en ligne</a>
+    <span class="admin-tag">Administration</span>
+    <p class="save-status" id="who" aria-live="polite"></p>
+    <button type="button" class="btn btn-small" id="btn-logout" hidden>Se déconnecter</button>
+  </header>
+
+  <main id="main" tabindex="-1">
+    <section id="login-view" class="admin-login" aria-labelledby="login-title" hidden>
+      <h1 id="login-title">Connexion administrateur</h1>
+      <p class="hint">Utilisez votre compte <strong>Devizo</strong> (même e-mail, même mot de passe, même application d'authentification).
+        Seuls les comptes administrateurs de Devizo ont accès.</p>
+      <form id="login-form" novalidate>
+        <div class="field"><label for="login-email">E-mail</label><input type="email" id="login-email" autocomplete="username" required></div>
+        <div class="field"><label for="login-password">Mot de passe</label><input type="password" id="login-password" autocomplete="current-password" required></div>
+        <button type="submit" class="btn btn-primary">Se connecter</button>
+      </form>
+      <form id="code-form" novalidate hidden>
+        <div class="field"><label for="login-code" id="login-code-label">Code à 6 chiffres</label>
+          <input type="text" id="login-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required></div>
+        <button type="submit" class="btn btn-primary">Valider</button>
+      </form>
+      <p class="admin-error" id="login-error" role="alert"></p>
+    </section>
+
+    <section id="dash-view" hidden aria-labelledby="dash-title">
+      <h1 id="dash-title" class="sr-only">Tableau de bord</h1>
+      <nav class="admin-tabs" aria-label="Rubriques de l'administration">
+        <button type="button" data-tab="overview" aria-current="page">Vue d'ensemble</button>
+        <button type="button" data-tab="orders">Commandes <span class="count-badge" id="pending-badge" hidden></span></button>
+        <button type="button" data-tab="offers">Offres et pass</button>
+        <button type="button" data-tab="templates">Modèles</button>
+        <button type="button" data-tab="codes">Codes</button>
+        <button type="button" data-tab="settings">Réglages</button>
+        <button type="button" data-tab="audit">Journal</button>
+      </nav>
+      <div id="panel" class="admin-panel" tabindex="-1"></div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

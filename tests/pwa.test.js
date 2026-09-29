@@ -27,7 +27,10 @@ test('le service worker met en cache tous les fichiers du site (et rien d\'exter
   const sw = read('sw.js');
   const list = [...sw.match(/const ASSETS = \[([\s\S]*?)\];/)[1].matchAll(/'([^']+)'/g)].map((m) => m[1]);
   // Polices « latin étendu » : chargées et mises en cache à la demande (données mobiles).
-  const files = walk(pub).filter((f) => !['_headers', 'sw.js'].includes(f) && !f.endsWith('.txt') && f !== 'sitemap.xml' && !/-latin-ext-/.test(f));
+  const files = walk(pub).filter((f) => !['_headers', 'sw.js'].includes(f) && !f.endsWith('.txt') && f !== 'sitemap.xml' && !/-latin-ext-/.test(f)
+    && !/^(admin\.html|js\/admin\.js|css\/admin\.css)$/.test(f)); // administration : jamais hors ligne
+  assert.ok(!list.some((f) => /admin/.test(f)), 'le tableau de bord n\'est pas mis en cache');
+  assert.ok(sw.includes("url.pathname.startsWith('/api/')"), 'les appels à l\'API ne passent jamais par le cache');
   assert.ok(!list.some((f) => /-latin-ext-/.test(f)), 'les polices latin-ext ne sont pas pré-téléchargées');
   for (const f of files) assert.ok(list.includes(f), `absent du cache hors ligne : ${f}`);
   for (const f of list) if (f !== './') assert.ok(existsSync(join(pub, f)), `fichier inexistant : ${f}`);

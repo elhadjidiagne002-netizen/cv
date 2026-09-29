@@ -300,11 +300,36 @@ famille de modèles haut de gamme ; l'administration et la monétisation attende
   utilise un flux normal pour que l'aperçu et l'impression paginent à l'identique.
 - **Tests** : 144 tests unitaires (+4) et 47 tests Playwright (+2).
 
-## Proposé pour le cycle 8 (en attente de décisions)
-1. **Tableau de bord admin + monétisation** avec le **compte admin de Devizo** (Cloudflare D1, mot de passe PBKDF2,
-   double authentification, super-admin par `ADMIN_EMAILS`). À décider : modèle de monétisation (modèles premium
-   déblocables, paiement par téléchargement, abonnement), moyen de paiement (Wave / Orange Money manuel comme Devizo,
-   agrégateur automatique, Stripe), et partage de compte (même base D1 que Devizo ou connexion via l'API Devizo).
-2. **Interface en anglais** (et aides principales en wolof).
-3. **Glisser-déposer accessible** des éléments et rubriques.
-4. **Captures de non-régression visuelle** des 45 modèles et de la lettre.
+## Cycle 8 — administration et monétisation (fait)
+
+### Décisions (2026-09-29)
+- **Plusieurs types de pass**, gérés par l'administrateur : pass à durée, modèle à l'unité, crédits de
+  téléchargement, abonnement mensuel renouvelable. L'essentiel reste gratuit (créer, contrôler, télécharger son CV
+  avec les modèles gratuits).
+- **Paiement Wave / Orange Money manuel** : le candidat envoie le montant avec une référence, l'administrateur valide,
+  un code de déblocage est délivré (sans compte pour le candidat).
+- **Compte admin = compte Devizo** : lecture de la base D1 de Devizo (e-mail, mot de passe PBKDF2, application
+  d'authentification), super-admins listés dans `ADMIN_EMAILS`.
+
+### Fait
+- [x] Serveur minimal (Pages Functions + D1, schéma créé automatiquement) : offres, commandes, codes, réglages,
+  statistiques anonymes, journal ; protections CSRF, limitation des tentatives, effacement automatique des numéros.
+- [x] Connexion admin avec le compte Devizo (PBKDF2, application d'authentification, anti-rejeu partagé, code par
+  e-mail en secours, comptes suspendus refusés).
+- [x] Tableau de bord `/admin.html` : vue d'ensemble (revenus, graphiques 30 jours, modèles les plus téléchargés),
+  commandes à valider (WhatsApp, export CSV), 4 types de pass, modèles premium / masqués, codes (offrir, prolonger,
+  désactiver), réglages (monétisation, Wave / Orange Money, annonce, durée de conservation), journal.
+- [x] Côté candidat : badges « Premium », fenêtre de déblocage (code, commande, « J'ai payé : vérifier »),
+  crédits décomptés par le serveur, annonce, modèles masqués ; tout gratuit sans serveur configuré.
+- [x] Confidentialité, déploiement (liaisons D1 à créer), tests serveur + interface + accessibilité.
+
+### Reste à faire côté hébergement (par le propriétaire)
+- Créer la base D1 `cv-en-ligne`, lier `DB` et `AUTH_DB` (Devizo), secret `ADMIN_EMAILS` (voir `DEPLOIEMENT.md`).
+
+## Proposé pour le cycle 9
+1. **Paiement automatique** (agrégateur Wave / Orange Money type PayDunya ou CinetPay) : code délivré sans
+   intervention, en gardant la validation manuelle en secours.
+2. **Notification admin** d'une nouvelle commande (e-mail Resend ou WhatsApp) et rappel des commandes en attente.
+3. **Codes promo** (réduction en %, date limite) et statistiques de conversion (vues du déblocage → ventes).
+4. **Interface en anglais** (et aides principales en wolof).
+5. **Glisser-déposer accessible** des éléments et rubriques ; captures de non-régression visuelle des 45 modèles.

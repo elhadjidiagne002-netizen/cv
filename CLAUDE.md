@@ -14,6 +14,12 @@ Toujours répondre et écrire l'interface **en français** (l'anglais est une la
   professionnel SANS identité ni coordonnées (`profileForAI`) à `https://nexusmarket.sn/api/ai` (Groq, clé côté
   serveur NEXUS) — seule origine externe autorisée dans `connect-src ;
   export / import d'un fichier `.json` pour les sauvegarder ou changer d'appareil.
+- **Administration et monétisation** (cycle 8) : `functions/` (Cloudflare Pages Functions, `/api/*`) + D1 `DB` (offres,
+  commandes, codes de déblocage, réglages, compteurs anonymes, journal) ; compte admin = **compte Devizo** (liaison D1
+  `AUTH_DB` en lecture, PBKDF2 + TOTP, `ADMIN_EMAILS`). Le **contenu des CV n'est jamais envoyé** : seuls le code, la
+  référence et le numéro de paiement le sont. Sans liaison `DB`, tout est gratuit (`/api/config` « non configuré »).
+  Client : `public/js/premium.js` (droits), `public/admin.html` + `js/admin.js` (tableau de bord, hors cache hors ligne).
+  Tests serveur : `tests/server.test.js` sur une D1 imitée (`tests/helpers/d1.js`, node:sqlite).
 - **Export PDF = impression du navigateur** (`window.print()` + CSS `@page`) : le texte reste du vrai
   texte sélectionnable, lisible par les logiciels de recrutement (ATS). Jamais de PDF « image »
   (pas de html2canvas pour l'export final).
@@ -34,7 +40,8 @@ Toujours répondre et écrire l'interface **en français** (l'anglais est une la
     `international.js`, `sidebar.js`, `banner.js`), briques communes dans `parts.js`, registre `index.js`.
     Tout contenu utilisateur passe par `esc()` ; **jamais d'attribut `style=""`** dans le HTML rendu (bloqué
     par la CSP) — les réglages dynamiques passent par `element.style.setProperty()` (CSSOM, autorisé).
-  - Serveur de test local : `npm run serve` (sert `public/` avec les en-têtes de `_headers`, donc la vraie CSP).
+  - Serveur de test local : `npm run serve` (sert `public/` avec les en-têtes de `_headers`, donc la vraie CSP, et
+    `/api/*` sur une base en mémoire isolée par cookie `testdb`).
   - `tests/` : `node --test` (unitaires) et `tests/ui/*.spec.mjs` (Playwright).
 
 ## Normes à respecter rigoureusement (le cœur du produit)
