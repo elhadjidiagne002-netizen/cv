@@ -4,7 +4,8 @@ Créez un CV professionnel en quelques minutes : des dizaines de modèles, un ap
 PDF conforme aux normes du recrutement (lisible par les logiciels de tri, normes françaises,
 Europass, résumé anglo-saxon).
 
-- 100 % dans le navigateur : vos données ne quittent jamais votre appareil.
+- 100 % dans le navigateur : vos données ne quittent pas votre appareil, sauf si vous utilisez l'assistant IA
+  (facultatif, avec accord explicite, parcours professionnel seulement — jamais l'identité ni les coordonnées).
 - Gratuit, sans compte.
 
 ## Utilisation locale

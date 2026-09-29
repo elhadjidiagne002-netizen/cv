@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <!-- CSP aussi en <meta> : certains hébergeurs (GitHub Pages) ignorent public/_headers. frame-ancestors n'est
        valable qu'en en-tête HTTP (_headers). Garder identique à _headers (vérifié par tests/deploy.test.js). -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'; upgrade-insecure-requests">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://nexusmarket.sn; manifest-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'; upgrade-insecure-requests">
   <meta name="referrer" content="no-referrer">
   <title>CV en ligne — créez un CV conforme aux normes du recrutement</title>
   <meta name="description" content="Créez gratuitement un CV professionnel : modèles ATS, Europass, résumé américain, aperçu en direct, contrôle de conformité et PDF. Sans compte, vos données restent sur votre appareil.">
@@ -44,7 +44,7 @@
           <a class="btn btn-primary" href="app.html">Créer mon CV</a>
           <a class="btn" href="#normes">Les normes vérifiées</a>
         </div>
-        <p class="hint">Gratuit, sans compte. Vos données restent dans votre navigateur : rien n'est envoyé à un serveur.</p>
+        <p class="hint">Gratuit, sans compte. Vos données restent dans votre navigateur : rien n'est envoyé à un serveur, sauf si vous utilisez l'assistant IA (facultatif, avec votre accord, sans votre nom ni vos coordonnées).</p>
       </div>
       <div class="hero-visual" aria-hidden="true" inert><span class="thumb-inner" id="hero-cv"></span></div>
     </section>
@@ -69,6 +69,10 @@
       <article class="feature">
         <h2>Vos données chez vous</h2>
         <p>Sauvegarde automatique dans le navigateur, plusieurs CV, et « Sauvegarde complète » en un fichier pour changer de téléphone sans rien perdre.</p>
+      </article>
+      <article class="feature">
+        <h2>Assistant IA</h2>
+        <p>Une lettre de motivation rédigée à partir de votre parcours et de l'annonce, et des conseils pour étoffer votre CV : accroche, missions reformulées, compétences à valoriser. Facultatif, sans envoyer votre identité.</p>
       </article>
       <article class="feature">
         <h2>Adapté à l'offre</h2>

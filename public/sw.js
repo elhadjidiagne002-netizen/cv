@@ -37,6 +37,7 @@ const ASSETS = [
   'icons/icon-512.png',
   'icons/icon.svg',
   'index.html',
+  'js/ai.js',
   'js/app.js',
   'js/applications.js',
   'js/docx.js',

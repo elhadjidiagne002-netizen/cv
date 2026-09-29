@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'; upgrade-insecure-requests">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://nexusmarket.sn; manifest-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'; upgrade-insecure-requests">
   <meta name="referrer" content="no-referrer">
   <title>Confidentialité — CV en ligne</title>
   <meta name="description" content="Politique de confidentialité de CV en ligne : aucune donnée collectée, vos CV restent dans votre navigateur.">
@@ -23,7 +23,8 @@
   <main class="prose" id="contenu" tabindex="-1">
     <h1>Confidentialité et données personnelles</h1>
     <p class="lead">En bref : <strong>nous ne collectons aucune donnée</strong>. Votre CV, vos lettres et votre suivi de candidatures
-      restent dans votre navigateur, sur votre appareil. Rien n'est envoyé à un serveur.</p>
+      restent dans votre navigateur, sur votre appareil. Rien n'est envoyé à un serveur, sauf si vous utilisez
+      volontairement l'<a href="#assistant-ia">assistant IA</a> (voir ci-dessous).</p>
 
     <h2>Où sont vos données ?</h2>
     <ul>
@@ -36,9 +37,18 @@
     <h2>Ce que le site ne fait pas</h2>
     <ul>
       <li>Aucun compte, aucune inscription, aucun cookie, aucune publicité.</li>
-      <li>Aucun outil de mesure d'audience ni traceur, aucune ressource chargée depuis un autre site (polices et scripts sont hébergés ici).</li>
+      <li>Aucun outil de mesure d'audience ni traceur, aucune ressource chargée depuis un autre site (polices et scripts sont hébergés ici).
+        La seule connexion extérieure possible est celle de l'assistant IA, si vous l'utilisez.</li>
       <li>L'analyse d'une offre d'emploi, l'import LinkedIn et le contrôle de conformité sont calculés sur votre appareil.</li>
     </ul>
+
+    <h2 id="assistant-ia">Assistant IA (facultatif)</h2>
+    <p>L'assistant IA (rédaction d'une lettre, conseils pour étoffer le CV) est la <strong>seule</strong> fonction qui envoie des
+      données, et seulement après votre accord explicite, à chaque utilisation que vous déclenchez. Il envoie à l'API d'IA de
+      NEXUS Market (<code>nexusmarket.sn</code>, modèle hébergé par Groq) votre <strong>parcours professionnel sans identité</strong> :
+      poste visé, accroche, expériences, formations, compétences, langues, certifications, projets, bénévolat, centres d'intérêt,
+      et l'annonce si vous l'avez collée. Ne sont <strong>jamais</strong> envoyés : nom, e-mail, téléphone, adresse, photo, date et
+      lieu de naissance, nationalité, situation familiale, références. Sans votre accord, rien ne part.</p>
 
     <h2>Hébergement</h2>
     <p>Le site est hébergé par Cloudflare Pages. Comme tout hébergeur, Cloudflare traite des données techniques de connexion
