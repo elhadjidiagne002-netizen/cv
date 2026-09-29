@@ -1,5 +1,44 @@
 # Journal du projet (le plus récent en haut)
 
+## 2026-09-29 — cycle 7 : photo sur 41 modèles, 12 modèles raffinés
+**Fait.** Photo facultative activée sur 9 modèles de plus (41 sur 45) ; emplacement « Ajouter une photo » cliquable
+dans l'aperçu et la galerie (jamais imprimé) ; famille « Raffinés » de 12 modèles (6 compatibles ATS) et 3 palettes.
+
+**Pourquoi.** Retour utilisateur : trop de modèles sans partie photo, besoin de designs plus soignés.
+
+**Choix notables.**
+- Photo jamais proposée sur les formats US, UK, Québec et Canada (usage anti-discrimination) : c'est une norme du
+  cahier des charges, pas un oubli.
+- L'emplacement photo est un élément d'aperçu : `aria-hidden`, masqué à l'impression, absent du texte brut et du
+  Word ; le nombre de pages est mesuré sur le rendu d'impression pour rester égal au PDF.
+- « Nordique » : première version en grille CSS (titre sur plusieurs rangées), abandonnée car la fragmentation des
+  grilles à l'impression ne se reproduisait pas fidèlement dans l'aperçu ; remplacée par un titre flottant.
+- Les décors (bande verticale, filets, dégradés, motifs) sont en CSS ; les bandes décoratives en marge sont
+  retirées à l'impression pour respecter les marges de 12 mm.
+
+**État.** 144 tests unitaires et 47 tests Playwright verts. Cycle 8 (admin + monétisation) en attente de décisions.
+
+## 2026-09-29 — cycle 6 : site en production (mises à jour fiables, sauvegarde complète, confidentialité)
+**Fait.** Service worker « réseau d'abord » avec délai de repli et bandeau « nouvelle version » ; sauvegarde complète
+et restauration sans doublon ; numéros de page à l'impression ; pages Confidentialité (avec effacement des données)
+et 404, `robots.txt`, `sitemap.xml`, Open Graph ; intégration continue sur chaque push.
+
+**Pourquoi.** Le site est déployé sur https://cv-en-ligne.pages.dev. L'ancien service worker servait les scripts
+« cache d'abord » et les mettait à jour un par un : après un déploiement, un visiteur pouvait obtenir une page neuve
+avec des modules anciens ou mélangés, et l'éditeur pouvait planter. Sur téléphone, changer d'appareil faisait perdre
+les CV faute de sauvegarde globale.
+
+**Choix notables.**
+- Réseau d'abord avec délai de 3,5 s : cohérence des versions en ligne, application utilisable sur réseau lent ou
+  hors ligne. Les requêtes passent par le cache HTTP (`max-age=300`, `must-revalidate`) : revalidations légères.
+- Restauration : un CV n'est remplacé que si la sauvegarde est plus récente (`updatedAt` conservé à la
+  restauration) ; les candidatures sont fusionnées de même.
+- Numéros de page par pages nommées CSS (`@page numbered { @bottom-right … }`), ajoutées seulement au moment de
+  l'impression si le CV fait au moins 2 pages ; vérifiés dans le texte du PDF (pypdf).
+- Le site en ligne n'est pas joignable depuis l'environnement de développement (politique réseau) : vérifications
+  faites sur le serveur local qui applique `_headers`.
+
+**État.** 140 tests unitaires et 45 tests Playwright verts. Propositions du cycle 7 dans `ROADMAP.md`.
 ## 2026-09-29 — assistant IA (lettre de motivation, conseils pour étoffer le CV) + mise en ligne Cloudflare
 **Fait.** « ✨ Rédiger avec l'IA » dans la lettre (candidature, stage, relance, remerciement ; styles standard,
 administratif, anglais ; tient compte de l'annonce collée) et « ✨ Conseils de l'IA » pour le CV (conseils classés

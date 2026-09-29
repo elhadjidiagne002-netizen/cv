@@ -28,6 +28,14 @@ test('accueil : aucune violation WCAG A/AA', async ({ page }) => {
   expect(await audit(page)).toEqual([]);
 });
 
+test('pages confidentialité et 404 : aucune violation', async ({ page }) => {
+  for (const url of ['/confidentialite.html', '/404.html']) {
+    await page.goto(url);
+    await expect(page.locator('h1')).toBeVisible();
+    expect(await audit(page), url).toEqual([]);
+  }
+});
+
 test('éditeur du CV (toutes les rubriques ouvertes, aide par métier) : aucune violation', async ({ page }) => {
   await page.reload();
   await expect(page.locator('#preview .cv')).toBeVisible();

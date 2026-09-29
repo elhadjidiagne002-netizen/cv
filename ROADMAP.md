@@ -249,10 +249,62 @@ qui évite de tout ressaisir. Reportés : interface en anglais / wolof, glisser-
 - Le suivi des candidatures n'est pas inclus dans l'export `.json` d'un CV (export CSV séparé).
 - Pas encore d'interface en anglais ni de glisser-déposer.
 
-## Proposé pour le cycle 6 (priorisé)
-1. **Sauvegarde complète** en un fichier (tous les CV + lettres + candidatures) et restauration, pour changer de
-   téléphone sans rien perdre.
+## Cycle 6 — site en production : mises à jour fiables, sauvegarde complète, confidentialité ✅ (terminé le 2026-09-29)
+
+### Priorités retenues (avant de coder)
+Le site est en ligne (https://cv-en-ligne.pages.dev). Ce qui compte le plus désormais : (1) que **chaque mise à jour
+arrive intacte** chez les visiteurs (le service worker pouvait mélanger nouvelle page et anciens scripts) ; (2) que
+personne ne **perde ses CV** en changeant de téléphone ; (3) les **pages attendues d'un site public**
+(confidentialité / RGPD, 404, référencement, aperçu de partage WhatsApp) ; (4) les **numéros de page** à l'impression.
+
+### Fait
+- **Mises à jour fiables** : service worker « réseau d'abord » avec repli sur la copie locale après 3,5 s ou hors
+  connexion (pages et scripts toujours de la même version), pré-cache qui contourne le cache HTTP, polices et icônes
+  servies depuis le cache ; vérification des mises à jour au retour sur l'onglet ; bandeau « Nouvelle version
+  disponible — Recharger maintenant » (les CV sont enregistrés avant).
+- **Sauvegarde complète** (menu Autres formats) : tous les CV (avec leurs lettres) et le suivi des candidatures en un
+  fichier ; **« Importer » la reconnaît et la restaure sans rien écraser de plus récent** ni dupliquer ; rappel discret
+  après 30 jours sans sauvegarde.
+- **Numéros de page** « 1 / 2 » en pied de page à l'impression (option, activée par défaut, seulement à partir de
+  2 pages ; jamais de coordonnées en pied de page) — vérifiés dans le PDF.
+- **Site public** : page **Confidentialité** (aucune collecte, hébergement, droits) avec bouton **« Effacer mes
+  données »**, page **404**, `robots.txt`, `sitemap.xml`, adresse canonique, balises **Open Graph** (aperçu du lien dans
+  WhatsApp / Facebook / LinkedIn), liens dans le pied de page.
+- **Intégration continue** : tests à chaque push / pull request ; GitHub Pages devient un secours manuel.
+- **Tests** : 140 tests unitaires (+4) et 45 tests Playwright (+5, dont l'accessibilité des nouvelles pages).
+
+### Reste / limites connues
+- La mise à jour d'un visiteur resté sur l'ancien service worker (avant ce cycle) peut encore demander deux
+  rechargements une seule fois ; ensuite le nouveau mécanisme s'applique.
+- Pas encore d'interface en anglais ni de glisser-déposer ; tableau de bord admin en attente de décision
+  (statistiques anonymes côté serveur ou gestionnaire local).
+
+## Cycle 7 — photo sur (presque) tous les modèles, 12 modèles raffinés ✅ (terminé le 2026-09-29)
+
+### Priorités retenues (avant de coder)
+Retour utilisateur : « la plupart des modèles n'ont pas de partie pour la photo » et « plus de modèles, aux designs plus
+raffinés ». Photo facultative partout où l'usage l'admet (jamais aux États-Unis, au Royaume-Uni ni au Canada) ;
+famille de modèles haut de gamme ; l'administration et la monétisation attendent des décisions (voir cycle 8).
+
+### Fait
+- **Photo possible sur 41 modèles sur 45** (9 modèles de plus : Sobre, Moderne ATS, Compact, Chronologique, Académique,
+  Chercheur, Fonctionnel, Étudiant, Technicien). Toujours masquée par défaut et retirée en mode anonyme ; jamais sur le
+  résumé US, le CV britannique, Québec et Canada (anglais).
+- **Emplacement photo** « Ajouter une photo » dans l'aperçu et les miniatures de la galerie (décoratif, jamais
+  imprimé ni exporté) ; un clic ouvre le choix de la photo, ou réaffiche une photo déjà enregistrée. Le nombre de
+  pages annoncé reste celui du PDF (mesuré sans l'emplacement).
+- **12 modèles « Raffinés »** (45 au total) : Prestige, Corporate, Nordique, Santé, Atelier, Gorée (une colonne,
+  compatibles ATS) ; Diplomate, Sahel (bandeaux) ; Baobab, Saint-Louis, Magazine, Ingénieur (deux colonnes). Chacun
+  avec photo et 4 palettes ; 3 palettes ajoutées (Terre cuite, Lagune, Sable et or), contrastes ≥ 4,5:1.
+- **Pagination** : la concordance aperçu / PDF est vérifiée sur les 45 modèles ; « Nordique » (titres en marge)
+  utilise un flux normal pour que l'aperçu et l'impression paginent à l'identique.
+- **Tests** : 144 tests unitaires (+4) et 47 tests Playwright (+2).
+
+## Proposé pour le cycle 8 (en attente de décisions)
+1. **Tableau de bord admin + monétisation** avec le **compte admin de Devizo** (Cloudflare D1, mot de passe PBKDF2,
+   double authentification, super-admin par `ADMIN_EMAILS`). À décider : modèle de monétisation (modèles premium
+   déblocables, paiement par téléchargement, abonnement), moyen de paiement (Wave / Orange Money manuel comme Devizo,
+   agrégateur automatique, Stripe), et partage de compte (même base D1 que Devizo ou connexion via l'API Devizo).
 2. **Interface en anglais** (et aides principales en wolof).
 3. **Glisser-déposer accessible** des éléments et rubriques.
-4. **Rappel du nom en tête de la page 2** (option), et numéros de page en pied de page à l'impression.
-5. **Captures de non-régression visuelle** des 33 modèles et de la lettre.
+4. **Captures de non-régression visuelle** des 45 modèles et de la lettre.

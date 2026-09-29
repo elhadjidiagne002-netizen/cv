@@ -105,6 +105,10 @@ export function contactList(view, { withPersonal = true } = {}) {
 }
 
 export function photo(view) {
+  if (!view.photo && view.photoSlot) {
+    // Emplacement d'aperçu : décoratif (aria-hidden), supprimé à l'impression (cv-base.css).
+    return `<span class="cv-photo cv-photo-slot" aria-hidden="true" data-photo-slot><span>${esc(view.photoSlotLabel)}</span></span>`;
+  }
   if (!view.photo) return '';
   return `<img class="cv-photo" src="${esc(view.photo)}" alt="${esc(t(view.lang, 'photoAlt'))}">`;
 }

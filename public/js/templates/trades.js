@@ -25,7 +25,7 @@ export const templates = [
     ...base,
     id: 'technicien',
     name: 'Technicien',
-    photo: false,
+    photo: true,
     palettes: palettes('petrole', 'ardoise', 'ocean', 'emeraude'),
     description: 'Compétences techniques et certifications d\'abord, titres à barre latérale : maintenance, électricité, réseaux.',
   },

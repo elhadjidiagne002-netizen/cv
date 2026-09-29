@@ -4,10 +4,12 @@
 // sauf les polices « latin étendu » (lettres ŋ, ɓ, ɗ, ƴ des langues nationales) : ~560 Ko rarement utiles,
 // mises en cache à la demande pour ménager les forfaits de données mobiles.
 
-const VERSION = 'cv-2026-09-29-ia';
+const VERSION = 'cv-2026-09-29-cycle7';
 const ASSETS = [
   './',
+  '404.html',
   'app.html',
+  'confidentialite.html',
   'css/app.css',
   'css/cv-base.css',
   'css/fonts.css',
@@ -50,6 +52,7 @@ const ASSETS = [
   'js/paginate.js',
   'js/phrases.js',
   'js/plaintext.js',
+  'js/privacy.js',
   'js/pwa.js',
   'js/render.js',
   'js/senegal.js',
@@ -63,6 +66,7 @@ const ASSETS = [
   'js/templates/international.js',
   'js/templates/national.js',
   'js/templates/palettes.js',
+  'js/templates/refined.js',
   'js/templates/parts.js',
   'js/templates/sidebar.js',
   'js/templates/single.js',
@@ -72,8 +76,14 @@ const ASSETS = [
   'manifest.webmanifest',
 ];
 
+/** Délai au-delà duquel une connexion lente cède la place à la copie locale (réseau mobile instable). */
+const NETWORK_TIMEOUT = 3500;
+
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(VERSION).then((cache) => cache.addAll(ASSETS)).then(() => self.skipWaiting()));
+  // cache: 'reload' : télécharge vraiment la nouvelle version (pas une copie du cache HTTP du navigateur).
+  event.waitUntil(caches.open(VERSION)
+    .then((cache) => cache.addAll(ASSETS.map((url) => new Request(url, { cache: 'reload' }))))
+    .then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (event) => {
@@ -84,39 +94,56 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+function fromCache(req) {
+  return caches.match(req, { ignoreSearch: true }).then((r) => r || (req.mode === 'navigate' ? caches.match('app.html') : undefined));
+}
+
+/**
+ * Réseau d'abord, copie locale si hors ligne ou si le réseau met plus de NETWORK_TIMEOUT ms.
+ * Pages et modules viennent ainsi de la même version dès qu'une connexion est disponible
+ * (jamais une page récente avec d'anciens scripts), et l'application reste utilisable sans connexion.
+ */
+function networkFirst(req) {
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (res) => {
+      if (!done && res) {
+        done = true;
+        resolve(res);
+      }
+    };
+    const timer = setTimeout(() => fromCache(req).then(finish), NETWORK_TIMEOUT);
+    fetch(req)
+      .then((res) => {
+        clearTimeout(timer);
+        if (res.ok) {
+          const copy = res.clone();
+          caches.open(VERSION).then((c) => c.put(req, copy));
+        }
+        finish(res);
+      })
+      .catch(() => {
+        clearTimeout(timer);
+        fromCache(req).then((r) => finish(r || Response.error()));
+      });
+  });
+}
+
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
-  if (req.mode === 'navigate') {
-    // Pages : réseau d'abord (dernière version), cache si hors ligne.
-    event.respondWith(
-      fetch(req)
-        .then((res) => {
-          if (res.ok) {
-            const copy = res.clone();
-            caches.open(VERSION).then((c) => c.put(req, copy));
-          }
-          return res;
-        })
-        .catch(() => caches.match(req, { ignoreSearch: true }).then((r) => r || caches.match('app.html'))),
-    );
+  // Polices et icônes : fichiers immuables, servis depuis le cache (économie de données mobiles).
+  if (/\/(fonts|icons)\//.test(url.pathname)) {
+    event.respondWith(caches.match(req).then((cached) => cached || fetch(req).then((res) => {
+      if (res.ok) {
+        const copy = res.clone();
+        caches.open(VERSION).then((c) => c.put(req, copy));
+      }
+      return res;
+    })));
     return;
   }
-  // Fichiers statiques : cache d'abord, mise à jour en arrière-plan.
-  event.respondWith(
-    caches.match(req).then((cached) => {
-      const network = fetch(req)
-        .then((res) => {
-          if (res.ok) {
-            const copy = res.clone();
-            caches.open(VERSION).then((c) => c.put(req, copy));
-          }
-          return res;
-        })
-        .catch(() => cached);
-      return cached || network;
-    }),
-  );
+  event.respondWith(networkFirst(req));
 });
