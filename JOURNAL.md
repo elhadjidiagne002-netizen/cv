@@ -1,5 +1,16 @@
 # Journal du projet (le plus récent en haut)
 
+## 2026-09-29 — cycle 8 mis en service (Cloudflare)
+**Fait.** Réglages Cloudflare de `DEPLOIEMENT.md` : base D1 `cv-en-ligne` créée (id `b6ba6fe5…`, région WEUR) et liée
+sous `DB` ; base D1 de Devizo liée sous `AUTH_DB` ; secret `ADMIN_EMAILS` = e-mail administrateur de Devizo (seul
+e-mail présent dans son journal d'audit). Liaisons posées en production ET en aperçu (API Pages). Branche
+`claude/sweet-cray-0tnf6f` fusionnée dans `main`, déployée en production (`wrangler pages deploy public` depuis la
+racine : `functions/` est inclus).
+
+**Vérifié en production.** `/api/config` → `configured: true` (9 tables créées au premier appel) ; connexion fausse →
+401 « identifiants de votre compte Devizo » (lecture d'`AUTH_DB` OK) ; `/admin`, `/app`, `/` en 200, aucune erreur
+console. Corrigé au passage : la page d'administration affichait « Session expirée » dès la première visite.
+
 ## 2026-09-29 — cycle 8 : tableau de bord admin (compte Devizo) et monétisation
 **Fait.** Serveur minimal (Cloudflare Pages Functions + D1) et tableau de bord `/admin.html` : connexion avec le
 compte Devizo, vue d'ensemble des ventes et de l'usage, validation des paiements Wave / Orange Money, gestion des
