@@ -116,3 +116,48 @@ export function readZip(bytes) {
   }
   return out;
 }
+
+/** Décompresse des données « deflate » brutes (méthode 8) avec l'API native du navigateur. */
+async function inflateRaw(data) {
+  if (typeof DecompressionStream !== 'function') throw new Error('Ce navigateur ne sait pas ouvrir les archives compressées : décompressez-la puis importez les fichiers .csv.');
+  const stream = new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+/**
+ * Lecture d'une archive ZIP quelconque (stockée ou compressée « deflate », comme l'export LinkedIn).
+ * Renvoie { nom: Uint8Array }. Les entrées chiffrées ou d'une autre méthode sont ignorées.
+ */
+export async function readZipAsync(bytes) {
+  const v = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  let eocd = bytes.length - 22;
+  while (eocd >= 0 && v.getUint32(eocd, true) !== 0x06054b50) eocd -= 1;
+  if (eocd < 0) throw new Error('Archive ZIP illisible.');
+  const count = v.getUint16(eocd + 10, true);
+  let p = v.getUint32(eocd + 16, true);
+  const dec = new TextDecoder();
+  const out = {};
+  for (let i = 0; i < count; i += 1) {
+    if (v.getUint32(p, true) !== 0x02014b50) throw new Error('Archive ZIP illisible.');
+    const flags = v.getUint16(p + 8, true);
+    const method = v.getUint16(p + 10, true);
+    const crc = v.getUint32(p + 16, true);
+    const size = v.getUint32(p + 20, true);
+    const nameLen = v.getUint16(p + 28, true);
+    const extra = v.getUint16(p + 30, true);
+    const comment = v.getUint16(p + 32, true);
+    const local = v.getUint32(p + 42, true);
+    const name = dec.decode(bytes.subarray(p + 46, p + 46 + nameLen));
+    p += 46 + nameLen + extra + comment;
+    if (flags & 1 || name.endsWith('/')) continue; // chiffré ou dossier
+    const start = local + 30 + v.getUint16(local + 26, true) + v.getUint16(local + 28, true);
+    const raw = bytes.subarray(start, start + size);
+    let data;
+    if (method === 0) data = raw;
+    else if (method === 8) data = await inflateRaw(raw);
+    else continue;
+    if (crc32(data) !== crc) throw new Error(`Archive endommagée (${name}).`);
+    out[name] = data;
+  }
+  return out;
+}

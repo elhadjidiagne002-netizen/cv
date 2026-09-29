@@ -218,12 +218,41 @@ parcours de candidature (demande de stage, relance, remerciement) ; (4) l'**inte
 - Aperçu toujours en une longue page avec repères (pas de pagination visuelle page par page).
 - Pas de glisser-déposer ; pas d'import de l'export LinkedIn (archive CSV).
 
-## Proposé pour le cycle 5 (priorisé)
-1. **Pagination visuelle réelle** (pages séparées dans l'aperçu, nom rappelé en page 2) et vérification automatique
-   de l'ordre d'extraction du texte du PDF.
-2. **Import LinkedIn** (archive « Obtenir une copie de vos données » : Positions.csv, Education.csv, Skills.csv).
-3. **Interface en anglais** (et aides principales en wolof) ; libellés de rubriques anglais pour les organisations
-   internationales basées à Dakar.
-4. **Glisser-déposer accessible** des éléments et rubriques (en plus des boutons Monter / Descendre).
-5. **Suivi des candidatures** local (entreprise, date d'envoi, relance prévue, statut) relié aux lettres de relance.
-6. **Captures de non-régression visuelle** des 33 modèles et de la lettre.
+## Cycle 5 — aperçu page par page, suivi des candidatures, import LinkedIn ✅ (terminé le 2026-09-29)
+
+### Priorités retenues (avant de coder)
+Demande : « continue les améliorations ». Retenu dans les propositions du cycle 4 : (1) un **aperçu fidèle au PDF**
+(la question « mon CV tient-il sur une page ? » est la plus fréquente) ; (2) le **suivi des candidatures**, qui
+relie CV, lettres et relances — utile à tout candidat qui envoie beaucoup de dossiers ; (3) l'**import LinkedIn**,
+qui évite de tout ressaisir. Reportés : interface en anglais / wolof, glisser-déposer.
+
+### Fait
+- **Aperçu page par page** (`paginate.js`) : feuilles A4 / Letter séparées (« Page 2 / 3 »), aucun bloc coupé
+  (élément, ligne de compétences, langue, paragraphe de lettre), titre de rubrique jamais seul en bas de page, marges
+  identiques à l'impression. Le nombre de pages annoncé (et contrôlé par les règles de longueur, et par « Ajuster à
+  1 page ») est désormais celui de cette pagination : **vérifié identique au PDF imprimé pour les 33 modèles**.
+- **Suivi des candidatures** (`applications.js`, bouton « Mes candidatures ») : entreprise, poste, canal, date
+  d'envoi, statut (à envoyer, envoyée, relancée, entretien, offre, refus, abandonnée), contact, référence, notes.
+  « Envoyée » programme la relance à J+10 ; pastille « n relances » dans la barre ; **lettre de relance pré-remplie**
+  (entreprise, référence, date d'envoi en toutes lettres) et **lettre de remerciement** après un entretien ;
+  statistiques (taux de réponse) ; **export CSV pour Excel** (BOM, « ; », formules neutralisées). Données locales.
+- **Import LinkedIn** (`linkedin.js`) : archive officielle .zip (décompression native « deflate », CRC vérifié) ou
+  fichiers .csv ; Profile, Positions, Education, Skills, Languages, Certifications, Projects, Honors, Volunteering,
+  e-mail principal, téléphone (+221 remis en forme) ; dates « Mar 2022 » / « sept. 2019 » ; niveaux LinkedIn →
+  CECRL (signalés comme approximatifs) ; CSV robuste (guillemets, retours à la ligne, notes en tête).
+- **Accessibilité** : l'audit axe-core couvre aussi le dialogue des candidatures (0 violation).
+- **Tests** : 136 tests unitaires (+8) et 40 tests Playwright (+6, dont la concordance aperçu / PDF sur 33 modèles).
+
+### Reste / limites connues
+- La pagination de l'aperçu repose sur les mêmes règles que l'impression de Chromium ; un autre navigateur peut
+  paginer très légèrement différemment à l'impression.
+- Le suivi des candidatures n'est pas inclus dans l'export `.json` d'un CV (export CSV séparé).
+- Pas encore d'interface en anglais ni de glisser-déposer.
+
+## Proposé pour le cycle 6 (priorisé)
+1. **Sauvegarde complète** en un fichier (tous les CV + lettres + candidatures) et restauration, pour changer de
+   téléphone sans rien perdre.
+2. **Interface en anglais** (et aides principales en wolof).
+3. **Glisser-déposer accessible** des éléments et rubriques.
+4. **Rappel du nom en tête de la page 2** (option), et numéros de page en pied de page à l'impression.
+5. **Captures de non-régression visuelle** des 33 modèles et de la lettre.

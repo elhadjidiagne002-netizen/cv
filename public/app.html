@@ -42,9 +42,10 @@
     </div>
     <div class="topbar-group" role="group" aria-label="Actions">
       <button type="button" class="btn" id="btn-gallery">Modèles</button>
+      <button type="button" class="btn" id="btn-apps">Mes candidatures <span class="due-badge" id="due-badge" hidden></span></button>
       <button type="button" class="btn" id="btn-anon" aria-pressed="false">CV anonyme</button>
       <button type="button" class="btn" id="btn-import">Importer</button>
-      <input type="file" id="file-import" accept=".json,application/json" hidden>
+      <input type="file" id="file-import" accept=".json,application/json,.zip,application/zip,.csv,text/csv" multiple hidden>
       <button type="button" class="btn" id="btn-export">Exporter (.json)</button>
       <button type="button" class="btn" id="btn-text">Texte brut</button>
       <details class="menu" id="formats-menu">
@@ -52,7 +53,7 @@
         <div class="menu-panel">
           <button type="button" class="btn" id="btn-docx">CV au format Word (.docx)</button>
           <button type="button" class="btn" id="btn-jsonresume">Format JSON Resume (.json)</button>
-          <p class="hint menu-hint">L'import accepte aussi les fichiers JSON Resume.</p>
+          <p class="hint menu-hint">« Importer » accepte aussi les fichiers JSON Resume et l'archive LinkedIn (.zip ou fichiers .csv).</p>
         </div>
       </details>
       <button type="button" class="btn btn-primary" id="btn-print">Télécharger en PDF</button>
@@ -188,6 +189,38 @@
       <button type="button" class="btn" id="text-download">Télécharger (.txt)</button>
       <button type="button" class="btn" id="text-share" hidden>Partager (WhatsApp, e-mail…)</button>
     </div>
+  </dialog>
+
+  <dialog id="apps-dlg" aria-labelledby="apps-title">
+    <div class="gallery-head">
+      <h2 id="apps-title">Mes candidatures</h2>
+      <button type="button" class="btn" id="apps-close">Fermer</button>
+    </div>
+    <p class="hint">Suivez vos envois et vos relances. Ces informations restent dans ce navigateur, comme vos CV.</p>
+    <p class="apps-stats" id="apps-stats" aria-live="polite"></p>
+    <div id="apps-due"></div>
+    <form id="apps-form" class="apps-form" novalidate>
+      <h3 id="apps-form-title">Nouvelle candidature</h3>
+      <input type="hidden" id="app-id">
+      <div class="grid">
+        <div class="field"><label for="app-company">Entreprise ou administration <span class="req" aria-hidden="true">*</span></label><input type="text" id="app-company" required aria-required="true"></div>
+        <div class="field"><label for="app-position">Poste</label><input type="text" id="app-position"></div>
+        <div class="field"><label for="app-status">Statut</label><select id="app-status"></select></div>
+        <div class="field"><label for="app-channel">Canal d'envoi</label><select id="app-channel"></select></div>
+        <div class="field"><label for="app-sentOn">Date d'envoi</label><input type="date" id="app-sentOn"></div>
+        <div class="field"><label for="app-followUpOn">Relance prévue le</label><input type="date" id="app-followUpOn" aria-describedby="app-followUpOn-hint"><p class="hint" id="app-followUpOn-hint">Vide : 10 jours après l'envoi.</p></div>
+        <div class="field"><label for="app-contact">Contact (nom, e-mail, téléphone)</label><input type="text" id="app-contact"></div>
+        <div class="field"><label for="app-reference">Référence de l'offre</label><input type="text" id="app-reference"></div>
+        <div class="field field-wide"><label for="app-notes">Notes</label><textarea id="app-notes" rows="2"></textarea></div>
+      </div>
+      <div class="dlg-actions">
+        <button type="submit" class="btn btn-primary" id="app-save">Enregistrer la candidature</button>
+        <button type="button" class="btn" id="app-cancel" hidden>Annuler la modification</button>
+      </div>
+    </form>
+    <h3 class="apps-list-h">Candidatures enregistrées</h3>
+    <ul class="apps-list" id="apps-list"></ul>
+    <div class="dlg-actions"><button type="button" class="btn" id="apps-export">Exporter pour Excel (.csv)</button></div>
   </dialog>
 
   <div id="datalists"></div>

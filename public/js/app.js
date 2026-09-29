@@ -7,8 +7,15 @@ import {
   CUSTOM_ITEM_FIELDS, CUSTOM_TITLES, MAX_CUSTOM_SECTIONS, createCustomSection, createCustomItem, customKey, findCustom,
 } from './model.js';
 import { cvToDocx, letterToDocx, DOCX_MIME } from './docx.js';
+import { paginate, drawPageGaps } from './paginate.js';
+import { readZipAsync } from './zip.js';
+import { fromLinkedIn } from './linkedin.js';
+import {
+  STATUSES, CHANNELS, createApplicationStore, createApplication, normalizeApplication, setStatus as setAppStatus,
+  dueFollowUps, sortApplications, stats as appStats, toCSV, addDays, FOLLOW_UP_DAYS,
+} from './applications.js';
 import { toJSONResume } from './jsonresume.js';
-import { createStore, exportJSON, importJSON, createAutosaver, QuotaError } from './storage.js';
+import { createStore, exportJSON, importJSON, createAutosaver, QuotaError, defaultStorage } from './storage.js';
 import { renderCV, TEMPLATES, getTemplate, effectivePaper, applyTheme, effectivePalette } from './render.js';
 import { checkCV, applyFix } from './norms.js';
 import { matchOffer } from './match.js';
@@ -51,6 +58,7 @@ const SECTION_HINTS = {
 };
 
 const store = createStore();
+const appStore = createApplicationStore(defaultStorage());
 const state = {
   cv: null, pages: 1, galleryFilter: 'Tous', openSections: new Set(['identity', 'headline']),
   doc: 'cv', helperJob: '', helperTarget: 0,
@@ -423,20 +431,10 @@ function renderPicker() {
 
 // ————————————————————————— Aperçu et conformité —————————————————————————
 
-const MM = 96 / 25.4;
 
 /** Applique la palette choisie et la couleur d'accent (CSSOM : autorisé par la CSP). */
 function applyAccent(root) {
   root.querySelectorAll('.cv').forEach((article) => applyTheme(article, state.cv, getTemplate(article.dataset.template)));
-}
-
-function measurePages(article, paper) {
-  const cs = getComputedStyle(article);
-  const inner = article.scrollHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
-  const pageH = paper === 'Letter' ? 10 * 96 : 273 * MM; // hauteur utile (marges d'impression déduites)
-  // Contenu réel : on retire le « min-height » de la page vide.
-  const content = [...article.children].reduce((max, el) => Math.max(max, el.offsetTop + el.offsetHeight), 0) - parseFloat(cs.paddingTop);
-  return { pages: Math.max(1, Math.ceil((Math.min(inner, content) - 2) / pageH)), pageH, padTop: parseFloat(cs.paddingTop) };
 }
 
 function updatePreview() {
@@ -451,9 +449,10 @@ function updatePreview() {
   applyAccent(preview);
   const article = preview.querySelector('.cv');
   const paper = effectivePaper(cv, tpl);
-  const { pages, pageH, padTop } = measurePages(article, paper);
+  const layout = paginate(article, paper);
+  const { pages } = layout;
   state.pages = pages;
-  pageMarks(preview, pages, pageH, padTop);
+  drawPageGaps(preview, article, layout);
   fitPreview();
   const fitNote = cv.meta.fit ? ` · mise en page resserrée (${cv.meta.fit}/${MAX_FIT})` : '';
   $('#template-info').innerHTML = `Modèle : <strong>${esc(tpl.name)}</strong> · ${tpl.ats ? 'ATS' : 'créatif'} · ${paper} · ${pages} page${pages > 1 ? 's' : ''}${fitNote}`;
@@ -461,25 +460,14 @@ function updatePreview() {
   renderMatch();
 }
 
-function pageMarks(preview, pages, pageH, padTop) {
-  preview.querySelectorAll('.page-break').forEach((n) => n.remove());
-  for (let p = 1; p < pages; p += 1) {
-    const mark = document.createElement('div');
-    mark.className = 'page-break';
-    mark.setAttribute('aria-hidden', 'true');
-    mark.textContent = `Fin de la page ${p}`;
-    mark.style.top = `${padTop + p * pageH}px`;
-    preview.appendChild(mark);
-  }
-}
-
 function updateLetterPreview(cv, tpl, preview) {
   preview.innerHTML = renderLetter(cv, tpl.id);
   applyAccent(preview);
   const article = preview.querySelector('.cv');
   const paper = effectivePaper(cv, tpl);
-  const { pages, pageH, padTop } = measurePages(article, paper);
-  pageMarks(preview, pages, pageH, padTop);
+  const layout = paginate(article, paper);
+  const { pages } = layout;
+  drawPageGaps(preview, article, layout);
   fitPreview();
   const words = wordCount(cv.letter.body);
   $('#template-info').innerHTML = `Lettre de motivation · modèle <strong>${esc(tpl.name)}</strong> · ${paper} · ${words} mots · ${pages} page${pages > 1 ? 's' : ''}`;
@@ -922,7 +910,7 @@ async function fitToPages(target = 1) {
     for (let level = 0; level <= MAX_FIT; level += 1) {
       probe.innerHTML = renderCV(cv, tpl.id, { fit: level });
       applyAccent(probe);
-      if (measurePages(probe.firstElementChild, paper).pages <= target) {
+      if (paginate(probe.firstElementChild, paper).pages <= target) {
         chosen = level;
         break;
       }
@@ -1161,6 +1149,197 @@ function travel(direction) {
   toast(direction === 'undo' ? 'Modification annulée.' : 'Modification rétablie.');
 }
 
+// ————————————————————————— Import LinkedIn —————————————————————————
+
+/** Archive LinkedIn (.zip) ou fichiers .csv extraits : tout est lu sur l'appareil. */
+async function importLinkedIn(files) {
+  const texts = {};
+  const dec = new TextDecoder();
+  for (const f of files) {
+    if (/\.zip$/i.test(f.name)) {
+      const entries = await readZipAsync(new Uint8Array(await f.arrayBuffer()));
+      for (const [name, data] of Object.entries(entries)) if (/\.csv$/i.test(name)) texts[name] = dec.decode(data);
+    } else if (/\.csv$/i.test(f.name)) texts[f.name] = await f.text();
+  }
+  const { cv, found, notes } = fromLinkedIn(texts);
+  if (!found.length) throw new Error('Aucun fichier LinkedIn reconnu (Profile.csv, Positions.csv, Education.csv…). Importez l\'archive « Obtenir une copie de vos données ».');
+  autosaver.flush();
+  state.cv = cv;
+  saveNow();
+  openCV(cv);
+  toast(`Profil LinkedIn importé (${found.length} fichier${found.length > 1 ? 's' : ''}). ${notes.join(' ')} Vérifiez l'ordre et les dates.`.trim());
+}
+
+// ————————————————————————— Suivi des candidatures —————————————————————————
+
+const appLabel = (id) => (STATUSES.find((st) => st.id === id) || { label: id }).label;
+const frDate = (iso) => (iso ? iso.split('-').reverse().join('/') : '');
+
+function updateDueBadge() {
+  const n = dueFollowUps(appStore.list()).length;
+  const badge = $('#due-badge');
+  badge.hidden = !n;
+  badge.textContent = n ? `${n} relance${n > 1 ? 's' : ''}` : '';
+}
+
+function resetAppForm(values = {}) {
+  const a = normalizeApplication({ position: state.cv.targetTitle, ...values });
+  $('#app-id').value = values.id || '';
+  for (const k of ['company', 'position', 'sentOn', 'followUpOn', 'contact', 'reference', 'notes']) $(`#app-${k}`).value = a[k];
+  $('#app-status').value = a.status;
+  $('#app-channel').value = a.channel;
+  $('#apps-form-title').textContent = values.id ? `Modifier : ${a.company}` : 'Nouvelle candidature';
+  $('#app-save').textContent = values.id ? 'Enregistrer les modifications' : 'Enregistrer la candidature';
+  $('#app-cancel').hidden = !values.id;
+}
+
+function renderApps() {
+  const list = sortApplications(appStore.list());
+  const due = new Set(dueFollowUps(list).map((a) => a.id));
+  const st = appStats(list);
+  $('#apps-stats').textContent = list.length
+    ? `${st.total} candidature${st.total > 1 ? 's' : ''} · ${st.sent} envoyée${st.sent > 1 ? 's' : ''} · ${st.interviews} entretien${st.interviews > 1 ? 's' : ''} · taux de réponse ${st.responseRate} %`
+    : 'Aucune candidature enregistrée pour l\'instant.';
+  $('#apps-due').innerHTML = due.size
+    ? `<p class="apps-due-note" role="status"><strong>${due.size} relance${due.size > 1 ? 's' : ''} à faire</strong> : sans réponse après ${FOLLOW_UP_DAYS} jours, une relance courte et polie est d'usage.</p>` : '';
+  $('#apps-list').innerHTML = list.map((a) => `<li class="app-card${due.has(a.id) ? ' is-due' : ''}">
+      <div class="app-main">
+        <h4>${esc(a.company)}${a.position ? ` <span class="app-pos">— ${esc(a.position)}</span>` : ''}</h4>
+        <p class="app-meta"><span class="app-status st-${a.status}">${esc(appLabel(a.status))}</span>
+          ${a.sentOn ? ` · envoyée le ${frDate(a.sentOn)}` : ''}${a.channel ? ` (${esc(a.channel)})` : ''}
+          ${a.followUpOn ? ` · relance ${due.has(a.id) ? '<strong>due</strong> depuis' : 'prévue'} le ${frDate(a.followUpOn)}` : ''}</p>
+        ${a.contact ? `<p class="app-meta">Contact : ${esc(a.contact)}</p>` : ''}
+        ${a.notes ? `<p class="app-meta">${esc(a.notes)}</p>` : ''}
+      </div>
+      <div class="app-actions">
+        <label class="sr-only" for="app-st-${a.id}">Statut de la candidature ${esc(a.company)}</label>
+        <select id="app-st-${a.id}" data-app-status="${a.id}">${STATUSES.map((x) => `<option value="${x.id}"${x.id === a.status ? ' selected' : ''}>${esc(x.label)}</option>`).join('')}</select>
+        ${['envoyee', 'relancee'].includes(a.status) ? `<button type="button" class="btn btn-small" data-app-act="followup" data-id="${a.id}">Préparer la relance</button>` : ''}
+        ${a.status === 'entretien' ? `<button type="button" class="btn btn-small" data-app-act="thanks" data-id="${a.id}">Lettre de remerciement</button>` : ''}
+        <button type="button" class="btn btn-small" data-app-act="edit" data-id="${a.id}" aria-label="Modifier la candidature ${esc(a.company)}">Modifier</button>
+        <button type="button" class="btn btn-small btn-danger" data-app-act="remove" data-id="${a.id}" aria-label="Supprimer la candidature ${esc(a.company)}">Supprimer</button>
+      </div>
+    </li>`).join('');
+  updateDueBadge();
+}
+
+function openApps() {
+  $('#app-status').innerHTML = STATUSES.map((x) => `<option value="${x.id}">${esc(x.label)}</option>`).join('');
+  $('#app-channel').innerHTML = `<option value="">— Choisir —</option>${CHANNELS.map((c) => `<option>${esc(c)}</option>`).join('')}`;
+  resetAppForm({ company: state.cv.letter.organization || '' });
+  renderApps();
+  const dlg = $('#apps-dlg');
+  if (typeof dlg.showModal === 'function') dlg.showModal();
+  else dlg.setAttribute('open', '');
+  $('#app-company').focus();
+}
+
+function closeApps() {
+  const dlg = $('#apps-dlg');
+  if (typeof dlg.close === 'function') dlg.close();
+  else dlg.removeAttribute('open');
+  $('#btn-apps').focus();
+}
+
+function saveAppFromForm(e) {
+  e.preventDefault();
+  const company = $('#app-company').value.trim();
+  if (!company) {
+    $('#app-company').setAttribute('aria-invalid', 'true');
+    $('#app-company').focus();
+    toast('Indiquez l\'entreprise ou l\'administration.');
+    return;
+  }
+  $('#app-company').removeAttribute('aria-invalid');
+  const id = $('#app-id').value;
+  const previous = id ? appStore.list().find((a) => a.id === id) : null;
+  let app = normalizeApplication({
+    ...(previous || createApplication()),
+    company,
+    position: $('#app-position').value,
+    sentOn: $('#app-sentOn').value,
+    followUpOn: $('#app-followUpOn').value,
+    channel: $('#app-channel').value,
+    contact: $('#app-contact').value,
+    reference: $('#app-reference').value,
+    notes: $('#app-notes').value,
+    cvId: (previous && previous.cvId) || state.cv.id,
+  });
+  const status = $('#app-status').value;
+  if (!previous || previous.status !== status) app = setAppStatus(app, status);
+  else if (app.sentOn && !app.followUpOn && ['envoyee', 'relancee'].includes(status)) app.followUpOn = addDays(app.sentOn, FOLLOW_UP_DAYS);
+  appStore.save(app);
+  resetAppForm();
+  renderApps();
+  $('#app-company').focus();
+  toast(previous ? 'Candidature mise à jour.' : `Candidature « ${company} » enregistrée.`);
+}
+
+/** Prépare une lettre de relance ou de remerciement pré-remplie pour une candidature. */
+function prepareLetter(app, kind) {
+  const L = state.cv.letter;
+  // eslint-disable-next-line no-alert
+  if (L.body.trim() && !window.confirm('La lettre actuelle sera remplacée par un brouillon. Continuer ? (Annuler reste possible.)')) return;
+  L.kind = kind;
+  L.organization = app.company;
+  L.reference = app.reference;
+  if (!L.place) L.place = state.cv.identity.city;
+  Object.assign(L, draftLetter(state.cv, L.style));
+  if (kind === 'relance' && app.sentOn) {
+    const [y, m, d] = app.sentOn.split('-').map(Number);
+    const months = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+    const when = L.style === 'en' ? `${d} ${new Date(Date.UTC(y, m - 1, d)).toLocaleString('en-GB', { month: 'long', timeZone: 'UTC' })} ${y}` : `${d === 1 ? '1er' : d} ${months[m - 1]} ${y}`;
+    L.body = L.body.replace(/\[date\]/, when);
+  }
+  if (app.position && L.body.includes('[intitulé du poste]')) L.body = L.body.replaceAll('[intitulé du poste]', app.position);
+  closeApps();
+  state.doc = 'letter';
+  changed({ structural: true });
+  renderDocSwitch();
+  focusAfterRender('#f-letter-body');
+  toast(kind === 'relance' ? 'Lettre de relance préparée : relisez-la avant l\'envoi.' : 'Lettre de remerciement préparée : ajoutez un point précis de l\'entretien.');
+}
+
+function onAppsClick(e) {
+  const b = e.target.closest('button[data-app-act]');
+  if (!b) return;
+  const app = appStore.list().find((a) => a.id === b.dataset.id);
+  if (!app) return;
+  switch (b.dataset.appAct) {
+    case 'edit':
+      resetAppForm(app);
+      $('#app-company').focus();
+      break;
+    case 'remove':
+      // eslint-disable-next-line no-alert
+      if (!window.confirm(`Supprimer la candidature « ${app.company} » ?`)) return;
+      appStore.remove(app.id);
+      renderApps();
+      $('#app-company').focus();
+      toast('Candidature supprimée.');
+      break;
+    case 'followup':
+      prepareLetter(app, 'relance');
+      break;
+    case 'thanks':
+      prepareLetter(app, 'remerciement');
+      break;
+    default:
+  }
+}
+
+function onAppsStatusChange(e) {
+  const id = e.target.dataset.appStatus;
+  if (!id) return;
+  const app = appStore.list().find((a) => a.id === id);
+  if (!app) return;
+  appStore.save(setAppStatus(app, e.target.value));
+  renderApps();
+  const again = document.querySelector(`[data-app-status="${CSS.escape(id)}"]`);
+  if (again) again.focus();
+  toast(`Statut : ${appLabel(e.target.value)}.`);
+}
+
 // ————————————————————————— Texte brut —————————————————————————
 
 function openTextDialog() {
@@ -1277,10 +1456,15 @@ function bind() {
   });
   $('#btn-import').addEventListener('click', () => $('#file-import').click());
   $('#file-import').addEventListener('change', async (e) => {
-    const file = e.target.files && e.target.files[0];
+    const files = [...(e.target.files || [])];
     e.target.value = '';
+    const file = files[0];
     if (!file) return;
     try {
+      if (files.some((f) => /\.(zip|csv)$/i.test(f.name))) {
+        await importLinkedIn(files);
+        return;
+      }
       const { cv, warnings, source } = importJSON(await file.text());
       autosaver.flush();
       state.cv = cv;
@@ -1314,6 +1498,19 @@ function bind() {
     }
   });
   $('#btn-text').addEventListener('click', openTextDialog);
+  $('#btn-apps').addEventListener('click', openApps);
+  $('#apps-close').addEventListener('click', closeApps);
+  $('#apps-form').addEventListener('submit', saveAppFromForm);
+  $('#app-cancel').addEventListener('click', () => {
+    resetAppForm();
+    $('#app-company').focus();
+  });
+  $('#apps-list').addEventListener('click', onAppsClick);
+  $('#apps-list').addEventListener('change', onAppsStatusChange);
+  $('#apps-export').addEventListener('click', () => {
+    download('candidatures.csv', toCSV(sortApplications(appStore.list())), 'text/csv');
+    toast('Suivi exporté : ouvrez le fichier avec Excel ou LibreOffice.');
+  });
   $('#btn-docx').addEventListener('click', () => {
     autosaver.flush();
     $('#formats-menu').open = false;
@@ -1430,6 +1627,7 @@ function init() {
   store.setActiveId(cv.id);
   renderDatalists();
   bind();
+  updateDueBadge();
   resetHistory();
   renderAll();
   // Les polices embarquées changent la hauteur du texte : nouvelle mesure une fois chargées.

@@ -1,5 +1,27 @@
 # Journal du projet (le plus récent en haut)
 
+## 2026-09-29 — cycle 5 : aperçu page par page, suivi des candidatures, import LinkedIn
+**Fait.** **Aperçu page par page** fidèle à l'impression (feuilles séparées, blocs jamais coupés, titres jamais
+orphelins), avec un nombre de pages vérifié identique au PDF pour les 33 modèles ; **suivi des candidatures** avec
+relances à J+10, lettres de relance et de remerciement pré-remplies et export pour Excel ; **import LinkedIn** depuis
+l'archive officielle (.zip compressé) ou les fichiers .csv.
+
+**Pourquoi.** Demande « continue les améliorations ». L'ancien aperçu (une longue page avec des repères) pouvait
+annoncer 1 page quand l'impression en produisait 2 ; le suivi et l'import LinkedIn font gagner du temps à chaque
+candidature.
+
+**Choix notables.**
+- Pagination par intercalaires invisibles insérés avant le bloc qui déborde (avec correction après mesure pour les
+  marges fusionnées et les grilles) ; l'impression repart d'un rendu neuf, donc n'est jamais affectée.
+- « Ajuster à 1 page » et les règles de longueur utilisent la même pagination que l'aperçu : plus de désaccord
+  possible entre l'alerte, l'aperçu et le PDF.
+- ZIP compressé lu avec `DecompressionStream('deflate-raw')` (natif navigateur et Node 22) : pas de bibliothèque.
+- Niveaux de langue LinkedIn → CECRL : correspondance approximative, annoncée à l'utilisateur plutôt que présentée
+  comme exacte.
+- Export CSV : cellules commençant par `= + - @` préfixées d'une apostrophe (injection de formules dans Excel).
+
+**État.** 136 tests unitaires et 40 tests Playwright verts. Propositions du cycle 6 dans `ROADMAP.md`.
+
 ## 2026-09-29 — cycle 4 : Word, rubriques personnalisées, lettres de stage / relance / remerciement, accessibilité
 **Fait.** **Export Word (.docx)** du CV et de la lettre, sans dépendance (WordprocessingML + ZIP écrits à la main) ;
 **rubriques personnalisées** (Stages, Vie associative…) avec contrôles de titre standard, rendues partout (33

@@ -23,7 +23,8 @@ Toujours répondre et écrire l'interface **en français** (l'anglais est une la
     `i18n.js` (libellés de rubriques FR/EN), `storage.js`, `app.js` (éditeur), `letter.js` (lettre de motivation
     assortie), `senegal.js` (référentiel local : diplômes, établissements, +221, FCFA, concours), `phrases.js`
     (aide à la rédaction par métier), `plaintext.js` (blocs du CV → texte brut), `docx.js` + `zip.js` (export Word
-    sans dépendance), `jsonresume.js` (import / export JSON Resume), `match.js` (offre d'emploi).
+    sans dépendance), `jsonresume.js` (import / export JSON Resume), `linkedin.js` (import de l'archive LinkedIn),
+    `applications.js` (suivi des candidatures), `paginate.js` (aperçu page par page), `match.js` (offre d'emploi).
   - `public/css/` : `app.css` (éditeur + accueil), `cv-base.css` (commun à tous les CV, impression A4/Letter),
     `templates.css` (couleurs, polices et variantes de chaque modèle, classe `.tpl-<id>`).
   - Modèles : une famille par fichier dans `public/js/templates/` (`single.js`, `europass.js`,

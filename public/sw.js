@@ -4,7 +4,7 @@
 // sauf les polices « latin étendu » (lettres ŋ, ɓ, ɗ, ƴ des langues nationales) : ~560 Ko rarement utiles,
 // mises en cache à la demande pour ménager les forfaits de données mobiles.
 
-const VERSION = 'cv-2026-09-29-cycle4';
+const VERSION = 'cv-2026-09-29-cycle5';
 const ASSETS = [
   './',
   'app.html',
@@ -36,14 +36,17 @@ const ASSETS = [
   'icons/icon.svg',
   'index.html',
   'js/app.js',
+  'js/applications.js',
   'js/docx.js',
   'js/home.js',
   'js/i18n.js',
   'js/jsonresume.js',
   'js/letter.js',
+  'js/linkedin.js',
   'js/match.js',
   'js/model.js',
   'js/norms.js',
+  'js/paginate.js',
   'js/phrases.js',
   'js/plaintext.js',
   'js/pwa.js',

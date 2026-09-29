@@ -40,7 +40,7 @@ test('éditeur du CV (toutes les rubriques ouvertes, aide par métier) : aucune 
   expect(await audit(page)).toEqual([]);
 });
 
-test('lettre de motivation, galerie et dialogue « texte brut » : aucune violation', async ({ page }) => {
+test('lettre de motivation, galerie, dialogues « texte brut » et « candidatures » : aucune violation', async ({ page }) => {
   await page.reload();
   await page.click('button[data-doc="letter"]');
   await page.click('button[data-act="letter-draft"]');
@@ -51,6 +51,14 @@ test('lettre de motivation, galerie et dialogue « texte brut » : aucune violat
   await page.click('#gallery-close');
   await page.click('#btn-text');
   expect(await audit(page, '#text-dlg')).toEqual([]);
+  await page.click('#text-close');
+  await page.click('#btn-apps');
+  await page.fill('#app-company', 'Sonatel');
+  await page.selectOption('#app-status', 'envoyee');
+  await page.fill('#app-sentOn', '2026-01-05');
+  await page.click('#app-save');
+  await expect(page.locator('.app-card')).toHaveCount(1);
+  expect(await audit(page, '#apps-dlg')).toEqual([]);
 });
 
 test('téléphone (390 px) : aucune violation', async ({ page }) => {

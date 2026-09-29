@@ -23,7 +23,7 @@ export function createMemoryStorage() {
   };
 }
 
-function defaultStorage() {
+export function defaultStorage() {
   try {
     const s = globalThis.localStorage;
     const probe = `${PREFIX}probe`;
