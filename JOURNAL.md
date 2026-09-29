@@ -1,5 +1,12 @@
 # Journal du projet (le plus récent en haut)
 
+## 2026-09-29 — domaine cv.nexusmarket.sn en service
+**Fait.** Enregistrement DNS `CNAME cv → cv-en-ligne.pages.dev` (proxy Cloudflare) créé avec un jeton Cloudflare
+« Modifier le DNS de la zone » limité à nexusmarket.sn, fourni par l'utilisateur dans un fichier local (supprimé
+après usage) ; le jeton OAuth de wrangler n'a pas de droit DNS. Domaine « actif » dans Pages, certificat HTTPS
+valide. Adresse officielle du site passée sur `https://cv.nexusmarket.sn/` (liens canoniques, Open Graph,
+`robots.txt`, `sitemap.xml`, test `deploy.test.js`) ; `VERSION` du service worker changée.
+
 ## 2026-09-29 — cycle 8 mis en service (Cloudflare)
 **Fait.** Réglages Cloudflare de `DEPLOIEMENT.md` : base D1 `cv-en-ligne` créée (id `b6ba6fe5…`, région WEUR) et liée
 sous `DB` ; base D1 de Devizo liée sous `AUTH_DB` ; secret `ADMIN_EMAILS` = e-mail administrateur de Devizo (seul

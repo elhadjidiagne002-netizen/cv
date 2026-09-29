@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 Disallow: /admin.html
 Disallow: /api/
-Sitemap: https://cv-en-ligne.pages.dev/sitemap.xml
+Sitemap: https://cv.nexusmarket.sn/sitemap.xml

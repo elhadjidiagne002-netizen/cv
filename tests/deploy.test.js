@@ -28,14 +28,14 @@ test('workflow de mise en ligne : tests avant publication, dossier public/ publi
 });
 
 test('site public : robots.txt, sitemap, aperçu de partage, page de confidentialité liée', () => {
-  assert.match(read('public/robots.txt'), /Sitemap: https:\/\/cv-en-ligne\.pages\.dev\/sitemap\.xml/);
+  assert.match(read('public/robots.txt'), /Sitemap: https:\/\/cv\.nexusmarket\.sn\/sitemap\.xml/);
   const sitemap = read('public/sitemap.xml');
   for (const loc of sitemap.match(/<loc>[^<]+<\/loc>/g)) {
-    const file = loc.replace(/<\/?loc>/g, '').replace('https://cv-en-ligne.pages.dev/', '') || 'index.html';
+    const file = loc.replace(/<\/?loc>/g, '').replace('https://cv.nexusmarket.sn/', '') || 'index.html';
     assert.ok(existsSync(new URL(`../public/${file}`, import.meta.url)), file);
   }
   const index = read('public/index.html');
-  assert.match(index, /<meta property="og:image" content="https:\/\/cv-en-ligne\.pages\.dev\/icons\/icon-512\.png">/);
+  assert.match(index, /<meta property="og:image" content="https:\/\/cv\.nexusmarket\.sn\/icons\/icon-512\.png">/);
   assert.match(index, /href="confidentialite\.html"/);
   assert.match(read('public/confidentialite.html'), /id="btn-wipe"/);
 });
