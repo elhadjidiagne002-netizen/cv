@@ -1,5 +1,37 @@
 # Journal du projet (le plus récent en haut)
 
+## 2026-09-29 — cycle 3 : réalités sénégalaises, lettre de motivation, confort d'édition
+**Fait.** **Lettre de motivation** assortie au modèle du CV, en 3 styles (standard, **administratif sénégalais**,
+anglais), avec brouillon guidé construit à partir du CV et contrôle dédié (longueur, 1 page, formules, objet,
+clichés, mots-clés de l'offre) ; **référentiel sénégalais** hors ligne (diplômes et équivalences, établissements,
+villes, langues) pour les suggestions de saisie ; nouvelles règles (**+221** avec correction en un clic, **FCFA**
+convertis pour l'étranger, **sigles de diplômes** expliqués, religion / ethnie / numéro de CNI) ; profils **Sénégal
+fonction publique** (dossier de concours à cocher), Côte d'Ivoire, Maroc, Belgique, Suisse ; **WhatsApp**, second
+numéro, lieu de naissance ; **langues « à l'oral »** ; **aide à la rédaction pour 23 métiers** ; **annuler /
+rétablir** ; **masquer un élément** sans le supprimer ; **texte brut** (copier, `.txt`, partage) ; polices
+**latin étendu** (ŋ, ɓ, ɗ, ƴ) ; exemple « jeune diplômé ».
+
+**Pourquoi.** Demande explicite : « améliorations majeures et adaptations aux réalités sénégalaises ». La lettre
+(et la demande d'emploi administrative) est exigée dans la plupart des candidatures au Sénégal ; les contrôles
+locaux évitent des erreurs fréquentes (numéro illisible depuis l'étranger, FCFA incompris, BFEM inconnu en
+France, mentions confessionnelles) ; les exemples par métier aident les candidats peu habitués au CV.
+
+**Choix notables.**
+- Lettre rendue avec les classes du modèle (`.cv .tpl-<id>`) et `head()` partagé : assortie aux 33 modèles sans
+  CSS par modèle. Toujours nominative (le mode anonyme ne concerne que le CV).
+- Brouillon honnête : années d'expérience arrondies à l'inférieur, passages [ … ] obligatoirement personnalisés
+  (le contrôleur du CV et celui de la lettre les signalent).
+- Éléments masqués : `checkCV` analyse le CV visible puis recalcule les chemins (`experiences.2.start`) vers les
+  positions réelles, pour que les alertes cliquables amènent toujours au bon champ.
+- Religion / ethnie : recherche limitée aux champs personnels (accroche, intérêts, compétences, bénévolat,
+  identité) pour ne pas signaler « Université catholique de l'Afrique de l'Ouest ».
+- Historique d'annulation : instantanés JSON (sans `updatedAt`), frappe regroupée (700 ms), listes et cases
+  validées immédiatement ; Ctrl+Z laisse l'annulation native dans les champs texte.
+- Polices latin-ext (≈ 560 Ko) exclues du pré-cache hors ligne : coût data important pour un usage rare.
+
+**État.** 118 tests unitaires et 26 tests Playwright verts (sous la vraie CSP). Propositions du cycle 4 dans
+`ROADMAP.md` (JSON Resume / LinkedIn / .docx, rubriques personnalisées, pagination visuelle).
+
 ## 2026-09-29 — cycle 2 : 33 modèles, hors ligne, offre d'emploi, normes par pays
 **Fait.** Catalogue porté de 16 à **33 modèles** en 11 familles (dont colonne de dates, académique,
 fonctionnel / reconversion, étudiant, métiers, Québec / Canada, Lebenslauf), chacun avec 3 à 5 palettes ;

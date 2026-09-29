@@ -121,21 +121,72 @@
 9. **Qualité** : audit d'accessibilité automatisé (axe-core en devDependency Playwright), captures de
    non-régression visuelle par modèle, vérification que le texte du PDF s'extrait dans l'ordre de lecture.
 
-## Proposé pour le cycle 3 (priorisé)
-1. **Lettre de motivation** assortie au modèle (même en-tête et typographie), avec structure guidée
-   (vous / moi / nous), contrôles (longueur 1 page, formule de politesse, destinataire) et réutilisation
-   des mots-clés de l'offre : très demandée au Sénégal et en France, complète naturellement le CV.
-2. **Confort d'édition** : annuler / rétablir (historique local), masquer un élément ou une rubrique sans la
-   supprimer (versions ciblées d'un même CV), glisser-déposer accessible au clavier, rubriques personnalisées.
-3. **Aide à la rédaction par métier** (hors ligne) : exemples de lignes et verbes d'action pour ~30 métiers
-   courants (comptable, infirmier, enseignant, chauffeur, commercial, technicien, agent de sécurité…),
-   suggestion de reformulation d'une ligne faible, synonymes pour la correspondance avec l'offre.
-4. **Pagination visuelle réelle** dans l'aperçu (pages A4/Letter séparées, en-tête de page 2 avec le nom) et
-   aperçu d'impression fidèle ; vérification automatique que le PDF extrait le texte dans l'ordre de lecture.
-5. **Interopérabilité** : import / export JSON Resume, copie en texte brut pour les formulaires en ligne,
-   import d'un profil LinkedIn exporté (fichier), export `.txt` compatible ATS.
-6. **Qualité** : audit d'accessibilité automatisé (axe-core en devDependency), captures de non-régression
-   visuelle des 33 modèles, contrôle des contrastes des modèles dans le navigateur (pas seulement des palettes).
-7. **Polices étendues** : sous-ensemble latin-ext (wolof, peul, pulaar : ŋ, ɓ, ɗ, ƴ) pour les noms et adresses.
-8. **Profils pays supplémentaires** : Côte d'Ivoire, Maroc, Belgique, Suisse, fonction publique sénégalaise
-   (pièces du dossier de concours), et modèle « CV + dossier de concours ».
+## Cycle 3 — réalités sénégalaises, lettre de motivation, confort d'édition ✅ (terminé le 2026-09-29)
+
+### Priorités retenues (avant de coder)
+Ce qui apporte le plus à un candidat au Sénégal : (1) la **lettre de motivation / demande d'emploi**, exigée
+presque partout, y compris au format administratif ; (2) des **contrôles adaptés aux réalités locales**
+(numéros +221 et WhatsApp, langues nationales souvent parlées sans être écrites, sigles de diplômes inconnus
+à l'étranger, montants en FCFA, concours de la fonction publique) ; (3) l'**aide à la rédaction par métier**
+pour les profils peu habitués à rédiger un CV ; (4) le confort (annuler, masquer, texte brut pour les
+formulaires et WhatsApp) ; (5) des polices qui affichent ŋ, ɓ, ɗ, ƴ.
+
+### Fait
+- **Lettre de motivation assortie au modèle** (`letter.js`) : même en-tête, polices et couleurs que le CV (33 modèles),
+  3 styles — *standard* (France), *administratif (Sénégal)* (« À Monsieur le Directeur… », objet, « haute
+  considération », P. J.) et *anglais* (cover letter). **Brouillon guidé** vous / moi / nous construit à partir du
+  poste visé, de la dernière expérience (élision « d'augmenter »), des compétences et des mots-clés de l'offre ;
+  passages [ … ] à personnaliser. Formule d'appel déduite du destinataire (« Monsieur le Directeur des RH » →
+  « Monsieur le Directeur, ») et reprise dans la formule de politesse. **Contrôle** : vide, 250–400 mots, 1 page
+  mesurée, paragraphes, objet, destinataire, cohérence appel / politesse, clichés, trop de « Je », mots-clés de
+  l'offre, signature. PDF de la lettre par impression (texte réel).
+- **Référentiel sénégalais** (`senegal.js`, hors ligne) : 21 diplômes avec équivalences FR / EN (CFEE, BFEM, BT, DTS,
+  DUEL, maîtrise, CAEM, CAES, CEAP…), 28 établissements (UCAD, UGB, UASZ, ESP, EPT, ENSAE, ISM, CESAG, UN-CHK…),
+  28 villes, 22 langues → **suggestions de saisie** (`<datalist>`) ; pièces du **dossier de concours**.
+- **Nouvelles règles** : numéro sénégalais (9 chiffres, préfixes 70/75/76/77/78/33) et **correction en un clic**
+  vers `+221 77 123 45 67` (aussi pour le 2e numéro) ; **montants en FCFA** convertis pour une candidature hors
+  zone CFA (parité fixe 655,957) ; **sigles de diplômes** expliqués pour l'étranger (+ bouton « Ajouter
+  l'équivalence ») ; **religion / confrérie / ethnie / caste** (sans faux positif sur « Université catholique… ») ;
+  **numéro de CNI / passeport / IPRES** ; taille et poids ; exemples [ … ] non personnalisés ; suivi du dossier.
+- **Profils pays** : Sénégal fonction publique / concours (liste de pièces à cocher dans l'éditeur), Côte d'Ivoire,
+  Maroc, Belgique, Suisse (11 profils) ; messages accordés (« au Maroc », « aux États-Unis »).
+- **Identité** : second téléphone, mention « (WhatsApp) » écrite en toutes lettres, lieu de naissance (masqué par
+  défaut, jamais sur un modèle anglo-saxon, retiré en mode anonyme). **Langues « à l'oral »** (« Wolof — Langue
+  maternelle, à l'oral ») avec suggestion automatique pour les langues nationales ; Europass et jauges compris.
+- **Aide à la rédaction par métier** (`phrases.js`) : 23 métiers courants au Sénégal (comptable SYSCOHADA,
+  téléconseiller, agent mobile money, chauffeur, enseignant, infirmier, sécurité, électricien, BTP, ONG, agriculture,
+  hôtellerie, banque, couture, jeune diplômé…) : lignes à insérer dans l'expérience choisie, compétences types,
+  accroche type.
+- **Confort** : **annuler / rétablir** (boutons, Ctrl+Z / Ctrl+Y hors des champs texte, 60 étapes, frappe
+  regroupée) ; **masquer un élément sans le supprimer** (versions ciblées : absent du CV, du texte brut et des
+  contrôles, chemins d'alertes recalculés) ; **texte brut** du CV ou de la lettre (copier, télécharger `.txt`,
+  partager via WhatsApp / e-mail sur téléphone).
+- **Polices latin étendu** (ŋ, ɓ, ɗ, ƴ) pour Inter, Montserrat, Merriweather, EB Garamond, Source Serif 4 ;
+  **non pré-téléchargées** par le service worker (≈ 560 Ko) pour ménager les forfaits : chargées si besoin.
+- **Exemple « jeune diplômé »** (BTS, stages, langues nationales à l'oral, WhatsApp) ; accueil mis à jour.
+- **Correction** : l'attribut `hidden` était écrasé par `.btn { display: inline-flex }` (« Taille normale » et
+  « Installer l'application » restaient visibles).
+- **Tests** : 118 tests unitaires (+21) et 26 tests Playwright (+7 : lettre + PDF 1 page, annuler / rétablir,
+  masquer, aide par métier, texte brut, Sénégal, téléphone mobile).
+
+### Reste / limites connues
+- Brouillon de lettre : français « générique » (pas d'accord selon le genre, pas d'article devant le nom de
+  l'employeur en style standard) ; les puces au participe passé sont citées telles quelles.
+- La conversion en dollars utilise un taux indicatif (1 € ≈ 1,10 $) ; l'euro est exact (parité fixe).
+- Aperçu toujours en une longue page avec repères (pas de pagination visuelle page par page).
+- Pas de glisser-déposer ; pas de rubriques personnalisées libres ; pas d'import JSON Resume / LinkedIn.
+- La liste des pièces du dossier de concours est indicative (l'avis de concours fait foi).
+
+## Proposé pour le cycle 4 (priorisé)
+1. **Interopérabilité** : import / export JSON Resume, import d'un export LinkedIn (fichier), export `.docx`
+   minimal (souvent exigé par les cabinets de recrutement au Sénégal) — sans dépendance d'exécution.
+2. **Rubriques personnalisées** (Stages séparés, Associations, Formations complémentaires, Mémoire…) et
+   glisser-déposer accessible au clavier.
+3. **Pagination visuelle réelle** (pages séparées dans l'aperçu, nom rappelé en page 2) et vérification
+   automatique de l'ordre d'extraction du texte du PDF.
+4. **Qualité** : audit d'accessibilité automatisé (axe-core en devDependency), captures de non-régression des
+   33 modèles et de la lettre.
+5. **Lettre** : accords de genre (choix « Madame / Monsieur » pour le candidat), modèles de lettre de relance,
+   de remerciement après entretien, de demande de stage.
+6. **Wolof / anglais pour l'interface** (au moins les aides et messages principaux), et libellés de rubriques en
+   anglais pour les organisations internationales basées à Dakar.

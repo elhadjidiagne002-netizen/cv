@@ -29,11 +29,16 @@
         <div class="menu-panel">
           <button type="button" class="btn" data-new="empty">CV vide</button>
           <button type="button" class="btn" data-new="sample">Exemple en français</button>
+          <button type="button" class="btn" data-new="sample-junior">Exemple : jeune diplômé (BTS, stages)</button>
           <button type="button" class="btn" data-new="sample-en">Exemple en anglais (résumé US)</button>
         </div>
       </details>
       <button type="button" class="btn" id="btn-dup">Dupliquer</button>
       <button type="button" class="btn btn-danger" id="btn-del">Supprimer</button>
+    </div>
+    <div class="topbar-group" role="group" aria-label="Historique">
+      <button type="button" class="btn" id="btn-undo" disabled aria-keyshortcuts="Control+Z">Annuler</button>
+      <button type="button" class="btn" id="btn-redo" disabled aria-keyshortcuts="Control+Y">Rétablir</button>
     </div>
     <div class="topbar-group" role="group" aria-label="Actions">
       <button type="button" class="btn" id="btn-gallery">Modèles</button>
@@ -41,6 +46,7 @@
       <button type="button" class="btn" id="btn-import">Importer</button>
       <input type="file" id="file-import" accept=".json,application/json" hidden>
       <button type="button" class="btn" id="btn-export">Exporter (.json)</button>
+      <button type="button" class="btn" id="btn-text">Texte brut</button>
       <button type="button" class="btn btn-primary" id="btn-print">Télécharger en PDF</button>
       <button type="button" class="btn" id="btn-install" hidden>Installer l'application</button>
     </div>
@@ -50,6 +56,10 @@
   <main class="layout">
     <section class="editor" id="editor" aria-labelledby="editor-title" tabindex="-1">
       <h1 id="editor-title" class="sr-only">Éditeur du CV</h1>
+      <div class="doc-switch" role="group" aria-label="Document à rédiger">
+        <button type="button" class="btn" data-doc="cv" aria-pressed="true">Mon CV</button>
+        <button type="button" class="btn" data-doc="letter" aria-pressed="false">Lettre de motivation</button>
+      </div>
       <details class="ed-section" open>
         <summary><h2>Réglages du document</h2></summary>
         <div class="ed-body grid">
@@ -61,14 +71,25 @@
             <label for="set-country">Pays visé (règles de conformité)</label>
             <select id="set-country" data-path="meta.country" aria-describedby="set-country-hint">
               <option value="">Général (francophone)</option>
-              <option value="FR">France</option>
-              <option value="SN">Sénégal</option>
-              <option value="CA">Canada / Québec</option>
-              <option value="UK">Royaume-Uni</option>
-              <option value="US">États-Unis</option>
-              <option value="DE">Allemagne</option>
+              <optgroup label="Afrique">
+                <option value="SN">Sénégal (secteur privé, ONG)</option>
+                <option value="SNFP">Sénégal : fonction publique, concours</option>
+                <option value="CI">Côte d'Ivoire</option>
+                <option value="MA">Maroc</option>
+              </optgroup>
+              <optgroup label="Europe">
+                <option value="FR">France</option>
+                <option value="BE">Belgique</option>
+                <option value="CH">Suisse</option>
+                <option value="DE">Allemagne</option>
+                <option value="UK">Royaume-Uni</option>
+              </optgroup>
+              <optgroup label="Amérique du Nord">
+                <option value="CA">Canada / Québec</option>
+                <option value="US">États-Unis</option>
+              </optgroup>
             </select>
-            <p class="hint" id="set-country-hint">Adapte les contrôles : photo, informations personnelles, format de papier, longueur.</p>
+            <p class="hint" id="set-country-hint">Adapte les contrôles : photo, informations personnelles, format de papier, longueur, montants en FCFA, sigles des diplômes.</p>
           </div>
           <div class="field">
             <label for="set-lang">Langue des rubriques du CV</label>
@@ -145,6 +166,23 @@
     <p class="gallery-note">Les modèles <strong>ATS</strong> (une colonne) sont les plus sûrs pour les candidatures en ligne, lues par des logiciels de tri. Les modèles créatifs conviennent à un envoi direct à un recruteur.</p>
     <ul class="gallery-grid" id="gallery-grid"></ul>
   </dialog>
+
+  <dialog id="text-dlg" aria-labelledby="text-dlg-title">
+    <div class="gallery-head">
+      <h2 id="text-dlg-title">Texte brut</h2>
+      <button type="button" class="btn" id="text-close">Fermer</button>
+    </div>
+    <p class="hint" id="text-dlg-hint">À coller dans un formulaire de candidature en ligne, un e-mail ou un message. C'est aussi, à peu près, ce que lit un logiciel de tri (ATS).</p>
+    <label for="plain-text" class="sr-only">Texte brut</label>
+    <textarea id="plain-text" rows="18" readonly spellcheck="false"></textarea>
+    <div class="dlg-actions">
+      <button type="button" class="btn btn-primary" id="text-copy">Copier</button>
+      <button type="button" class="btn" id="text-download">Télécharger (.txt)</button>
+      <button type="button" class="btn" id="text-share" hidden>Partager (WhatsApp, e-mail…)</button>
+    </div>
+  </dialog>
+
+  <div id="datalists"></div>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </body>

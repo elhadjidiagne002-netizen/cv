@@ -40,7 +40,7 @@ test('la saisie met à jour l\'aperçu et est sauvegardée automatiquement', asy
 
 test('ajout, réordonnancement et suppression d\'une expérience', async ({ page }) => {
   const section = page.locator('details[data-section="experiences"]');
-  await section.locator('summary').click();
+  await section.locator(':scope > summary').click();
   await expect(section.locator('.ed-item')).toHaveCount(3);
   await section.locator('button[data-act="item-add"]').click();
   await expect(section.locator('.ed-item')).toHaveCount(4);
@@ -62,7 +62,7 @@ test('une alerte cliquable amène au champ à corriger ; correction automatique 
   await expect(page.locator('#f-identity-email')).toBeFocused();
 
   const section = page.locator('details[data-section="experiences"]');
-  await section.locator('summary').click();
+  await section.locator(':scope > summary').click();
   await section.locator('button[data-act="item-down"][data-index="0"]').click();
   const fix = page.locator('#norms button[data-fix="sort:experiences"]');
   await expect(fix).toBeVisible();

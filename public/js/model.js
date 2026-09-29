@@ -21,14 +21,20 @@ export const LIST_SECTIONS = [
   'references',
 ];
 
-/** Pays visés (profils de règles de conformité) : '' = générique. */
-export const COUNTRIES = ['FR', 'SN', 'CA', 'UK', 'US', 'DE'];
+/**
+ * Pays visés (profils de règles de conformité) : '' = générique.
+ * SNFP = Sénégal, fonction publique et concours (dossier administratif).
+ */
+export const COUNTRIES = ['FR', 'SN', 'SNFP', 'CI', 'MA', 'BE', 'CH', 'CA', 'UK', 'US', 'DE'];
+
+/** Usage d'une langue : '' (écrit et oral) ou 'oral' (langue parlée, peu ou pas écrite — fréquent pour les langues nationales). */
+export const LANGUAGE_MODES = ['', 'oral'];
 
 /** Niveau maximal de l'ajustement « tenir sur 1 page » (0 = taille normale). */
 export const MAX_FIT = 4;
 
 /** Champs d'identité sensibles : facultatifs, masqués par défaut (non-discrimination). */
-export const SENSITIVE_FIELDS = ['photo', 'birthDate', 'maritalStatus', 'nationality', 'drivingLicence'];
+export const SENSITIVE_FIELDS = ['photo', 'birthDate', 'birthPlace', 'maritalStatus', 'nationality', 'drivingLicence'];
 
 /**
  * Description des champs de chaque rubrique (sert à l'éditeur et à la normalisation).
@@ -64,6 +70,13 @@ export const ITEM_FIELDS = {
   languages: [
     { key: 'name', label: 'Langue', type: 'text', required: true },
     { key: 'level', label: 'Niveau CECRL', type: 'select', options: ['', ...CEFR_LEVELS] },
+    {
+      key: 'mode',
+      label: 'Usage',
+      type: 'select',
+      options: LANGUAGE_MODES,
+      optionLabels: { '': 'Écrit et oral', oral: 'À l\'oral uniquement' },
+    },
     { key: 'certificate', label: 'Certificat (ex. : DELF B2, TOEIC 850)', type: 'text' },
   ],
   certifications: [
@@ -112,7 +125,9 @@ export const IDENTITY_FIELDS = [
   { key: 'firstName', label: 'Prénom', type: 'text', autocomplete: 'given-name' },
   { key: 'lastName', label: 'Nom', type: 'text', autocomplete: 'family-name' },
   { key: 'email', label: 'E-mail', type: 'email', autocomplete: 'email' },
-  { key: 'phone', label: 'Téléphone', type: 'tel', autocomplete: 'tel' },
+  { key: 'phone', label: 'Téléphone (avec l\'indicatif, ex. +221 77 123 45 67)', type: 'tel', autocomplete: 'tel' },
+  { key: 'phone2', label: 'Second téléphone (facultatif)', type: 'tel' },
+  { key: 'whatsapp', label: 'Premier numéro joignable sur WhatsApp', type: 'checkbox' },
   { key: 'city', label: 'Ville', type: 'text', autocomplete: 'address-level2' },
   { key: 'country', label: 'Pays', type: 'text', autocomplete: 'country-name' },
   { key: 'address', label: 'Adresse (facultatif — la ville suffit)', type: 'text', autocomplete: 'street-address' },
@@ -122,6 +137,7 @@ export const IDENTITY_FIELDS = [
 
 export const SENSITIVE_IDENTITY_FIELDS = [
   { key: 'birthDate', label: 'Date de naissance', type: 'date' },
+  { key: 'birthPlace', label: 'Lieu de naissance', type: 'text' },
   { key: 'nationality', label: 'Nationalité', type: 'text' },
   { key: 'maritalStatus', label: 'Situation familiale', type: 'text' },
   { key: 'drivingLicence', label: 'Permis de conduire (ex. : Permis B)', type: 'text' },
@@ -136,7 +152,7 @@ export function uid(prefix = 'id') {
 }
 
 function emptyItem(section) {
-  const item = { id: uid(section.slice(0, 3)) };
+  const item = { id: uid(section.slice(0, 3)), hidden: false };
   for (const f of ITEM_FIELDS[section]) {
     item[f.key] = f.type === 'checkbox' ? false : f.type === 'list' ? [] : '';
   }
@@ -167,6 +183,7 @@ export function createEmptyCV(overrides = {}) {
       country: '',
       fit: 0,
       jobOffer: '',
+      dossier: [],
       sectionOrder: [...LIST_SECTIONS],
       createdAt: now,
       updatedAt: now,
@@ -176,6 +193,8 @@ export function createEmptyCV(overrides = {}) {
       lastName: '',
       email: '',
       phone: '',
+      phone2: '',
+      whatsapp: false,
       address: '',
       city: '',
       country: '',
@@ -183,11 +202,13 @@ export function createEmptyCV(overrides = {}) {
       website: '',
       photo: '',
       birthDate: '',
+      birthPlace: '',
       nationality: '',
       maritalStatus: '',
       drivingLicence: '',
     },
-    privacy: { showPhoto: false, showBirthDate: false, showNationality: false, showMaritalStatus: false, showDrivingLicence: false },
+    privacy: { showPhoto: false, showBirthDate: false, showBirthPlace: false, showNationality: false, showMaritalStatus: false, showDrivingLicence: false },
+    letter: createLetter(),
     targetTitle: '',
     summary: '',
     referencesOnRequest: false,
@@ -213,10 +234,11 @@ export function normalizeDate(v) {
 
 function normalizeItem(section, raw) {
   const src = raw && typeof raw === 'object' ? raw : {};
-  const item = { id: str(src.id) || uid(section.slice(0, 3)) };
+  const item = { id: str(src.id) || uid(section.slice(0, 3)), hidden: Boolean(src.hidden) };
   for (const f of ITEM_FIELDS[section]) {
     const v = src[f.key];
     if (f.type === 'checkbox') item[f.key] = Boolean(v);
+    else if (f.key === 'mode') item[f.key] = LANGUAGE_MODES.includes(v) ? v : '';
     else if (f.type === 'list') {
       item[f.key] = (Array.isArray(v) ? v : str(v).split(','))
         .map((x) => str(x).trim())
@@ -235,6 +257,42 @@ function normalizeLevel(v) {
   if (CEFR_LEVELS.includes(up)) return up;
   if (/^(native|maternelle|langue maternelle|mother tongue)$/i.test(s)) return 'native';
   return s;
+}
+
+// ————————————————————————— Lettre de motivation —————————————————————————
+
+/**
+ * Styles de lettre : « standard » (lettre de motivation française), « administratif » (usage sénégalais :
+ * « À Monsieur le Directeur… », objet, formule de haute considération), « en » (cover letter).
+ */
+export const LETTER_STYLES = ['standard', 'administratif', 'en'];
+
+/** Champs de la lettre de motivation (éditeur + normalisation). */
+export const LETTER_FIELDS = [
+  { key: 'recipientTitle', label: 'Destinataire (fonction) — ex. : Monsieur le Directeur des ressources humaines', type: 'text' },
+  { key: 'recipientName', label: 'Nom du destinataire (si connu)', type: 'text' },
+  { key: 'organization', label: 'Entreprise ou administration', type: 'text' },
+  { key: 'recipientAddress', label: 'Adresse du destinataire (ex. : BP 1234, Dakar)', type: 'text' },
+  { key: 'place', label: 'Lieu d\'écriture (ex. : Dakar)', type: 'text' },
+  { key: 'date', label: 'Date (vide = date du jour)', type: 'date' },
+  { key: 'subject', label: 'Objet (ex. : Candidature au poste de comptable)', type: 'text' },
+  { key: 'reference', label: 'Référence de l\'offre (facultatif)', type: 'text' },
+  { key: 'salutation', label: 'Formule d\'appel (ex. : Madame, Monsieur,)', type: 'text' },
+  { key: 'body', label: 'Corps de la lettre (laissez une ligne vide entre deux paragraphes)', type: 'textarea' },
+  { key: 'closing', label: 'Formule de politesse', type: 'textarea' },
+  { key: 'enclosures', label: 'Pièces jointes (ex. : CV, copies des diplômes)', type: 'text' },
+];
+
+export function createLetter(values = {}) {
+  return normalizeLetter({ style: 'standard', salutation: 'Madame, Monsieur,', enclosures: 'Curriculum vitae', ...values });
+}
+
+export function normalizeLetter(raw) {
+  const src = raw && typeof raw === 'object' ? raw : {};
+  const letter = { style: LETTER_STYLES.includes(src.style) ? src.style : 'standard' };
+  for (const f of LETTER_FIELDS) letter[f.key] = str(src[f.key]).slice(0, f.key === 'body' ? 8000 : 600);
+  if (letter.date && !/^\d{4}-\d{2}-\d{2}$/.test(letter.date)) letter.date = '';
+  return letter;
 }
 
 /**
@@ -264,6 +322,7 @@ export function normalizeCV(raw) {
       country: COUNTRIES.includes(str(m.country)) ? str(m.country) : '',
       fit: Number.isInteger(m.fit) && m.fit >= 0 && m.fit <= MAX_FIT ? m.fit : 0,
       jobOffer: str(m.jobOffer).slice(0, 20000),
+      dossier: Array.isArray(m.dossier) ? m.dossier.map(str).filter((x) => /^[a-z-]{1,30}$/.test(x)) : [],
       sectionOrder: order,
       createdAt: str(m.createdAt) || now,
       updatedAt: str(m.updatedAt) || now,
@@ -272,6 +331,7 @@ export function normalizeCV(raw) {
     privacy: {
       showPhoto: Boolean(p.showPhoto),
       showBirthDate: Boolean(p.showBirthDate),
+      showBirthPlace: Boolean(p.showBirthPlace),
       showNationality: Boolean(p.showNationality),
       showMaritalStatus: Boolean(p.showMaritalStatus),
       showDrivingLicence: Boolean(p.showDrivingLicence),
@@ -279,8 +339,11 @@ export function normalizeCV(raw) {
     targetTitle: str(src.targetTitle),
     summary: str(src.summary),
     referencesOnRequest: Boolean(src.referencesOnRequest),
+    letter: normalizeLetter(src.letter),
   };
-  for (const f of [...IDENTITY_FIELDS, ...SENSITIVE_IDENTITY_FIELDS]) cv.identity[f.key] = str(id[f.key]).trim();
+  for (const f of [...IDENTITY_FIELDS, ...SENSITIVE_IDENTITY_FIELDS]) {
+    cv.identity[f.key] = f.type === 'checkbox' ? Boolean(id[f.key]) : str(id[f.key]).trim();
+  }
   const photo = str(id.photo);
   cv.identity.photo = /^data:image\/(png|jpe?g|webp);base64,/i.test(photo) ? photo : '';
   for (const s of LIST_SECTIONS) {
@@ -481,6 +544,69 @@ export function createSampleCV() {
     ],
     interests: [{ name: 'Basket-ball en club (ASC Jaraaf)' }, { name: 'Photographie de rue' }, { name: 'Lecture : littérature africaine' }],
     references: [],
+    referencesOnRequest: true,
+  });
+}
+
+/** Exemple « jeune diplômé » : BTS, stages, langues nationales à l'oral, format premier emploi (Sénégal). */
+export function createSampleJunior() {
+  return createEmptyCV({
+    meta: { title: 'Exemple — Moussa Diop (jeune diplômé)', templateId: 'premier-emploi', lang: 'fr', paper: 'A4', country: 'SN' },
+    identity: {
+      firstName: 'Moussa',
+      lastName: 'Diop',
+      email: 'moussa.diop@example.com',
+      phone: '+221 78 234 56 78',
+      whatsapp: true,
+      city: 'Thiès',
+      country: 'Sénégal',
+      drivingLicence: 'Permis B',
+    },
+    privacy: { showDrivingLicence: true },
+    targetTitle: 'Technicien en électrotechnique',
+    summary:
+      'Technicien supérieur en électrotechnique (BTS 2025), 10 mois de stages en maintenance industrielle et en installation ' +
+      'solaire. Disponible immédiatement, mobile sur Thiès, Dakar et Diamniadio.',
+    experiences: [
+      {
+        position: 'Stagiaire technicien de maintenance',
+        employer: 'Société Minière du Cayor',
+        city: 'Mboro',
+        start: '2025-03',
+        end: '2025-08',
+        description:
+          'Réaliser la maintenance préventive de 25 moteurs électriques selon le planning\n' +
+          'Diagnostiquer les pannes des armoires de commande avec les techniciens\n' +
+          'Mettre à jour les fiches d\'intervention dans la GMAO',
+      },
+      {
+        position: 'Stagiaire installateur photovoltaïque',
+        employer: 'SolarTeranga',
+        city: 'Thiès',
+        start: '2024-07',
+        end: '2024-10',
+        description: 'Poser 12 kits solaires domestiques et 2 installations de pompage dans la région de Thiès',
+      },
+    ],
+    education: [
+      { degree: 'BTS Électrotechnique', school: 'Lycée technique Seydina Limamou Laye', city: 'Guédiawaye', start: '2023-10', end: '2025-07', description: 'Projet de fin d\'études : automatisation d\'une station de pompage (mention Bien)' },
+      { degree: 'Baccalauréat série T1 (technique)', school: 'Lycée technique Maurice Delafosse', city: 'Dakar', end: '2023-07' },
+    ],
+    skills: [
+      { name: 'Techniques', keywords: ['Maintenance préventive', 'Lecture de schémas électriques', 'Automates Schneider', 'Photovoltaïque', 'Habilitation électrique B1V'] },
+      { name: 'Outils', keywords: ['AutoCAD Electrical', 'Excel', 'GMAO'] },
+    ],
+    languages: [
+      { name: 'Wolof', level: 'native', mode: 'oral' },
+      { name: 'Français', level: 'C1' },
+      { name: 'Pulaar', level: 'B2', mode: 'oral' },
+      { name: 'Anglais', level: 'A2' },
+    ],
+    certifications: [{ name: 'Habilitation électrique B1V-BR', issuer: 'ONFP', date: '2025-05' }],
+    volunteering: [
+      { role: 'Trésorier', organization: 'Association sportive et culturelle de mon quartier (ASC)', start: '2022-01', current: true, description: 'Gérer un budget annuel de 1,2 million FCFA et organiser le tournoi navétane' },
+    ],
+    interests: [{ name: 'Football en club (navétanes)' }, { name: 'Réparation de petit électroménager pour le voisinage' }],
     referencesOnRequest: true,
   });
 }

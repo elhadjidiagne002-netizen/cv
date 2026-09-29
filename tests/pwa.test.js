@@ -26,7 +26,9 @@ test('manifeste installable : nom, start_url, icônes 192 et 512 existantes', ()
 test('le service worker met en cache tous les fichiers du site (et rien d\'externe)', () => {
   const sw = read('sw.js');
   const list = [...sw.match(/const ASSETS = \[([\s\S]*?)\];/)[1].matchAll(/'([^']+)'/g)].map((m) => m[1]);
-  const files = walk(pub).filter((f) => !['_headers', 'sw.js'].includes(f) && !f.endsWith('.txt'));
+  // Polices « latin étendu » : chargées et mises en cache à la demande (données mobiles).
+  const files = walk(pub).filter((f) => !['_headers', 'sw.js'].includes(f) && !f.endsWith('.txt') && !/-latin-ext-/.test(f));
+  assert.ok(!list.some((f) => /-latin-ext-/.test(f)), 'les polices latin-ext ne sont pas pré-téléchargées');
   for (const f of files) assert.ok(list.includes(f), `absent du cache hors ligne : ${f}`);
   for (const f of list) if (f !== './') assert.ok(existsSync(join(pub, f)), `fichier inexistant : ${f}`);
   assert.doesNotMatch(sw, /https?:\/\//);

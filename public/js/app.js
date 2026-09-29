@@ -2,8 +2,8 @@
 // galerie de modèles, sauvegarde automatique, export PDF (impression) et JSON.
 
 import {
-  createEmptyCV, createSampleCV, createSampleCVEnglish, createItem, cloneCV, getByPath, setByPath, moveItem,
-  normalizeDate, ITEM_FIELDS, IDENTITY_FIELDS, SENSITIVE_IDENTITY_FIELDS, CEFR_LEVELS, MAX_FIT,
+  createEmptyCV, createSampleCV, createSampleCVEnglish, createSampleJunior, createItem, cloneCV, getByPath, setByPath, moveItem,
+  normalizeDate, normalizeCV, ITEM_FIELDS, IDENTITY_FIELDS, SENSITIVE_IDENTITY_FIELDS, CEFR_LEVELS, MAX_FIT, LETTER_FIELDS,
 } from './model.js';
 import { createStore, exportJSON, importJSON, createAutosaver, QuotaError } from './storage.js';
 import { renderCV, TEMPLATES, getTemplate, effectivePaper, applyTheme, effectivePalette } from './render.js';
@@ -12,6 +12,12 @@ import { matchOffer } from './match.js';
 import { registerServiceWorker, setupInstallButton } from './pwa.js';
 import { levelLabel } from './i18n.js';
 import { esc } from './templates/parts.js';
+import { SCHOOLS, CITIES, LANGUAGES, DIPLOMAS, DOSSIER_ITEMS, isNationalLanguage } from './senegal.js';
+import { JOBS, getJob } from './phrases.js';
+import { cvPlainText } from './plaintext.js';
+import {
+  renderLetter, checkLetter, draftLetter, letterText, wordCount, salutationFor, closingFor,
+} from './letter.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 
@@ -42,7 +48,10 @@ const SECTION_HINTS = {
 };
 
 const store = createStore();
-const state = { cv: null, pages: 1, galleryFilter: 'Tous', openSections: new Set(['identity', 'headline']) };
+const state = {
+  cv: null, pages: 1, galleryFilter: 'Tous', openSections: new Set(['identity', 'headline']),
+  doc: 'cv', helperJob: '', helperTarget: 0,
+};
 let renderTimer = null;
 
 const autosaver = createAutosaver((cv) => {
@@ -82,7 +91,7 @@ function fieldHTML(path, f, value, extra = '') {
       return `<div class="field field-wide">${label}<textarea id="${id}" data-path="${path}" rows="4"${req}>${esc(value)}</textarea></div>`;
     case 'select':
       return `<div class="field">${label}<select id="${id}" data-path="${path}"${req}>${f.options
-        .map((o) => `<option value="${o}"${o === value ? ' selected' : ''}>${o ? esc(levelLabel('fr', o)) : '— Choisir —'}</option>`)
+        .map((o) => `<option value="${o}"${o === value ? ' selected' : ''}>${esc(f.optionLabels ? f.optionLabels[o] : o ? levelLabel('fr', o) : '— Choisir —')}</option>`)
         .join('')}</select></div>`;
     case 'list':
       return `<div class="field field-wide">${label}<input type="text" id="${id}" data-path="${path}" data-type="list" value="${esc((value || []).join(', '))}"></div>`;
@@ -90,9 +99,25 @@ function fieldHTML(path, f, value, extra = '') {
       return `<div class="field">${label}<input type="month" id="${id}" data-path="${path}" data-type="month" placeholder="AAAA-MM" value="${esc(value)}"${req}${extra}></div>`;
     default: {
       const ac = f.autocomplete ? ` autocomplete="${f.autocomplete}"` : '';
-      return `<div class="field">${label}<input type="${f.type}" id="${id}" data-path="${path}" value="${esc(value)}"${ac}${req}${extra}></div>`;
+      const dl = datalistFor(path);
+      return `<div class="field">${label}<input type="${f.type}" id="${id}" data-path="${path}" value="${esc(value)}"${ac}${dl ? ` list="${dl}"` : ''}${req}${extra}></div>`;
     }
   }
+}
+
+/** Suggestions de saisie (référentiel sénégalais, hors ligne) selon le champ. */
+function datalistFor(path) {
+  if (/(^|\.)city$/.test(path) || path === 'letter.place') return 'dl-cities';
+  if (/^education\.\d+\.school$/.test(path)) return 'dl-schools';
+  if (/^education\.\d+\.degree$/.test(path)) return 'dl-diplomas';
+  if (/^languages\.\d+\.name$/.test(path)) return 'dl-languages';
+  return '';
+}
+
+function renderDatalists() {
+  const dl = (id, values) => `<datalist id="${id}">${values.map((v) => `<option value="${esc(v)}"></option>`).join('')}</datalist>`;
+  $('#datalists').innerHTML = dl('dl-cities', CITIES) + dl('dl-schools', SCHOOLS) + dl('dl-languages', LANGUAGES)
+    + dl('dl-diplomas', DIPLOMAS.map((d) => d.label));
 }
 
 function detailsOpen(key) {
@@ -163,10 +188,13 @@ function listSectionHTML(cv, key, index, total) {
       const fields = ITEM_FIELDS[key]
         .map((f) => fieldHTML(`${base}.${f.key}`, f, it[f.key], f.key === 'end' && it.current ? ' disabled' : ''))
         .join('');
-      return `<li><fieldset class="ed-item" data-item="${base}">
-        <legend>${esc(ui.item)} ${i + 1}${t ? ` : ${esc(t)}` : ''}</legend>
-        <div class="grid">${fields}</div>
+      const oralHint = key === 'languages' && isNationalLanguage(it.name) && !it.mode
+        ? '<p class="hint">Langue nationale : si vous la parlez sans l\'écrire couramment, choisissez « À l\'oral uniquement ».</p>' : '';
+      return `<li><fieldset class="ed-item${it.hidden ? ' is-hidden' : ''}" data-item="${base}">
+        <legend>${esc(ui.item)} ${i + 1}${t ? ` : ${esc(t)}` : ''}${it.hidden ? ' <span class="hidden-label">(masqué sur le CV)</span>' : ''}</legend>
+        <div class="grid">${fields}</div>${oralHint}
         <div class="item-actions">
+          <button type="button" class="btn btn-small" data-act="item-hide" data-section="${key}" data-index="${i}" aria-pressed="${it.hidden}" aria-label="Masquer ${esc(ui.item.toLowerCase())} ${i + 1} sur le CV (sans la supprimer)">${it.hidden ? 'Afficher sur le CV' : 'Masquer du CV'}</button>
           <button type="button" class="btn btn-small" data-act="item-up" data-section="${key}" data-index="${i}"${i === 0 ? ' disabled' : ''} aria-label="Monter ${esc(ui.item.toLowerCase())} ${i + 1}">Monter</button>
           <button type="button" class="btn btn-small" data-act="item-down" data-section="${key}" data-index="${i}"${i === items.length - 1 ? ' disabled' : ''} aria-label="Descendre ${esc(ui.item.toLowerCase())} ${i + 1}">Descendre</button>
           <button type="button" class="btn btn-small btn-danger" data-act="item-remove" data-section="${key}" data-index="${i}" aria-label="Supprimer ${esc(ui.item.toLowerCase())} ${i + 1}">Supprimer</button>
@@ -178,7 +206,7 @@ function listSectionHTML(cv, key, index, total) {
     ? `<div class="field-check"><input type="checkbox" id="f-referencesOnRequest" data-path="referencesOnRequest"${cv.referencesOnRequest ? ' checked' : ''}><label for="f-referencesOnRequest">Afficher « Références disponibles sur demande » si la liste est vide</label></div>`
     : '';
   return `<details class="ed-section" data-section="${key}"${detailsOpen(key)}>
-    <summary><h2>${esc(ui.title)} <span class="count">(${items.length})</span></h2></summary>
+    <summary><h2>${esc(ui.title)} <span class="count">(${items.length}${items.some((it) => it.hidden) ? `, dont ${items.filter((it) => it.hidden).length} masqué${items.filter((it) => it.hidden).length > 1 ? 's' : ''}` : ''})</span></h2></summary>
     <div class="ed-body">
       ${SECTION_HINTS[key] ? `<p class="hint">${esc(SECTION_HINTS[key])}</p>` : ''}
       <div class="section-actions">
@@ -187,6 +215,7 @@ function listSectionHTML(cv, key, index, total) {
         <button type="button" class="btn btn-small" data-act="section-down" data-section="${key}"${index === total - 1 ? ' disabled' : ''} aria-label="Descendre la rubrique ${esc(ui.title)}">Descendre</button>
         ${['experiences', 'education', 'volunteering'].includes(key) && items.length > 1 ? `<button type="button" class="btn btn-small" data-act="sort" data-section="${key}">Trier du plus récent au plus ancien</button>` : ''}
       </div>
+      ${key === 'experiences' ? helperHTML(cv) : ''}
       <ol class="items">${itemsHTML}</ol>
       ${extra}
       <button type="button" class="btn btn-add" data-act="item-add" data-section="${key}">+ ${esc(ui.add)}</button>
@@ -194,10 +223,100 @@ function listSectionHTML(cv, key, index, total) {
   </details>`;
 }
 
+/** Aide à la rédaction par métier : exemples de lignes, compétences et accroche types. */
+function helperHTML(cv) {
+  const job = getJob(state.helperJob);
+  const options = JOBS.map((j) => `<option value="${j.id}"${j.id === state.helperJob ? ' selected' : ''}>${esc(j.name)}</option>`).join('');
+  let body = '';
+  if (job) {
+    const target = Math.min(state.helperTarget, Math.max(0, cv.experiences.length - 1));
+    const targets = cv.experiences.length
+      ? `<div class="field"><label for="helper-target">Ajouter les lignes à</label><select id="helper-target" data-helper="target">${cv.experiences
+        .map((e, i) => `<option value="${i}"${i === target ? ' selected' : ''}>Expérience ${i + 1}${e.position ? ` : ${esc(e.position)}` : ''}</option>`).join('')}</select></div>`
+      : '<p class="hint">Aucune expérience : la première ligne ajoutée en créera une.</p>';
+    body = `${targets}
+      <ul class="helper-lines">${job.lines.map((l, i) => `<li><span>${esc(l)}</span><button type="button" class="btn btn-small" data-act="helper-line" data-line="${i}" aria-label="Ajouter la ligne : ${esc(l)}">Ajouter</button></li>`).join('')}</ul>
+      <p class="hint">Remplacez les passages entre crochets [ … ] par vos chiffres réels : un exemple non personnalisé se remarque.</p>
+      <div class="helper-actions">
+        <button type="button" class="btn btn-small" data-act="helper-skills">Ajouter les compétences types (${esc(job.skills.keywords.slice(0, 3).join(', '))}…)</button>
+        <button type="button" class="btn btn-small" data-act="helper-summary">Proposer l'accroche type</button>
+      </div>`;
+  }
+  return `<details class="helper" data-section="helper"${detailsOpen('helper')}>
+    <summary>Aide à la rédaction par métier (exemples, sans connexion)</summary>
+    <div class="helper-body">
+      <div class="field"><label for="helper-job">Votre métier</label><select id="helper-job" data-helper="job"><option value="">— Choisir un métier —</option>${options}</select></div>
+      ${body}
+    </div>
+  </details>`;
+}
+
+/** Dossier de concours de la fonction publique sénégalaise (liste de pièces à cocher). */
+function dossierHTML(cv) {
+  const done = new Set(cv.meta.dossier);
+  return `<details class="ed-section" data-section="dossier"${detailsOpen('dossier')}>
+    <summary><h2>Dossier de concours <span class="count">(${DOSSIER_ITEMS.filter((d) => done.has(d.id)).length} / ${DOSSIER_ITEMS.length})</span></h2></summary>
+    <div class="ed-body">
+      <p class="hint">Pièces habituellement demandées pour un concours ou un recrutement dans l'administration sénégalaise.
+        <strong>L'avis de concours fait foi</strong> : vérifiez la liste exacte, les délais et le lieu de dépôt. Cochez ce qui est prêt.</p>
+      <ul class="dossier-list">${DOSSIER_ITEMS.map((d) => `<li class="field-check"><input type="checkbox" id="dossier-${d.id}" data-dossier="${d.id}"${done.has(d.id) ? ' checked' : ''}><label for="dossier-${d.id}">${esc(d.label)}</label></li>`).join('')}</ul>
+      <p class="hint">La demande manuscrite peut être préparée avec l'onglet « Lettre de motivation », style « Administratif (Sénégal) ».</p>
+    </div>
+  </details>`;
+}
+
+const LETTER_STYLES_UI = [
+  { id: 'standard', name: 'Standard', desc: 'Lettre de motivation « à la française » : entreprises, ONG, candidatures en ligne.' },
+  { id: 'administratif', name: 'Administratif (Sénégal)', desc: '« À Monsieur le Directeur… », objet, formule de haute considération : administrations, sociétés nationales, demande d\'emploi.' },
+  { id: 'en', name: 'Anglais (cover letter)', desc: 'Pour une candidature en anglais (organisations internationales, étranger).' },
+];
+
+function letterEditorHTML(cv) {
+  const L = cv.letter;
+  const f = (key) => LETTER_FIELDS.find((x) => x.key === key);
+  const field = (key, extra = {}) => fieldHTML(`letter.${key}`, { ...f(key), ...extra }, L[key]);
+  return `<section class="ed-section letter-editor" aria-labelledby="letter-title">
+    <h2 id="letter-title" class="letter-h">Lettre de motivation</h2>
+    <div class="ed-body">
+      <p class="hint">La lettre reprend l'en-tête, les polices et les couleurs de votre modèle de CV (${esc(getTemplate(cv.meta.templateId).name)}).
+        Une lettre = une candidature : adaptez-la à chaque employeur.</p>
+      <fieldset class="letter-style">
+        <legend>Style de lettre</legend>
+        ${LETTER_STYLES_UI.map((st) => `<div class="field-check radio"><input type="radio" name="letter-style" id="letter-style-${st.id}" value="${st.id}" data-path="letter.style"${L.style === st.id ? ' checked' : ''} aria-describedby="letter-style-${st.id}-d"><label for="letter-style-${st.id}"><strong>${esc(st.name)}</strong></label><span class="hint" id="letter-style-${st.id}-d">${esc(st.desc)}</span></div>`).join('')}
+      </fieldset>
+      <h3 class="letter-sub">Destinataire</h3>
+      <div class="grid">${['organization', 'recipientTitle', 'recipientName', 'recipientAddress', 'place', 'date'].map((k) => field(k)).join('')}</div>
+      <div class="letter-draft">
+        <button type="button" class="btn btn-primary" data-act="letter-draft">Proposer un brouillon à partir de mon CV</button>
+        <p class="hint">Structure « vous / moi / nous » construite avec votre poste visé, votre dernière expérience et les mots-clés de l'offre collée à droite. Complétez les passages entre crochets.</p>
+      </div>
+      <div class="grid">${field('subject', { type: 'text' })}${field('reference')}${field('salutation')}</div>
+      <div class="field field-wide">
+        <label for="f-letter-body">${esc(f('body').label)}</label>
+        <textarea id="f-letter-body" data-path="letter.body" rows="16" aria-describedby="letter-count">${esc(L.body)}</textarea>
+        <p class="hint" id="letter-count">${wordCount(L.body)} mots (idéal : 250 à 400)</p>
+      </div>
+      <div class="grid">${field('closing')}${field('enclosures')}</div>
+    </div>
+  </section>`;
+}
+
 function renderEditor() {
   const cv = state.cv;
+  if (state.doc === 'letter') {
+    $('#sections').innerHTML = letterEditorHTML(cv);
+    return;
+  }
   const order = cv.meta.sectionOrder;
-  $('#sections').innerHTML = identityHTML(cv) + headlineHTML(cv) + order.map((k, i) => listSectionHTML(cv, k, i, order.length)).join('');
+  const dossier = cv.meta.country === 'SNFP' ? dossierHTML(cv) : '';
+  $('#sections').innerHTML = identityHTML(cv) + headlineHTML(cv) + dossier + order.map((k, i) => listSectionHTML(cv, k, i, order.length)).join('');
+}
+
+function renderDocSwitch() {
+  document.querySelectorAll('.doc-switch button[data-doc]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.doc === state.doc)));
+  $('#btn-print').textContent = state.doc === 'letter' ? 'Télécharger la lettre en PDF' : 'Télécharger en PDF';
+  $('#btn-fit').hidden = state.doc === 'letter';
+  if (state.doc === 'letter') $('#btn-fit-reset').hidden = true;
 }
 
 function renderSettings() {
@@ -214,7 +333,7 @@ function renderSettings() {
     .map((p, i) => `<option value="${esc(p.id)}"${pal && p.id === pal.id ? ' selected' : ''}>${esc(p.name)}${i === 0 ? ' (d\'origine)' : ''}</option>`)
     .join('');
   $('#set-palette').disabled = !(tpl.palettes && tpl.palettes.length > 1);
-  $('#btn-fit-reset').hidden = !meta.fit;
+  $('#btn-fit-reset').hidden = !meta.fit || state.doc === 'letter';
   const anon = $('#btn-anon');
   anon.setAttribute('aria-pressed', String(meta.anonymous));
   anon.textContent = meta.anonymous ? 'CV anonyme : activé' : 'CV anonyme';
@@ -249,15 +368,27 @@ function updatePreview() {
   const cv = state.cv;
   const tpl = getTemplate(cv.meta.templateId);
   const preview = $('#preview');
+  if (state.doc === 'letter') {
+    updateLetterPreview(cv, tpl, preview);
+    return;
+  }
   preview.innerHTML = renderCV(cv, tpl.id);
   applyAccent(preview);
   const article = preview.querySelector('.cv');
   const paper = effectivePaper(cv, tpl);
   const { pages, pageH, padTop } = measurePages(article, paper);
   state.pages = pages;
-  // Repères de fin de page
+  pageMarks(preview, pages, pageH, padTop);
+  fitPreview();
+  const fitNote = cv.meta.fit ? ` · mise en page resserrée (${cv.meta.fit}/${MAX_FIT})` : '';
+  $('#template-info').innerHTML = `Modèle : <strong>${esc(tpl.name)}</strong> · ${tpl.ats ? 'ATS' : 'créatif'} · ${paper} · ${pages} page${pages > 1 ? 's' : ''}${fitNote}`;
+  renderNorms(checkCV(cv, tpl, { pages }));
+  renderMatch();
+}
+
+function pageMarks(preview, pages, pageH, padTop) {
   preview.querySelectorAll('.page-break').forEach((n) => n.remove());
-  for (let p = 1; p < Math.max(pages, 1) + 0; p += 1) {
+  for (let p = 1; p < pages; p += 1) {
     const mark = document.createElement('div');
     mark.className = 'page-break';
     mark.setAttribute('aria-hidden', 'true');
@@ -265,10 +396,19 @@ function updatePreview() {
     mark.style.top = `${padTop + p * pageH}px`;
     preview.appendChild(mark);
   }
+}
+
+function updateLetterPreview(cv, tpl, preview) {
+  preview.innerHTML = renderLetter(cv, tpl.id);
+  applyAccent(preview);
+  const article = preview.querySelector('.cv');
+  const paper = effectivePaper(cv, tpl);
+  const { pages, pageH, padTop } = measurePages(article, paper);
+  pageMarks(preview, pages, pageH, padTop);
   fitPreview();
-  const fitNote = cv.meta.fit ? ` · mise en page resserrée (${cv.meta.fit}/${MAX_FIT})` : '';
-  $('#template-info').innerHTML = `Modèle : <strong>${esc(tpl.name)}</strong> · ${tpl.ats ? 'ATS' : 'créatif'} · ${paper} · ${pages} page${pages > 1 ? 's' : ''}${fitNote}`;
-  renderNorms(checkCV(cv, tpl, { pages }));
+  const words = wordCount(cv.letter.body);
+  $('#template-info').innerHTML = `Lettre de motivation · modèle <strong>${esc(tpl.name)}</strong> · ${paper} · ${words} mots · ${pages} page${pages > 1 ? 's' : ''}`;
+  renderNorms(checkLetter(cv, { pages }), 'letter');
   renderMatch();
 }
 
@@ -290,7 +430,7 @@ function schedulePreview() {
   renderTimer = setTimeout(updatePreview, 120);
 }
 
-function renderNorms(result) {
+function renderNorms(result, kind = 'cv') {
   const { score, issues } = result;
   const level = score >= 85 ? 'good' : score >= 60 ? 'mid' : 'bad';
   const sevLabel = { error: 'Erreur', warning: 'À corriger', info: 'Conseil' };
@@ -299,15 +439,15 @@ function renderNorms(result) {
     .filter(Boolean)
     .join(', ');
   $('#norms').innerHTML = `<details class="norms-box norms-${level}" ${state.normsOpen === false ? '' : 'open'}>
-    <summary><span class="score" aria-hidden="true">${score}</span><span class="norms-title"><span>Conformité aux normes : <strong>${score}/100</strong></span><span class="norms-sub">${
+    <summary><span class="score" aria-hidden="true">${score}</span><span class="norms-title"><span>${kind === 'letter' ? 'Qualité de la lettre' : 'Conformité aux normes'} : <strong>${score}/100</strong></span><span class="norms-sub">${
       summary || 'Aucun problème détecté'
     }</span></span></summary>
-    ${issues.length ? `<ul class="issues">${issues
+    ${issues.length ? `<ul class="issues" aria-label="${kind === 'letter' ? 'Points à améliorer dans la lettre' : 'Alertes de conformité du CV'}">${issues
       .map((is, i) => `<li class="issue sev-${is.severity}"><span class="sev">${sevLabel[is.severity]}</span>
         <button type="button" class="issue-link" data-issue="${i}">${esc(is.message)}</button>
         ${is.advice ? `<span class="issue-advice">${esc(is.advice)}</span>` : ''}
         ${is.fix ? `<button type="button" class="btn btn-small" data-fix="${esc(is.fix)}">${esc(is.fixLabel || 'Corriger')}</button>` : ''}</li>`)
-      .join('')}</ul>` : '<p class="norms-ok">Votre CV respecte les règles vérifiées.</p>'}
+      .join('')}</ul>` : `<p class="norms-ok">${kind === 'letter' ? 'Votre lettre respecte les règles vérifiées.' : 'Votre CV respecte les règles vérifiées.'}</p>`}
   </details>`;
   state.issues = issues;
 }
@@ -317,6 +457,16 @@ function goTo(target) {
   if (!target) return;
   if (target === 'template') {
     openGallery();
+    return;
+  }
+  const wantDoc = target.startsWith('letter.') ? 'letter' : 'cv';
+  if (!target.startsWith('meta.') && wantDoc !== state.doc) switchDoc(wantDoc, { focus: false });
+  if (target.startsWith('letter.')) {
+    const el = document.querySelector(`[data-path="${CSS.escape(target)}"]`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.focus({ preventScroll: true });
+    }
     return;
   }
   if (target.startsWith('meta.')) {
@@ -349,8 +499,9 @@ function goTo(target) {
 
 // ————————————————————————— Modifications —————————————————————————
 
-function changed({ structural = false } = {}) {
+function changed({ structural = false, immediate = structural } = {}) {
   state.cv.meta.updatedAt = new Date().toISOString();
+  recordHistory(immediate);
   setStatus('Modifications en cours…');
   autosaver.schedule(state.cv);
   if (structural) {
@@ -375,8 +526,13 @@ function onInput(e) {
     value = normalizeDate(value);
     if (value !== el.value) el.value = value;
   }
+  if (el.type === 'radio' && !el.checked) return;
+  const before = getByPath(state.cv, path);
   setByPath(state.cv, path, value);
   if (path === 'summary') $('#summary-count').textContent = `${value.length} / 500 caractères`;
+  if (path === 'letter.body') $('#letter-count').textContent = `${wordCount(value)} mots (idéal : 250 à 400)`;
+  if (path === 'letter.style' && before !== value) adaptLetterFormulas(before, value);
+  if (path === 'letter.recipientTitle' && e.type === 'change') adaptSalutation(before);
   if (/\.current$/.test(path)) {
     const endPath = path.replace(/\.current$/, '.end');
     const end = document.querySelector(`[data-path="${endPath}"]`);
@@ -388,14 +544,49 @@ function onInput(e) {
       }
     }
   }
-  const structural = path === 'meta.lang' || path === 'meta.palette' || (path.startsWith('privacy.') && e.type === 'change');
+  const structural = path === 'meta.lang' || path === 'meta.palette' || (path.startsWith('privacy.') && e.type === 'change')
+    || path === 'meta.country' || path === 'letter.style';
   if (path === 'meta.palette' && state.cv.meta.accent) {
     // Choisir une palette annule la couleur libre, sinon elle masquerait la palette.
     state.cv.meta.accent = '';
   }
-  changed({ structural: false });
+  // Frappe au clavier : regroupée dans l'historique ; listes, cases, sortie de champ : étape immédiate.
+  changed({ structural: false, immediate: e.type === 'change' || el.tagName === 'SELECT' || ['checkbox', 'radio', 'color'].includes(el.type) });
   if (path === 'meta.title') renderPicker();
-  if (structural) renderSettings();
+  if (structural) {
+    renderSettings();
+    if (path === 'meta.country' || path === 'letter.style') {
+      renderEditor();
+      if (path === 'letter.style') focusAfterRender(`#${CSS.escape(el.id)}`);
+    }
+  }
+}
+
+/** Changement de style de lettre : met à jour les formules restées « par défaut ». */
+function adaptLetterFormulas(prevStyle, style) {
+  const L = state.cv.letter;
+  if (!L.salutation || L.salutation === salutationFor(L.recipientTitle, prevStyle) || L.salutation === 'Madame, Monsieur,' || L.salutation === 'Dear Hiring Manager,') {
+    L.salutation = salutationFor(L.recipientTitle, style);
+  }
+  if (!L.closing || L.closing === closingFor(L.salutation, prevStyle) || /salutations distinguées|haute considération|Yours (faithfully|sincerely)/.test(L.closing)) {
+    L.closing = L.body.trim() || L.closing ? closingFor(L.salutation, style) : '';
+  }
+}
+
+/** Destinataire modifié : la formule d'appel (et la formule de politesse) suivent si elles n'ont pas été personnalisées. */
+function adaptSalutation(prevTitle) {
+  const L = state.cv.letter;
+  const old = salutationFor(prevTitle, L.style);
+  if (L.salutation && L.salutation !== old && L.salutation !== 'Madame, Monsieur,') return;
+  const next = salutationFor(L.recipientTitle, L.style);
+  if (next === L.salutation) return;
+  if (L.closing === closingFor(L.salutation, L.style)) L.closing = closingFor(next, L.style);
+  L.salutation = next;
+  // Mise à jour des champs sans reconstruire le formulaire (le focus de l'utilisateur est préservé).
+  const sal = $('#f-letter-salutation');
+  const clo = $('#f-letter-closing');
+  if (sal) sal.value = L.salutation;
+  if (clo) clo.value = L.closing;
 }
 
 function focusAfterRender(selector) {
@@ -452,6 +643,65 @@ function onEditorClick(e) {
       changed({ structural: true });
       toast('Rubrique triée du plus récent au plus ancien.');
       break;
+    case 'item-hide': {
+      const it = cv[section][i];
+      it.hidden = !it.hidden;
+      changed({ structural: true });
+      focusAfterRender(`button[data-act="item-hide"][data-section="${section}"][data-index="${i}"]`);
+      toast(it.hidden ? 'Élément masqué sur le CV (conservé dans vos données).' : 'Élément de nouveau affiché sur le CV.');
+      break;
+    }
+    case 'helper-line': {
+      const job = getJob(state.helperJob);
+      if (!job) break;
+      const line = job.lines[Number(btn.dataset.line)];
+      if (!cv.experiences.length) cv.experiences.push(createItem('experiences'));
+      const target = Math.min(state.helperTarget, cv.experiences.length - 1);
+      const exp = cv.experiences[target];
+      exp.description = exp.description.trim() ? `${exp.description.replace(/\s+$/, '')}\n${line}` : line;
+      state.openSections.add('experiences');
+      changed({ structural: true });
+      focusAfterRender(`button[data-act="helper-line"][data-line="${btn.dataset.line}"]`);
+      toast(`Ligne ajoutée à l'expérience ${target + 1} : complétez les passages entre crochets.`);
+      break;
+    }
+    case 'helper-skills': {
+      const job = getJob(state.helperJob);
+      if (!job) break;
+      const existing = cv.skills.find((g) => g.name.toLowerCase() === job.skills.name.toLowerCase());
+      if (existing) {
+        for (const k of job.skills.keywords) if (!existing.keywords.some((x) => x.toLowerCase() === k.toLowerCase())) existing.keywords.push(k);
+      } else cv.skills.push(createItem('skills', { name: job.skills.name, keywords: job.skills.keywords }));
+      state.openSections.add('skills');
+      changed({ structural: true });
+      focusAfterRender('button[data-act="helper-skills"]');
+      toast(`Compétences « ${job.skills.name} » ajoutées : retirez celles que vous ne maîtrisez pas.`);
+      break;
+    }
+    case 'helper-summary': {
+      const job = getJob(state.helperJob);
+      if (!job) break;
+      // eslint-disable-next-line no-alert
+      if (cv.summary.trim() && !window.confirm('Remplacer votre accroche actuelle par l\'accroche type ?')) break;
+      cv.summary = job.summary;
+      if (!cv.targetTitle.trim()) cv.targetTitle = job.name.split(/[/(]/)[0].trim();
+      state.openSections.add('headline');
+      changed({ structural: true });
+      focusAfterRender('#f-summary');
+      toast('Accroche type insérée : personnalisez-la (chiffres entre crochets).');
+      break;
+    }
+    case 'letter-draft': {
+      const L = cv.letter;
+      // eslint-disable-next-line no-alert
+      if (L.body.trim() && !window.confirm('Remplacer le texte actuel de la lettre par un nouveau brouillon ?')) break;
+      if (!L.place) L.place = cv.identity.city;
+      Object.assign(L, draftLetter(cv, L.style));
+      changed({ structural: true });
+      focusAfterRender('#f-letter-body');
+      toast('Brouillon proposé : personnalisez les passages entre crochets [ … ].');
+      break;
+    }
     case 'photo-remove':
       cv.identity.photo = '';
       cv.privacy.showPhoto = false;
@@ -484,6 +734,27 @@ async function readPhoto(file) {
 }
 
 async function onEditorChange(e) {
+  const { helper, dossier } = e.target.dataset || {};
+  if (helper) {
+    if (helper === 'job') {
+      state.helperJob = e.target.value;
+      state.helperTarget = 0;
+      state.openSections.add('helper');
+      renderEditor();
+      focusAfterRender('#helper-job');
+    } else state.helperTarget = Number(e.target.value) || 0;
+    return;
+  }
+  if (dossier) {
+    const set = new Set(state.cv.meta.dossier);
+    if (e.target.checked) set.add(dossier);
+    else set.delete(dossier);
+    state.cv.meta.dossier = DOSSIER_ITEMS.map((d) => d.id).filter((id) => set.has(id));
+    changed();
+    const count = document.querySelector('details[data-section="dossier"] .count');
+    if (count) count.textContent = `(${state.cv.meta.dossier.length} / ${DOSSIER_ITEMS.length})`;
+    return;
+  }
   if (e.target.id === 'photo-input') {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
@@ -587,6 +858,7 @@ function openCV(cv) {
   autosaver.flush();
   state.cv = cv;
   store.setActiveId(cv.id);
+  resetHistory();
   renderAll();
 }
 
@@ -599,7 +871,8 @@ function saveNow() {
 }
 
 function newCV(kind) {
-  const cv = kind === 'sample' ? createSampleCV() : kind === 'sample-en' ? createSampleCVEnglish() : createEmptyCV({ meta: { title: 'Nouveau CV' } });
+  const makers = { sample: createSampleCV, 'sample-en': createSampleCVEnglish, 'sample-junior': createSampleJunior };
+  const cv = makers[kind] ? makers[kind]() : createEmptyCV({ meta: { title: 'Nouveau CV' } });
   autosaver.flush();
   state.cv = cv;
   saveNow();
@@ -607,8 +880,8 @@ function newCV(kind) {
   toast(kind === 'empty' ? 'Nouveau CV créé.' : 'Exemple chargé : remplacez les informations par les vôtres.');
 }
 
-function download(filename, text) {
-  const blob = new Blob([text], { type: 'application/json' });
+function download(filename, text, type = 'application/json') {
+  const blob = new Blob([text], { type: `${type};charset=utf-8` });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -625,7 +898,7 @@ function slug(s) {
 
 function preparePrint() {
   const root = $('#print-root');
-  root.innerHTML = renderCV(state.cv, state.cv.meta.templateId);
+  root.innerHTML = state.doc === 'letter' ? renderLetter(state.cv, state.cv.meta.templateId) : renderCV(state.cv, state.cv.meta.templateId);
   applyAccent(root);
 }
 
@@ -634,7 +907,8 @@ function printCV() {
   preparePrint();
   const previous = document.title;
   const { firstName, lastName } = state.cv.identity;
-  document.title = state.cv.meta.anonymous ? 'CV anonyme' : `CV ${[firstName, lastName].filter(Boolean).join(' ')}`.trim();
+  const who = [firstName, lastName].filter(Boolean).join(' ');
+  document.title = state.doc === 'letter' ? `Lettre de motivation ${who}`.trim() : state.cv.meta.anonymous ? 'CV anonyme' : `CV ${who}`.trim();
   window.print();
   setTimeout(() => {
     document.title = previous;
@@ -700,7 +974,108 @@ function closeGallery() {
 
 // ————————————————————————— Initialisation —————————————————————————
 
+// ————————————————————————— Historique : annuler / rétablir —————————————————————————
+
+const undoHistory = { undo: [], redo: [], current: null, timer: null };
+const HISTORY_MAX = 60;
+
+/** État du CV pour l'historique (sans la date de modification, qui change à chaque frappe). */
+function snapshot() {
+  return JSON.stringify({ ...state.cv, meta: { ...state.cv.meta, updatedAt: '' } });
+}
+
+function resetHistory() {
+  clearTimeout(undoHistory.timer);
+  undoHistory.undo = [];
+  undoHistory.redo = [];
+  undoHistory.current = snapshot();
+  updateHistoryButtons();
+}
+
+/** Enregistre l'état : immédiatement pour une action (ajout, tri…), regroupé pour la frappe. */
+function recordHistory(immediate) {
+  clearTimeout(undoHistory.timer);
+  if (immediate) commitHistory();
+  else undoHistory.timer = setTimeout(commitHistory, 700);
+}
+
+function commitHistory() {
+  clearTimeout(undoHistory.timer);
+  undoHistory.timer = null;
+  const snap = snapshot();
+  if (snap === undoHistory.current) return;
+  if (undoHistory.current !== null) undoHistory.undo.push(undoHistory.current);
+  if (undoHistory.undo.length > HISTORY_MAX) undoHistory.undo.shift();
+  undoHistory.redo = [];
+  undoHistory.current = snap;
+  updateHistoryButtons();
+}
+
+function updateHistoryButtons() {
+  $('#btn-undo').disabled = !undoHistory.undo.length;
+  $('#btn-redo').disabled = !undoHistory.redo.length;
+}
+
+function travel(direction) {
+  if (undoHistory.timer) commitHistory();
+  const from = direction === 'undo' ? undoHistory.undo : undoHistory.redo;
+  const to = direction === 'undo' ? undoHistory.redo : undoHistory.undo;
+  if (!from.length) return;
+  to.push(undoHistory.current);
+  undoHistory.current = from.pop();
+  state.cv = normalizeCV(JSON.parse(undoHistory.current));
+  autosaver.schedule(state.cv);
+  renderAll();
+  updateHistoryButtons();
+  toast(direction === 'undo' ? 'Modification annulée.' : 'Modification rétablie.');
+}
+
+// ————————————————————————— Texte brut —————————————————————————
+
+function openTextDialog() {
+  autosaver.flush();
+  const letter = state.doc === 'letter';
+  $('#text-dlg-title').textContent = letter ? 'Lettre en texte brut' : 'CV en texte brut';
+  $('#plain-text').value = letter ? letterText(state.cv) : cvPlainText(state.cv);
+  $('#text-share').hidden = typeof navigator.share !== 'function';
+  const dlg = $('#text-dlg');
+  if (typeof dlg.showModal === 'function') dlg.showModal();
+  else dlg.setAttribute('open', '');
+  $('#text-copy').focus();
+}
+
+function closeTextDialog() {
+  const dlg = $('#text-dlg');
+  if (typeof dlg.close === 'function') dlg.close();
+  else dlg.removeAttribute('open');
+  $('#btn-text').focus();
+}
+
+async function copyText() {
+  const area = $('#plain-text');
+  try {
+    await navigator.clipboard.writeText(area.value);
+    toast('Texte copié : collez-le dans le formulaire ou le message.');
+  } catch {
+    area.focus();
+    area.select();
+    toast('Copie automatique impossible : le texte est sélectionné, faites Ctrl+C (ou « Copier » sur téléphone).');
+  }
+}
+
+// ————————————————————————— Document : CV ou lettre —————————————————————————
+
+function switchDoc(doc, { focus = true } = {}) {
+  if (doc === state.doc) return;
+  state.doc = doc;
+  renderDocSwitch();
+  renderEditor();
+  updatePreview();
+  if (focus) focusAfterRender(`.doc-switch button[data-doc="${doc}"]`);
+}
+
 function renderAll() {
+  renderDocSwitch();
   renderPicker();
   renderSettings();
   renderEditor();
@@ -786,6 +1161,41 @@ function bind() {
     }
   });
   $('#btn-print').addEventListener('click', printCV);
+  document.querySelector('.doc-switch').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-doc]');
+    if (b) switchDoc(b.dataset.doc);
+  });
+  $('#btn-undo').addEventListener('click', () => travel('undo'));
+  $('#btn-redo').addEventListener('click', () => travel('redo'));
+  document.addEventListener('keydown', (e) => {
+    if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+    const k = e.key.toLowerCase();
+    // Dans un champ de saisie, l'annulation native du navigateur reste prioritaire.
+    const typing = e.target.closest && e.target.closest('input[type="text"], input[type="email"], input[type="tel"], input[type="url"], input:not([type]), textarea');
+    if (typing) return;
+    if (k === 'z' && !e.shiftKey) {
+      e.preventDefault();
+      travel('undo');
+    } else if (k === 'y' || (k === 'z' && e.shiftKey)) {
+      e.preventDefault();
+      travel('redo');
+    }
+  });
+  $('#btn-text').addEventListener('click', openTextDialog);
+  $('#text-close').addEventListener('click', closeTextDialog);
+  $('#text-copy').addEventListener('click', copyText);
+  $('#text-download').addEventListener('click', () => {
+    const name = state.doc === 'letter' ? `lettre-${slug(state.cv.meta.title)}` : slug(state.cv.meta.title);
+    download(`${name}.txt`, $('#plain-text').value, 'text/plain');
+    toast('Fichier texte téléchargé.');
+  });
+  $('#text-share').addEventListener('click', async () => {
+    try {
+      await navigator.share({ title: state.doc === 'letter' ? 'Lettre de motivation' : 'CV', text: $('#plain-text').value });
+    } catch {
+      // Partage annulé par l'utilisateur : rien à faire.
+    }
+  });
   window.addEventListener('beforeprint', preparePrint);
   $('#btn-gallery').addEventListener('click', openGallery);
   $('#btn-gallery-2').addEventListener('click', openGallery);
@@ -872,14 +1282,16 @@ function init() {
   }
   state.cv = cv;
   store.setActiveId(cv.id);
+  renderDatalists();
   bind();
+  resetHistory();
   renderAll();
   // Les polices embarquées changent la hauteur du texte : nouvelle mesure une fois chargées.
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => schedulePreview());
   registerServiceWorker();
   setStatus(navigator.onLine === false ? 'Hors ligne — vos données restent dans ce navigateur' : 'Vos données restent dans ce navigateur');
   // Exposé pour le débogage et les tests d'interface.
-  window.__cvApp = { state, store, cloneCV, getByPath, CEFR_LEVELS };
+  window.__cvApp = { state, store, cloneCV, getByPath, CEFR_LEVELS, undoHistory };
 }
 
 init();

@@ -1,8 +1,8 @@
 // Famille Europass : structure et intitulés officiels du CV Europass (Union européenne, format 2020+).
 // Une colonne ; rubriques dans l'ordre Europass ; langues séparées en « maternelle(s) » / « autre(s) ».
 
-import { esc, head, section, sectionTitle } from './parts.js';
-import { levelLabel } from '../i18n.js';
+import { esc, head, section, sectionTitle, languageLevel } from './parts.js';
+import { t } from '../i18n.js';
 import { palettes } from './palettes.js';
 
 const LABELS = {
@@ -47,10 +47,10 @@ function languagesEuropass(view) {
   const lab = (k) => (view.lang === 'en' ? { mother: 'Mother tongue(s)', other: 'Other language(s)' } : { mother: 'Langue(s) maternelle(s)', other: 'Autre(s) langue(s)' })[k];
   const colon = view.lang === 'fr' ? ' :' : ':';
   let body = '';
-  if (native.length) body += `<p class="cv-ep-mother"><strong>${esc(lab('mother'))}${colon}</strong> ${esc(native.map((l) => l.name).join(', '))}</p>`;
+  if (native.length) body += `<p class="cv-ep-mother"><strong>${esc(lab('mother'))}${colon}</strong> ${esc(native.map((l) => (l.mode === 'oral' ? `${l.name} (${t(view.lang, 'oral')})` : l.name)).join(', '))}</p>`;
   if (others.length) {
     body += `<p class="cv-ep-other-label"><strong>${esc(lab('other'))}${colon}</strong></p><ul class="cv-langs">${others
-      .map((l) => `<li><span class="cv-lang-name">${esc(l.name)}</span>${l.level ? ` <span class="cv-lang-level">— ${esc(levelLabel(view.lang, l.level))}</span>` : ''}${
+      .map((l) => `<li><span class="cv-lang-name">${esc(l.name)}</span>${languageLevel(view.lang, l) ? ` <span class="cv-lang-level">— ${esc(languageLevel(view.lang, l))}</span>` : ''}${
         l.certificate ? ` <span class="cv-lang-cert">(${esc(l.certificate)})</span>` : ''
       }</li>`)
       .join('')}</ul>`;

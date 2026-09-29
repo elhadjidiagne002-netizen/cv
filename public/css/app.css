@@ -22,6 +22,8 @@
 }
 
 * { box-sizing: border-box; }
+/* L'attribut hidden doit l'emporter sur les display des composants (.btn en inline-flex…). */
+[hidden] { display: none !important; }
 body { margin: 0; line-height: 1.5; background: var(--bg); }
 a { color: var(--primary); }
 :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; box-shadow: 0 0 0 5px #1c1e21; }
@@ -216,3 +218,37 @@ dialog#gallery::backdrop { background: rgba(10, 15, 25, .6); }
 
 /* Mesure hors écran pour « Ajuster à 1 page » */
 .fit-probe { position: absolute; left: -10000px; top: 0; visibility: hidden; pointer-events: none; }
+
+/* ——— Cycle 3 : CV / lettre, aide par métier, dossier de concours, éléments masqués, texte brut ——— */
+.doc-switch { display: flex; gap: 6px; margin-bottom: 12px; }
+.doc-switch .btn { flex: 1; min-height: 44px; font-weight: 600; }
+.ed-item.is-hidden { background: #f3f4f6; border-style: dashed; }
+.ed-item.is-hidden .grid { opacity: 0.75; }
+.hidden-label { color: var(--mid); font-weight: 600; }
+.helper { margin: 0 0 12px; border: 1px solid #b9d3ee; background: #f3f8fd; border-radius: var(--radius); }
+.helper > summary { cursor: pointer; padding: 10px 12px; font-weight: 600; color: #063d74; }
+.helper-body { padding: 0 12px 12px; display: grid; gap: 8px; }
+.helper-lines { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.helper-lines li { display: flex; gap: 8px; align-items: center; justify-content: space-between; background: #fff; border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; }
+.helper-lines li span { flex: 1; min-width: 0; }
+.helper-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.dossier-list { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 2px; }
+.dossier-list .field-check { align-items: flex-start; min-height: 36px; }
+.dossier-list .field-check input { margin-top: 3px; flex: none; }
+.letter-editor { padding-top: 12px; }
+.letter-h { margin: 0 16px 8px; font-size: 1.15rem; }
+.letter-sub { font-size: 1rem; margin: 14px 0 6px; }
+.letter-style { border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 12px; margin: 0; }
+.letter-style legend { font-weight: 700; padding: 0 6px; }
+.letter-style .radio { flex-wrap: wrap; row-gap: 0; }
+.letter-style .radio .hint { flex-basis: 100%; margin: 0 0 6px 28px; }
+.letter-draft { margin: 14px 0; padding: 10px 12px; border-radius: var(--radius); background: var(--primary-soft); }
+.letter-draft .hint { margin-bottom: 0; }
+dialog#text-dlg { width: min(760px, 96vw); max-height: 92vh; border: none; border-radius: 12px; padding: 16px 20px; }
+dialog#text-dlg::backdrop { background: rgba(10, 15, 25, .6); }
+#plain-text { width: 100%; font: 0.9rem/1.45 ui-monospace, "Cascadia Mono", Consolas, monospace; padding: 10px; border: 1px solid #8a919c; border-radius: 6px; resize: vertical; }
+.dlg-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+@media (max-width: 560px) {
+  .helper-lines li { flex-direction: column; align-items: stretch; }
+  .topbar-group .btn { min-height: 44px; }
+}

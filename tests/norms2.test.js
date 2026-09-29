@@ -98,8 +98,10 @@ test('téléphone : format international, numéro incomplet, indicatif du pays',
   assert.ok(has(cv, 'identity.phone.intl'));
   cv.identity.phone = '12 34';
   assert.ok(has(cv, 'identity.phone.invalid'));
-  cv.identity.phone = '00221 77 123 45 67';
+  cv.identity.phone = '+221 77 123 45 67';
   assert.equal(has(cv, 'identity.phone'), false);
+  cv.identity.phone = '00221 77 123 45 67';
+  assert.ok(has(cv, 'identity.phone.format'), 'écriture 00221 → +221');
   cv.meta.country = 'FR';
   assert.ok(has(cv, 'identity.phone.country'), 'numéro sénégalais pour la France');
 });

@@ -24,10 +24,13 @@ export function buildView(cv, template, opts = {}) {
   const anonymous = opts.anonymous ?? cv.meta.anonymous;
   const lang = effectiveLang(cv, template);
   const data = cloneCV(cv);
+  // Éléments masqués par l'utilisateur (« versions ciblées ») : conservés dans les données, absents du CV.
+  for (const s of LIST_SECTIONS) if (Array.isArray(data[s])) data[s] = data[s].filter((it) => !it.hidden);
   const p = data.privacy || {};
   const personalAllowed = !template.noPersonal && !anonymous;
   const show = {
     birthDate: personalAllowed && p.showBirthDate,
+    birthPlace: personalAllowed && p.showBirthPlace,
     nationality: personalAllowed && p.showNationality,
     maritalStatus: personalAllowed && p.showMaritalStatus,
     drivingLicence: !template.noPersonal && p.showDrivingLicence,
@@ -35,7 +38,9 @@ export function buildView(cv, template, opts = {}) {
   const photo = template.photo && !anonymous && p.showPhoto && data.identity.photo ? data.identity.photo : '';
   if (anonymous) {
     // CV anonyme : nom, photo, adresse, âge, situation familiale, nationalité et références masqués.
-    data.identity = { ...data.identity, firstName: '', lastName: '', email: '', phone: '', address: '', linkedin: '', website: '', photo: '', birthDate: '', nationality: '', maritalStatus: '' };
+    data.identity = {
+      ...data.identity, firstName: '', lastName: '', email: '', phone: '', phone2: '', address: '', linkedin: '', website: '', photo: '', birthDate: '', birthPlace: '', nationality: '', maritalStatus: '',
+    };
     data.references = [];
     if (cv.references.length) data.referencesOnRequest = true;
   }
