@@ -3,6 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- CSP aussi en <meta> : certains hébergeurs (GitHub Pages) ignorent public/_headers. frame-ancestors n'est
+       valable qu'en en-tête HTTP (_headers). Garder identique à _headers (vérifié par tests/deploy.test.js). -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'; upgrade-insecure-requests">
+  <meta name="referrer" content="no-referrer">
   <title>Éditeur de CV — CV en ligne</title>
   <meta name="description" content="Rédigez votre CV avec aperçu en direct, contrôle de conformité et export PDF. Vos données restent dans votre navigateur.">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
@@ -29,18 +33,33 @@
         <div class="menu-panel">
           <button type="button" class="btn" data-new="empty">CV vide</button>
           <button type="button" class="btn" data-new="sample">Exemple en français</button>
+          <button type="button" class="btn" data-new="sample-junior">Exemple : jeune diplômé (BTS, stages)</button>
           <button type="button" class="btn" data-new="sample-en">Exemple en anglais (résumé US)</button>
         </div>
       </details>
       <button type="button" class="btn" id="btn-dup">Dupliquer</button>
       <button type="button" class="btn btn-danger" id="btn-del">Supprimer</button>
     </div>
+    <div class="topbar-group" role="group" aria-label="Historique">
+      <button type="button" class="btn" id="btn-undo" disabled aria-keyshortcuts="Control+Z">Annuler</button>
+      <button type="button" class="btn" id="btn-redo" disabled aria-keyshortcuts="Control+Y">Rétablir</button>
+    </div>
     <div class="topbar-group" role="group" aria-label="Actions">
       <button type="button" class="btn" id="btn-gallery">Modèles</button>
+      <button type="button" class="btn" id="btn-apps">Mes candidatures <span class="due-badge" id="due-badge" hidden></span></button>
       <button type="button" class="btn" id="btn-anon" aria-pressed="false">CV anonyme</button>
       <button type="button" class="btn" id="btn-import">Importer</button>
-      <input type="file" id="file-import" accept=".json,application/json" hidden>
+      <input type="file" id="file-import" accept=".json,application/json,.zip,application/zip,.csv,text/csv" multiple hidden>
       <button type="button" class="btn" id="btn-export">Exporter (.json)</button>
+      <button type="button" class="btn" id="btn-text">Texte brut</button>
+      <details class="menu" id="formats-menu">
+        <summary class="btn">Autres formats</summary>
+        <div class="menu-panel">
+          <button type="button" class="btn" id="btn-docx">CV au format Word (.docx)</button>
+          <button type="button" class="btn" id="btn-jsonresume">Format JSON Resume (.json)</button>
+          <p class="hint menu-hint">« Importer » accepte aussi les fichiers JSON Resume et l'archive LinkedIn (.zip ou fichiers .csv).</p>
+        </div>
+      </details>
       <button type="button" class="btn btn-primary" id="btn-print">Télécharger en PDF</button>
       <button type="button" class="btn" id="btn-install" hidden>Installer l'application</button>
     </div>
@@ -50,6 +69,10 @@
   <main class="layout">
     <section class="editor" id="editor" aria-labelledby="editor-title" tabindex="-1">
       <h1 id="editor-title" class="sr-only">Éditeur du CV</h1>
+      <div class="doc-switch" role="group" aria-label="Document à rédiger">
+        <button type="button" class="btn" data-doc="cv" aria-pressed="true">Mon CV</button>
+        <button type="button" class="btn" data-doc="letter" aria-pressed="false">Lettre de motivation</button>
+      </div>
       <details class="ed-section" open>
         <summary><h2>Réglages du document</h2></summary>
         <div class="ed-body grid">
@@ -61,14 +84,25 @@
             <label for="set-country">Pays visé (règles de conformité)</label>
             <select id="set-country" data-path="meta.country" aria-describedby="set-country-hint">
               <option value="">Général (francophone)</option>
-              <option value="FR">France</option>
-              <option value="SN">Sénégal</option>
-              <option value="CA">Canada / Québec</option>
-              <option value="UK">Royaume-Uni</option>
-              <option value="US">États-Unis</option>
-              <option value="DE">Allemagne</option>
+              <optgroup label="Afrique">
+                <option value="SN">Sénégal (secteur privé, ONG)</option>
+                <option value="SNFP">Sénégal : fonction publique, concours</option>
+                <option value="CI">Côte d'Ivoire</option>
+                <option value="MA">Maroc</option>
+              </optgroup>
+              <optgroup label="Europe">
+                <option value="FR">France</option>
+                <option value="BE">Belgique</option>
+                <option value="CH">Suisse</option>
+                <option value="DE">Allemagne</option>
+                <option value="UK">Royaume-Uni</option>
+              </optgroup>
+              <optgroup label="Amérique du Nord">
+                <option value="CA">Canada / Québec</option>
+                <option value="US">États-Unis</option>
+              </optgroup>
             </select>
-            <p class="hint" id="set-country-hint">Adapte les contrôles : photo, informations personnelles, format de papier, longueur.</p>
+            <p class="hint" id="set-country-hint">Adapte les contrôles : photo, informations personnelles, format de papier, longueur, montants en FCFA, sigles des diplômes.</p>
           </div>
           <div class="field">
             <label for="set-lang">Langue des rubriques du CV</label>
@@ -145,6 +179,55 @@
     <p class="gallery-note">Les modèles <strong>ATS</strong> (une colonne) sont les plus sûrs pour les candidatures en ligne, lues par des logiciels de tri. Les modèles créatifs conviennent à un envoi direct à un recruteur.</p>
     <ul class="gallery-grid" id="gallery-grid"></ul>
   </dialog>
+
+  <dialog id="text-dlg" aria-labelledby="text-dlg-title">
+    <div class="gallery-head">
+      <h2 id="text-dlg-title">Texte brut</h2>
+      <button type="button" class="btn" id="text-close">Fermer</button>
+    </div>
+    <p class="hint" id="text-dlg-hint">À coller dans un formulaire de candidature en ligne, un e-mail ou un message. C'est aussi, à peu près, ce que lit un logiciel de tri (ATS).</p>
+    <label for="plain-text" class="sr-only">Texte brut</label>
+    <textarea id="plain-text" rows="18" readonly spellcheck="false"></textarea>
+    <div class="dlg-actions">
+      <button type="button" class="btn btn-primary" id="text-copy">Copier</button>
+      <button type="button" class="btn" id="text-download">Télécharger (.txt)</button>
+      <button type="button" class="btn" id="text-share" hidden>Partager (WhatsApp, e-mail…)</button>
+    </div>
+  </dialog>
+
+  <dialog id="apps-dlg" aria-labelledby="apps-title">
+    <div class="gallery-head">
+      <h2 id="apps-title">Mes candidatures</h2>
+      <button type="button" class="btn" id="apps-close">Fermer</button>
+    </div>
+    <p class="hint">Suivez vos envois et vos relances. Ces informations restent dans ce navigateur, comme vos CV.</p>
+    <p class="apps-stats" id="apps-stats" aria-live="polite"></p>
+    <div id="apps-due"></div>
+    <form id="apps-form" class="apps-form" novalidate>
+      <h3 id="apps-form-title">Nouvelle candidature</h3>
+      <input type="hidden" id="app-id">
+      <div class="grid">
+        <div class="field"><label for="app-company">Entreprise ou administration <span class="req" aria-hidden="true">*</span></label><input type="text" id="app-company" required aria-required="true"></div>
+        <div class="field"><label for="app-position">Poste</label><input type="text" id="app-position"></div>
+        <div class="field"><label for="app-status">Statut</label><select id="app-status"></select></div>
+        <div class="field"><label for="app-channel">Canal d'envoi</label><select id="app-channel"></select></div>
+        <div class="field"><label for="app-sentOn">Date d'envoi</label><input type="date" id="app-sentOn"></div>
+        <div class="field"><label for="app-followUpOn">Relance prévue le</label><input type="date" id="app-followUpOn" aria-describedby="app-followUpOn-hint"><p class="hint" id="app-followUpOn-hint">Vide : 10 jours après l'envoi.</p></div>
+        <div class="field"><label for="app-contact">Contact (nom, e-mail, téléphone)</label><input type="text" id="app-contact"></div>
+        <div class="field"><label for="app-reference">Référence de l'offre</label><input type="text" id="app-reference"></div>
+        <div class="field field-wide"><label for="app-notes">Notes</label><textarea id="app-notes" rows="2"></textarea></div>
+      </div>
+      <div class="dlg-actions">
+        <button type="submit" class="btn btn-primary" id="app-save">Enregistrer la candidature</button>
+        <button type="button" class="btn" id="app-cancel" hidden>Annuler la modification</button>
+      </div>
+    </form>
+    <h3 class="apps-list-h">Candidatures enregistrées</h3>
+    <ul class="apps-list" id="apps-list"></ul>
+    <div class="dlg-actions"><button type="button" class="btn" id="apps-export">Exporter pour Excel (.csv)</button></div>
+  </dialog>
+
+  <div id="datalists"></div>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </body>

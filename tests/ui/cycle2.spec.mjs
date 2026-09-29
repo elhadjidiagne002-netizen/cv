@@ -90,7 +90,7 @@ test('correspondance avec une offre : score, mots manquants, ajout aux compéten
 
 test('nouvelles rubriques : ajouter une publication', async ({ page }) => {
   const section = page.locator('details[data-section="publications"]');
-  await section.locator('summary').click();
+  await section.locator(':scope > summary').click();
   await section.locator('button[data-act="item-add"]').click();
   await page.fill('#f-publications-0-title', 'Le mobile money au Sénégal');
   await expect(page.locator('#preview .cv-s-publications')).toContainText('Le mobile money au Sénégal');

@@ -47,7 +47,12 @@ export function contactItems(view) {
   if (view.anonymous) return [{ key: 'anonymous', label: t(lang, 'contact'), value: t(lang, 'anonymousContact') }];
   const items = [];
   if (id.email) items.push({ key: 'email', label: t(lang, 'email'), value: id.email, href: `mailto:${id.email}` });
-  if (id.phone) items.push({ key: 'phone', label: t(lang, 'phone'), value: id.phone, href: `tel:${id.phone.replace(/[^\d+]/g, '')}` });
+  if (id.phone) {
+    // « (WhatsApp) » écrit en toutes lettres : aucune icône porteuse d'information (norme ATS).
+    const value = id.whatsapp ? `${id.phone} (${t(lang, 'whatsapp')})` : id.phone;
+    items.push({ key: 'phone', label: t(lang, 'phone'), value, href: `tel:${id.phone.replace(/[^\d+]/g, '')}` });
+  }
+  if (id.phone2) items.push({ key: 'phone2', label: t(lang, 'phone'), value: id.phone2, href: `tel:${id.phone2.replace(/[^\d+]/g, '')}` });
   if (id.address) items.push({ key: 'address', label: t(lang, 'address'), value: [id.address, id.city, id.country].filter(Boolean).join(', ') });
   else if (id.city || id.country) items.push({ key: 'city', label: t(lang, 'address'), value: [id.city, id.country].filter(Boolean).join(', ') });
   if (id.linkedin) items.push({ key: 'linkedin', label: t(lang, 'linkedin'), value: prettyUrl(id.linkedin), href: safeHref(id.linkedin) });
@@ -60,13 +65,20 @@ export function personalItems(view) {
   const { identity: id, lang, show } = view;
   const items = [];
   if (show.birthDate && id.birthDate) items.push({ key: 'birthDate', label: t(lang, 'birthDate'), value: formatBirthDate(id.birthDate, lang) });
+  if (show.birthPlace && id.birthPlace) items.push({ key: 'birthPlace', label: t(lang, 'birthPlace'), value: id.birthPlace });
   if (show.nationality && id.nationality) items.push({ key: 'nationality', label: t(lang, 'nationality'), value: id.nationality });
   if (show.maritalStatus && id.maritalStatus) items.push({ key: 'maritalStatus', label: t(lang, 'maritalStatus'), value: id.maritalStatus });
   if (show.drivingLicence && id.drivingLicence) items.push({ key: 'drivingLicence', label: t(lang, 'drivingLicence'), value: id.drivingLicence });
   return items;
 }
 
-const PERSONAL_KEYS = new Set(['birthDate', 'nationality', 'maritalStatus', 'drivingLicence']);
+const PERSONAL_KEYS = new Set(['birthDate', 'birthPlace', 'nationality', 'maritalStatus', 'drivingLicence']);
+
+/** Niveau d'une langue en toutes lettres (+ « à l'oral » pour une langue surtout parlée). */
+export function languageLevel(lang, l) {
+  const parts = [l.level ? levelLabel(lang, l.level) : '', l.mode === 'oral' ? t(lang, 'oral') : ''].filter(Boolean);
+  return parts.join(', ');
+}
 
 function contactValue(c) {
   return c.href ? `<a href="${esc(c.href)}">${esc(c.value)}</a>` : esc(c.value);
@@ -109,6 +121,8 @@ export function head(view, { contact = 'inline', withPhoto = true, extraClass = 
 
 /** Libellé de rubrique : libellé standard, ou libellé officiel propre au modèle (ex. Europass). */
 export function label(view, key) {
+  const cs = customSection(view, key);
+  if (cs) return cs.title;
   return (view.labels && view.labels[key]) || t(view.lang, key);
 }
 
@@ -203,13 +217,14 @@ export function sectionBody(view, key, variant = 'default') {
       if (variant === 'bars') {
         // Infographie modérée : le niveau CECRL reste écrit en toutes lettres ; la jauge est décorative.
         return `<ul class="cv-langs cv-langs-bars">${list
-          .map((l) => `<li><span class="cv-lang-name">${esc(l.name)}</span>${l.level ? ` <span class="cv-lang-level">— ${esc(levelLabel(lang, l.level))}</span><span class="cv-gauge lvl-${esc(l.level)}" aria-hidden="true"></span>` : ''}${
+          .map((l) => `<li><span class="cv-lang-name">${esc(l.name)}</span>${languageLevel(lang, l) ? ` <span class="cv-lang-level">— ${esc(languageLevel(lang, l))}</span>` : ''}${
+            l.level ? `<span class="cv-gauge lvl-${esc(l.level)}" aria-hidden="true"></span>` : ''}${
             l.certificate ? ` <span class="cv-lang-cert">(${esc(l.certificate)})</span>` : ''
           }</li>`)
           .join('')}</ul>`;
       }
       return `<ul class="cv-langs">${list
-        .map((l) => `<li><span class="cv-lang-name">${esc(l.name)}</span>${l.level ? ` <span class="cv-lang-level">— ${esc(levelLabel(lang, l.level))}</span>` : ''}${
+        .map((l) => `<li><span class="cv-lang-name">${esc(l.name)}</span>${languageLevel(lang, l) ? ` <span class="cv-lang-level">— ${esc(languageLevel(lang, l))}</span>` : ''}${
           l.certificate ? ` <span class="cv-lang-cert">(${esc(l.certificate)})</span>` : ''
         }</li>`)
         .join('')}</ul>`;
@@ -235,8 +250,20 @@ export function sectionBody(view, key, variant = 'default') {
   }
 }
 
+/** Rubrique personnalisée de la vue pour une clé « custom:<id> ». */
+export function customSection(view, key) {
+  if (!String(key).startsWith('custom:')) return null;
+  return (view.cv.custom || []).find((c) => `custom:${c.id}` === key) || null;
+}
+
+function customBody(view, cs) {
+  return cs.items.map((it) => datedItem(view, it.title, it.subtitle, it, it.description)).join('');
+}
+
 export function hasContent(view, key) {
   if (key === 'summary') return Boolean(view.summary.trim());
+  const cs = customSection(view, key);
+  if (cs) return cs.items.length > 0 && Boolean(cs.title.trim());
   if (key === 'references') return view.cv.references.length > 0 || view.cv.referencesOnRequest;
   return (view.cv[key] || []).length > 0;
 }
@@ -244,8 +271,10 @@ export function hasContent(view, key) {
 /** Rubrique complète (titre standard + contenu) ; chaîne vide si rien à afficher. */
 export function section(view, key, variant = 'default') {
   if (!hasContent(view, key)) return '';
-  const body = key === 'summary' ? `<p class="cv-summary">${esc(view.summary)}</p>` : sectionBody(view, key, variant);
+  const cs = customSection(view, key);
+  const body = key === 'summary' ? `<p class="cv-summary">${esc(view.summary)}</p>` : cs ? customBody(view, cs) : sectionBody(view, key, variant);
   if (!body) return '';
+  if (cs) return `<section class="cv-section cv-s-custom" data-section="${esc(key)}">${sectionTitle(view, key)}${body}</section>`;
   return `<section class="cv-section cv-s-${key}" data-section="${key}">${sectionTitle(view, key)}${body}</section>`;
 }
 

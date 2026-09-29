@@ -25,7 +25,8 @@ test('le schéma couvre toutes les rubriques demandées', () => {
 
 test('les champs sensibles sont masqués par défaut', () => {
   const cv = createEmptyCV();
-  assert.deepEqual(Object.values(cv.privacy), [false, false, false, false, false]);
+  assert.ok(Object.values(cv.privacy).length >= 6);
+  assert.ok(Object.values(cv.privacy).every((v) => v === false));
   const sample = createSampleCV();
   assert.equal(sample.privacy.showBirthDate, false);
   assert.equal(sample.identity.birthDate, '');

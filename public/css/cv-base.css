@@ -128,3 +128,20 @@ ul.cv-desc li::before { content: "•"; position: absolute; left: 0.6mm; color: 
   .cv a { color: inherit; }
   .cv { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+
+/* ——— Lettre de motivation (assortie au modèle : mêmes polices et couleurs via .tpl-<id>) ———
+   Sélecteurs préfixés par .cv.letter pour l'emporter sur la remise à zéro « .cv p { margin: 0 } ». */
+.cv.letter { --fs: 10.5pt; line-height: 1.45; }
+.cv.letter .cv-head { margin-bottom: 8mm; }
+.cv.letter .lt-top { display: flex; flex-direction: column; align-items: flex-end; gap: 5mm; margin-bottom: 8mm; }
+.cv.letter .lt-recipient { display: flex; flex-direction: column; min-width: 70mm; max-width: 95mm; }
+.cv.letter.letter-administratif .lt-recipient { font-weight: 600; }
+.cv.letter .lt-subject, .cv.letter .lt-ref { margin-bottom: 1.5mm; }
+.cv.letter .lt-salutation { margin: 7mm 0 4mm; }
+.cv.letter .lt-body p { margin: 0 0 3.5mm; text-align: justify; hyphens: auto; }
+.cv.letter .lt-closing { margin-top: 2mm; text-align: justify; }
+.cv.letter .lt-signature { margin-top: 12mm; font-weight: 700; text-align: right; padding-right: 10mm; }
+.cv.letter .lt-enclosures { margin-top: 10mm; font-size: 9.5pt; color: var(--muted); }
+@media print {
+  .cv.letter .lt-body p, .cv.letter .lt-closing, .cv.letter .lt-signature { break-inside: avoid; }
+}

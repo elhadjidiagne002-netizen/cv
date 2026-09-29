@@ -1,5 +1,94 @@
 # Journal du projet (le plus récent en haut)
 
+## 2026-09-29 — mise en ligne (GitHub Pages)
+**Fait.** Workflow GitHub Actions qui teste puis publie `public/` sur GitHub Pages à chaque mise à jour de `main` ;
+CSP dupliquée en `<meta>` (GitHub Pages ignore `_headers`), avec un test qui garantit qu'elle reste identique ;
+guide `DEPLOIEMENT.md` (GitHub Pages en place, Cloudflare Pages en option).
+
+**Pourquoi.** Demande « mettre le site en ligne d'abord » (avant le tableau de bord admin). Aucun accès Cloudflare
+depuis l'environnement de développement (pas de jeton, API bloquée) : GitHub Pages est publiable directement depuis
+le dépôt public.
+
+**Vérifié.** Site servi sous `/cv/` par un serveur sans en-têtes personnalisés : aucune erreur, CSP active (style en
+ligne bloqué), service worker limité à `/cv/`, rechargement hors ligne. 138 tests unitaires et 40 tests Playwright verts.
+
+## 2026-09-29 — cycle 5 : aperçu page par page, suivi des candidatures, import LinkedIn
+**Fait.** **Aperçu page par page** fidèle à l'impression (feuilles séparées, blocs jamais coupés, titres jamais
+orphelins), avec un nombre de pages vérifié identique au PDF pour les 33 modèles ; **suivi des candidatures** avec
+relances à J+10, lettres de relance et de remerciement pré-remplies et export pour Excel ; **import LinkedIn** depuis
+l'archive officielle (.zip compressé) ou les fichiers .csv.
+
+**Pourquoi.** Demande « continue les améliorations ». L'ancien aperçu (une longue page avec des repères) pouvait
+annoncer 1 page quand l'impression en produisait 2 ; le suivi et l'import LinkedIn font gagner du temps à chaque
+candidature.
+
+**Choix notables.**
+- Pagination par intercalaires invisibles insérés avant le bloc qui déborde (avec correction après mesure pour les
+  marges fusionnées et les grilles) ; l'impression repart d'un rendu neuf, donc n'est jamais affectée.
+- « Ajuster à 1 page » et les règles de longueur utilisent la même pagination que l'aperçu : plus de désaccord
+  possible entre l'alerte, l'aperçu et le PDF.
+- ZIP compressé lu avec `DecompressionStream('deflate-raw')` (natif navigateur et Node 22) : pas de bibliothèque.
+- Niveaux de langue LinkedIn → CECRL : correspondance approximative, annoncée à l'utilisateur plutôt que présentée
+  comme exacte.
+- Export CSV : cellules commençant par `= + - @` préfixées d'une apostrophe (injection de formules dans Excel).
+
+**État.** 136 tests unitaires et 40 tests Playwright verts. Propositions du cycle 6 dans `ROADMAP.md`.
+
+## 2026-09-29 — cycle 4 : Word, rubriques personnalisées, lettres de stage / relance / remerciement, accessibilité
+**Fait.** **Export Word (.docx)** du CV et de la lettre, sans dépendance (WordprocessingML + ZIP écrits à la main) ;
+**rubriques personnalisées** (Stages, Vie associative…) avec contrôles de titre standard, rendues partout (33
+modèles, texte brut, Word, JSON Resume) ; **demande de stage, relance et remerciement** en plus de la candidature ;
+**import / export JSON Resume** ; **audit d'accessibilité axe-core** (0 violation WCAG A/AA) et deux défauts corrigés.
+
+**Pourquoi.** Demande « autres améliorations ». Le .docx est souvent exigé par les cabinets et plateformes d'emploi ;
+les rubriques libres et la demande de stage répondent aux CV de jeunes diplômés, très nombreux au Sénégal ; l'audit
+automatique garantit l'exigence WCAG 2.2 AA du cahier des charges au fil des cycles.
+
+**Choix notables.**
+- ZIP « stocké » (sans compression) : format valide et simple à vérifier (CRC-32 testé contre la valeur de référence
+  0xCBF43926) ; un algorithme deflate maison aurait été un risque pour un gain de quelques dizaines de Ko.
+- Le .docx reste un document ATS (une colonne, styles de titres Word) quel que soit le modèle : un tableau ou des
+  zones de texte pour imiter les modèles créatifs seraient mal lus par les logiciels de tri.
+- Texte brut et Word partagent la même liste de blocs (`cvBlocks`), qui reproduit l'ordre imposé par Europass et le
+  résumé US : le contenu est identique dans les trois formats.
+- Rubriques personnalisées stockées à part (`cv.custom`) et référencées dans `meta.sectionOrder` par
+  `custom:<id>` : les rubriques standard et leurs règles restent inchangées.
+- axe-core injecté avec `bypassCSP` uniquement dans `a11y.spec.mjs` ; tous les autres tests gardent la vraie CSP.
+
+**État.** 128 tests unitaires et 34 tests Playwright verts. Propositions du cycle 5 dans `ROADMAP.md`.
+
+## 2026-09-29 — cycle 3 : réalités sénégalaises, lettre de motivation, confort d'édition
+**Fait.** **Lettre de motivation** assortie au modèle du CV, en 3 styles (standard, **administratif sénégalais**,
+anglais), avec brouillon guidé construit à partir du CV et contrôle dédié (longueur, 1 page, formules, objet,
+clichés, mots-clés de l'offre) ; **référentiel sénégalais** hors ligne (diplômes et équivalences, établissements,
+villes, langues) pour les suggestions de saisie ; nouvelles règles (**+221** avec correction en un clic, **FCFA**
+convertis pour l'étranger, **sigles de diplômes** expliqués, religion / ethnie / numéro de CNI) ; profils **Sénégal
+fonction publique** (dossier de concours à cocher), Côte d'Ivoire, Maroc, Belgique, Suisse ; **WhatsApp**, second
+numéro, lieu de naissance ; **langues « à l'oral »** ; **aide à la rédaction pour 23 métiers** ; **annuler /
+rétablir** ; **masquer un élément** sans le supprimer ; **texte brut** (copier, `.txt`, partage) ; polices
+**latin étendu** (ŋ, ɓ, ɗ, ƴ) ; exemple « jeune diplômé ».
+
+**Pourquoi.** Demande explicite : « améliorations majeures et adaptations aux réalités sénégalaises ». La lettre
+(et la demande d'emploi administrative) est exigée dans la plupart des candidatures au Sénégal ; les contrôles
+locaux évitent des erreurs fréquentes (numéro illisible depuis l'étranger, FCFA incompris, BFEM inconnu en
+France, mentions confessionnelles) ; les exemples par métier aident les candidats peu habitués au CV.
+
+**Choix notables.**
+- Lettre rendue avec les classes du modèle (`.cv .tpl-<id>`) et `head()` partagé : assortie aux 33 modèles sans
+  CSS par modèle. Toujours nominative (le mode anonyme ne concerne que le CV).
+- Brouillon honnête : années d'expérience arrondies à l'inférieur, passages [ … ] obligatoirement personnalisés
+  (le contrôleur du CV et celui de la lettre les signalent).
+- Éléments masqués : `checkCV` analyse le CV visible puis recalcule les chemins (`experiences.2.start`) vers les
+  positions réelles, pour que les alertes cliquables amènent toujours au bon champ.
+- Religion / ethnie : recherche limitée aux champs personnels (accroche, intérêts, compétences, bénévolat,
+  identité) pour ne pas signaler « Université catholique de l'Afrique de l'Ouest ».
+- Historique d'annulation : instantanés JSON (sans `updatedAt`), frappe regroupée (700 ms), listes et cases
+  validées immédiatement ; Ctrl+Z laisse l'annulation native dans les champs texte.
+- Polices latin-ext (≈ 560 Ko) exclues du pré-cache hors ligne : coût data important pour un usage rare.
+
+**État.** 118 tests unitaires et 26 tests Playwright verts (sous la vraie CSP). Propositions du cycle 4 dans
+`ROADMAP.md` (JSON Resume / LinkedIn / .docx, rubriques personnalisées, pagination visuelle).
+
 ## 2026-09-29 — cycle 2 : 33 modèles, hors ligne, offre d'emploi, normes par pays
 **Fait.** Catalogue porté de 16 à **33 modèles** en 11 familles (dont colonne de dates, académique,
 fonctionnel / reconversion, étudiant, métiers, Québec / Canada, Lebenslauf), chacun avec 3 à 5 palettes ;

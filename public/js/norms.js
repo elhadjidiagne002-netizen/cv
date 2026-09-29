@@ -3,8 +3,11 @@
 // target : chemin du champ à corriger (« experiences.0.start ») — l'éditeur y amène l'utilisateur.
 // fix : action corrective automatique proposée (« sort:experiences », « anonymous », « hide:photo »…).
 
-import { MONTH_RE, EMAIL_RE, CEFR_LEVELS, LIST_SECTIONS, recencyKey, sortAntichronological } from './model.js';
+import { MONTH_RE, EMAIL_RE, CEFR_LEVELS, LIST_SECTIONS, CUSTOM_TITLES, recencyKey, sortAntichronological } from './model.js';
 import { getTemplate } from './templates/index.js';
+import {
+  parseSenegalPhone, formatSenegalPhone, findCFAAmounts, convertCFA, foreignDiplomas, hasEquivalentNote, DOSSIER_ITEMS,
+} from './senegal.js';
 
 /**
  * Profils de règles par pays visé (meta.country). '' = règles générales (francophones).
@@ -13,13 +16,28 @@ import { getTemplate } from './templates/index.js';
  * desquelles 1 page est attendue (0 = pas d'exigence).
  */
 export const COUNTRY_PROFILES = {
-  FR: { name: 'France', paper: 'A4', photo: 'discouraged', personal: 'discouraged', maxPages: 2, onePageUnder: 10, phone: '+33', lang: 'fr', templates: ['sobre', 'chronologique', 'classique', 'moderne-ats'] },
-  SN: { name: 'Sénégal', paper: 'A4', photo: 'accepted', personal: 'accepted', maxPages: 2, onePageUnder: 5, phone: '+221', lang: 'fr', templates: ['sobre', 'teranga', 'registre', 'classique'] },
-  CA: { name: 'Canada / Québec', paper: 'Letter', photo: 'forbidden', personal: 'forbidden', maxPages: 2, onePageUnder: 0, phone: '+1', lang: '', templates: ['quebec', 'canada-en'] },
-  UK: { name: 'Royaume-Uni', paper: 'A4', photo: 'forbidden', personal: 'forbidden', maxPages: 2, onePageUnder: 0, phone: '+44', lang: 'en', templates: ['uk-cv'] },
-  US: { name: 'États-Unis', paper: 'Letter', photo: 'forbidden', personal: 'forbidden', maxPages: 2, onePageUnder: 10, phone: '+1', lang: 'en', templates: ['us-resume'] },
-  DE: { name: 'Allemagne', paper: 'A4', photo: 'accepted', personal: 'accepted', maxPages: 2, onePageUnder: 0, phone: '+49', lang: '', templates: ['lebenslauf', 'lebenslauf-moderne', 'europass'] },
+  FR: { name: 'France', inName: 'en France', paper: 'A4', photo: 'discouraged', personal: 'discouraged', maxPages: 2, onePageUnder: 10, phone: '+33', lang: 'fr', currency: 'EUR', templates: ['sobre', 'chronologique', 'classique', 'moderne-ats'] },
+  SN: { name: 'Sénégal', inName: 'au Sénégal', paper: 'A4', photo: 'accepted', personal: 'accepted', maxPages: 2, onePageUnder: 5, phone: '+221', lang: 'fr', local: true, templates: ['sobre', 'teranga', 'registre', 'classique'] },
+  SNFP: { name: 'Sénégal (fonction publique, concours)', inName: 'dans la fonction publique sénégalaise', paper: 'A4', photo: 'accepted', personal: 'accepted', maxPages: 2, onePageUnder: 0, phone: '+221', lang: 'fr', local: true, dossier: true, templates: ['classique', 'registre', 'sobre', 'teranga'] },
+  CI: { name: 'Côte d\'Ivoire', inName: 'en Côte d\'Ivoire', paper: 'A4', photo: 'accepted', personal: 'accepted', maxPages: 2, onePageUnder: 5, phone: '+225', lang: 'fr', cfa: true, templates: ['sobre', 'teranga', 'classique'] },
+  MA: { name: 'Maroc', inName: 'au Maroc', paper: 'A4', photo: 'accepted', personal: 'accepted', maxPages: 2, onePageUnder: 5, phone: '+212', lang: 'fr', currency: 'EUR', templates: ['sobre', 'classique', 'moderne-ats'] },
+  BE: { name: 'Belgique', inName: 'en Belgique', paper: 'A4', photo: 'discouraged', personal: 'discouraged', maxPages: 2, onePageUnder: 10, phone: '+32', lang: '', currency: 'EUR', templates: ['sobre', 'europass', 'chronologique'] },
+  CH: { name: 'Suisse', inName: 'en Suisse', paper: 'A4', photo: 'accepted', personal: 'accepted', maxPages: 2, onePageUnder: 0, phone: '+41', lang: '', currency: 'EUR', templates: ['sobre', 'chronologique', 'europass'] },
+  CA: { name: 'Canada / Québec', inName: 'au Canada / Québec', paper: 'Letter', photo: 'forbidden', personal: 'forbidden', maxPages: 2, onePageUnder: 0, phone: '+1', lang: '', currency: 'USD', templates: ['quebec', 'canada-en'] },
+  UK: { name: 'Royaume-Uni', inName: 'au Royaume-Uni', paper: 'A4', photo: 'forbidden', personal: 'forbidden', maxPages: 2, onePageUnder: 0, phone: '+44', lang: 'en', currency: 'EUR', templates: ['uk-cv'] },
+  US: { name: 'États-Unis', inName: 'aux États-Unis', paper: 'Letter', photo: 'forbidden', personal: 'forbidden', maxPages: 2, onePageUnder: 10, phone: '+1', lang: 'en', currency: 'USD', templates: ['us-resume'] },
+  DE: { name: 'Allemagne', inName: 'en Allemagne', paper: 'A4', photo: 'accepted', personal: 'accepted', maxPages: 2, onePageUnder: 0, phone: '+49', lang: '', currency: 'EUR', templates: ['lebenslauf', 'lebenslauf-moderne', 'europass'] },
 };
+
+const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+
+/**
+ * Informations à ne jamais mettre sur un CV : appartenance religieuse ou confrérique, ethnie, caste
+ * (critères de discrimination interdits) et numéros de pièce d'identité (risque d'usurpation).
+ */
+const DISCRIMINATORY_RE = /(^|[^a-zàâçéèêëîïôûùüÿœ])(religion|religieu(x|se)|musulman(e)?|chr[ée]tien(ne)?|catholique|protestant(e)?|mouride|tidian[ei]|tidjan[ei]|layène|khadre|qadiri|confr[ée]rie|dahira|ethnie|ethnique|caste)(?=$|[^a-zàâçéèêëîïôûùüÿœ])/i;
+const ID_NUMBER_RE = /(\bCNI\b|carte (nationale )?d'identit[ée]|passeport|\bNIN\b|num[ée]ro d'identification|s[ée]curit[ée] sociale|\bIPRES\b|\bCSS\b)[^\n]{0,20}\d{5,}/i;
+const PHYSICAL_RE = /(^|[^a-zà-ÿ])(taille|poids|height|weight)\s*:?\s*\d/i;
 
 /** Mots creux (« buzzwords ») : affirmations sans preuve que les recruteurs ignorent. */
 const BUZZ_FR = ['dynamique', 'motivé', 'motivée', 'rigoureux', 'rigoureuse', 'passionné', 'passionnée', 'polyvalent', 'polyvalente', 'sérieux', 'sérieuse',
@@ -59,7 +77,8 @@ export function findGaps(cv, now, minMonths = 6) {
   const exp = intervals(cv.experiences, now);
   if (!exp.length) return [];
   const firstJob = exp.reduce((m, x) => (x.start < m ? x.start : m), exp[0].start);
-  const all = [...exp, ...intervals(cv.education, now), ...intervals(cv.volunteering, now)]
+  const customItems = (cv.custom || []).flatMap((c) => c.items.filter((it) => !it.hidden));
+  const all = [...exp, ...intervals(cv.education, now), ...intervals(cv.volunteering, now), ...intervals(customItems, now)]
     .filter((x) => x.end >= firstJob)
     .sort((a, b) => a.start.localeCompare(b.start));
   const gaps = [];
@@ -215,6 +234,28 @@ const todayYM = (today) => `${today.getFullYear()}-${String(today.getMonth() + 1
  * Analyse un CV. opts : { pages?: number (mesuré dans l'aperçu), today?: Date }
  */
 export function checkCV(cv, templateOrId, opts = {}) {
+  // Les éléments masqués (« versions ciblées ») ne figurent pas sur le CV : on analyse le CV visible,
+  // puis on ramène les chemins (« experiences.1.start ») aux positions réelles dans l'éditeur.
+  const visible = { ...cv };
+  const positions = {};
+  for (const s of LIST_SECTIONS) {
+    const list = Array.isArray(cv[s]) ? cv[s] : [];
+    positions[s] = list.map((it, i) => (it.hidden ? -1 : i)).filter((i) => i >= 0);
+    visible[s] = list.filter((it) => !it.hidden);
+  }
+  const result = checkVisible(visible, templateOrId, opts);
+  const remap = (str) => (typeof str === 'string'
+    ? str.replace(/\b([a-z]+)\.(\d+)(?=\.|$)/g, (m, s, i) => (positions[s] && positions[s][Number(i)] !== undefined ? `${s}.${positions[s][Number(i)]}` : m))
+    : str);
+  for (const is of result.issues) {
+    is.id = remap(is.id);
+    is.target = remap(is.target);
+    is.fix = remap(is.fix);
+  }
+  return result;
+}
+
+function checkVisible(cv, templateOrId, opts = {}) {
   const template = typeof templateOrId === 'object' && templateOrId ? templateOrId : getTemplate(templateOrId || cv.meta.templateId);
   const today = opts.today || new Date();
   const now = todayYM(today);
@@ -242,15 +283,31 @@ export function checkCV(cv, templateOrId, opts = {}) {
     }
   }
   if (!anonymous && !idn.phone) add('identity.phone', 'warning', 'Ajoutez un numéro de téléphone (avec l\'indicatif, ex. +221).', { target: 'identity.phone' });
-  else if (idn.phone) {
-    const digits = phoneDigits(idn.phone).replace(/^\+/, '');
-    if (/[^\d\s+().\-/]/.test(idn.phone) || digits.length < 8 || digits.length > 15) {
-      add('identity.phone.invalid', 'warning', `Numéro de téléphone « ${idn.phone} » incomplet ou illisible (8 à 15 chiffres attendus).`, { target: 'identity.phone' });
-    } else if (!/^\s*(\+|00)/.test(idn.phone)) {
+  for (const key of ['phone', 'phone2']) {
+    const phone = idn[key];
+    if (!phone) continue;
+    const digits = phoneDigits(phone).replace(/^\+/, '');
+    const sn = parseSenegalPhone(phone);
+    const target = `identity.${key}`;
+    const suffix = key === 'phone2' ? '.2' : '';
+    if (/[^\d\s+().\-/]/.test(phone) || digits.length < 8 || digits.length > 15) {
+      add(`identity.phone.invalid${suffix}`, 'warning', `Numéro de téléphone « ${phone} » incomplet ou illisible (8 à 15 chiffres attendus).`, { target });
+    } else if (sn && sn.invalid) {
+      add(`identity.phone.sn${suffix}`, 'warning', `Numéro sénégalais « ${phone} » incorrect : 9 chiffres après +221, commençant par 70, 75, 76, 77, 78 (mobile) ou 33 (fixe).`, { target });
+    } else if (!/^\s*(\+|00)/.test(phone)) {
       const ex = country ? country.phone : '+221 / +33';
-      add('identity.phone.intl', 'info', `Téléphone sans indicatif international : écrivez-le au format ${ex} … pour être joignable depuis l'étranger.`, { target: 'identity.phone' });
-    } else if (country && !phoneDigits(idn.phone).replace(/^00/, '+').startsWith(country.phone) && !anonymous) {
-      add('identity.phone.country', 'info', `Numéro étranger pour une candidature en ${country.name} : précisez votre disponibilité ou ajoutez un numéro local (${country.phone}).`, { target: 'identity.phone' });
+      add(`identity.phone.intl${suffix}`, 'info', `Téléphone sans indicatif international : écrivez-le au format ${ex} … pour être joignable depuis l'étranger.`, sn
+        ? { target, fix: `phone:${key}`, fixLabel: `Écrire ${formatSenegalPhone(phone)}` }
+        : { target });
+    } else {
+      if (sn && formatSenegalPhone(phone) !== phone.trim()) {
+        add(`identity.phone.format${suffix}`, 'info', `Écrivez le numéro au format international, par groupes de chiffres : ${formatSenegalPhone(phone)}.`, {
+          target, fix: `phone:${key}`, fixLabel: 'Mettre en forme',
+        });
+      }
+      if (key === 'phone' && country && !phoneDigits(phone).replace(/^00/, '+').startsWith(country.phone) && !anonymous) {
+        add('identity.phone.country', 'info', `Numéro étranger pour une candidature ${country.inName} : précisez votre disponibilité ou ajoutez un numéro local (${country.phone}).`, { target });
+      }
     }
   }
   if (!anonymous && !idn.city) add('identity.city', 'info', 'Indiquez votre ville : les recruteurs filtrent souvent par localisation.', { target: 'identity.city' });
@@ -391,6 +448,17 @@ export function checkCV(cv, templateOrId, opts = {}) {
     add('style.spaces', 'info', 'Doubles espaces détectés dans le texte : ils créent des décalages dans le PDF.', { target: 'summary', fix: 'clean:spaces', fixLabel: 'Supprimer les doubles espaces' });
   }
 
+  // ——— Rubriques personnalisées ———
+  checkCustom(cv, add);
+
+  // ——— Exemples insérés depuis l'aide à la rédaction, pas encore personnalisés ———
+  const placeholderRe = /\[[^\]\n]{1,40}\]/;
+  if (textFields(cv).some((v) => placeholderRe.test(v))) {
+    add('placeholder', 'warning', 'Il reste des passages entre crochets [ … ] (exemples à compléter) : remplacez-les par vos chiffres et informations réels.', {
+      target: findField(cv, placeholderRe) || 'experiences',
+    });
+  }
+
   // ——— Mots creux ———
   const prose = `${cv.summary}\n${cv.experiences.map((e) => e.description).join('\n')}`.toLowerCase();
   const buzz = (lang === 'en' ? BUZZ_EN : BUZZ_FR).filter((w) => new RegExp(`(^|[^a-zàâçéèêëîïôûùüÿœ])${w.replace(/[-']/g, '[-\' ]')}($|[^a-zàâçéèêëîïôûùüÿœ])`, 'i').test(prose));
@@ -413,6 +481,7 @@ export function checkCV(cv, templateOrId, opts = {}) {
   if (!anonymous) {
     const shown = [];
     if (p.showBirthDate && idn.birthDate) shown.push('date de naissance');
+    if (p.showBirthPlace && idn.birthPlace) shown.push('lieu de naissance');
     if (p.showMaritalStatus && idn.maritalStatus) shown.push('situation familiale');
     if (p.showNationality && idn.nationality) shown.push('nationalité');
     const personalOk = country && ['accepted', 'forbidden'].includes(country.personal);
@@ -451,12 +520,12 @@ export function checkCV(cv, templateOrId, opts = {}) {
   if (country) {
     const c = country.name;
     if (paper !== country.paper) {
-      add('country.paper', 'warning', `Format de papier ${paper} : le format ${country.paper} est la norme pour ${c}.`, template.forceFormat
+      add('country.paper', 'warning', `Format de papier ${paper} : le format ${country.paper} est la norme ${country.inName}.`, template.forceFormat
         ? { target: 'template' }
         : { target: 'meta.paper', fix: `paper:${country.paper}`, fixLabel: `Passer en ${country.paper}` });
     }
     if (country.lang && lang !== country.lang) {
-      add('country.lang', 'warning', `Candidature pour ${c} : rédigez le CV en ${country.lang === 'en' ? 'anglais' : 'français'} (langue des rubriques et du contenu).`, { target: 'meta.lang' });
+      add('country.lang', 'warning', `Candidature ${country.inName} : rédigez le CV en ${country.lang === 'en' ? 'anglais' : 'français'} (langue des rubriques et du contenu).`, { target: 'meta.lang' });
     }
     const photoShown = !anonymous && p.showPhoto && idn.photo && template.photo;
     if (country.photo === 'forbidden' && photoShown && !isAnglo) {
@@ -465,15 +534,71 @@ export function checkCV(cv, templateOrId, opts = {}) {
     if (country.photo === 'accepted' && !photoShown && !anonymous && cv.meta.country === 'DE') {
       add('country.photo.de', 'info', 'Allemagne : une photo professionnelle reste d\'usage sur le Lebenslauf, mais elle est facultative (loi AGG).', { target: 'privacy' });
     }
-    if (country.personal === 'forbidden' && !isAnglo && !anonymous && (p.showBirthDate || p.showNationality || p.showMaritalStatus)) {
+    if (country.personal === 'forbidden' && !isAnglo && !anonymous && (p.showBirthDate || p.showBirthPlace || p.showNationality || p.showMaritalStatus)) {
       add('country.personal', 'error', `${c} : date de naissance, nationalité et situation familiale ne doivent pas figurer sur le CV.`, { target: 'privacy', fix: 'hide:sensitive', fixLabel: 'Masquer ces informations' });
     }
     if (cv.meta.country === 'US' && !template.excludeSections?.includes('interests') && (cv.interests.length || cv.references.length || cv.referencesOnRequest)) {
       add('country.us.sections', 'info', 'États-Unis : les centres d\'intérêt et les références ne figurent pas sur un résumé.', { target: 'interests' });
     }
     if (country.templates && !country.templates.includes(template.id) && ['forbidden'].includes(country.photo)) {
-      add('country.template', 'info', `Pour ${c}, les modèles conseillés sont : ${country.templates.map((id) => getTemplate(id).name).join(', ')}.`, { target: 'template' });
+      add('country.template', 'info', `${capitalize(country.inName)}, les modèles conseillés sont : ${country.templates.map((id) => getTemplate(id).name).join(', ')}.`, { target: 'template' });
     }
+  }
+
+  // ——— Réalités sénégalaises : montants en FCFA, diplômes, dossier de concours ———
+  const abroad = (country && !country.local && !country.cfa) || (!country && lang === 'en');
+  if (abroad) {
+    const cur = (country && country.currency) || (lang === 'en' ? 'USD' : 'EUR');
+    const texts = [cv.summary, ...cv.experiences.map((e) => e.description), ...cv.projects.map((e) => e.description)];
+    const found = texts.flatMap(findCFAAmounts).filter((a) => a.amount >= 1000);
+    const noted = texts.some((t) => /€|\beuros?\b|\$|\bUSD\b|\bEUR\b/i.test(t));
+    if (found.length && !noted) {
+      const ex = found[0];
+      add('money.cfa', 'info', `Montant en francs CFA (« ${ex.text} ») : un recruteur ${country ? country.inName : 'étranger'} ne le situera pas. Ajoutez l'équivalent : ≈ ${convertCFA(ex.amount, cur)}.`, {
+        target: 'experiences',
+        advice: `Parité fixe : 1 € = 655,957 FCFA${cur === 'USD' ? ' (dollar : taux indicatif, à vérifier)' : ''}. Exemple : « 45 millions FCFA (≈ 69 000 €) ».`,
+      });
+    }
+  }
+  if (abroad || cv.meta.country === 'FR') {
+    const i = cv.education.findIndex((e) => foreignDiplomas(e.degree).length && !hasEquivalentNote(e.degree));
+    if (i >= 0) {
+      const { diploma, equivalent } = foreignDiplomas(cv.education[i].degree, lang)[0];
+      add(`education.${i}.equivalent`, 'info', `« ${cv.education[i].degree} » : le sigle ${diploma.label.split(' ')[0]} est peu connu hors du Sénégal. Précisez l'équivalent (${equivalent}).`, {
+        target: `education.${i}.degree`,
+        fix: `equiv:education.${i}`,
+        fixLabel: 'Ajouter l\'équivalence',
+      });
+    }
+  }
+  if (country && country.dossier) {
+    const done = (cv.meta.dossier || []).filter((id) => DOSSIER_ITEMS.some((d) => d.id === id)).length;
+    if (done < DOSSIER_ITEMS.length) {
+      add('dossier.incomplete', 'info', `Dossier de concours : ${done} pièce${done > 1 ? 's' : ''} prête${done > 1 ? 's' : ''} sur ${DOSSIER_ITEMS.length}. Cochez-les au fur et à mesure (l'avis de concours fait foi).`, {
+        target: 'dossier', penalty: 0,
+      });
+    }
+  }
+
+  // ——— Informations à ne jamais faire figurer ———
+  const everything = [...textFields(cv), idn.nationality, idn.maritalStatus, idn.address].join('\n');
+  // Religion / ethnie : pas dans les noms d'établissements ou d'employeurs (« Université catholique… »).
+  const personalText = [cv.targetTitle, cv.summary, idn.nationality, idn.maritalStatus, idn.address,
+    ...cv.interests.map((i) => i.name), ...cv.skills.flatMap((g) => [g.name, ...g.keywords]), ...cv.volunteering.map((v) => `${v.role}\n${v.description}`)].join('\n');
+  const disc = personalText.match(DISCRIMINATORY_RE);
+  if (disc) {
+    add('sensitive.religion', 'warning', `« ${disc[2]} » : religion, confrérie, ethnie ou caste n'ont pas leur place sur un CV (critères de discrimination interdits). Retirez cette mention.`, {
+      target: findField(cv, DISCRIMINATORY_RE, ['interests', 'skills', 'volunteering']) || 'interests',
+      advice: 'Un engagement associatif peut rester, décrit par ce que vous y faites (ex. « Trésorier d\'une association de quartier, 120 membres »).',
+    });
+  }
+  if (ID_NUMBER_RE.test(everything)) {
+    add('sensitive.idnumber', 'warning', 'Numéro de pièce d\'identité ou de sécurité sociale détecté : ne le mettez jamais sur un CV (risque d\'usurpation d\'identité). Il ne se donne qu\'au moment de l\'embauche.', {
+      target: findField(cv, ID_NUMBER_RE) || 'identity.address',
+    });
+  }
+  if (PHYSICAL_RE.test(everything)) {
+    add('sensitive.physical', 'info', 'Taille et poids n\'ont pas à figurer sur un CV (sauf exigence légale explicite du métier dans l\'annonce).', { target: findField(cv, PHYSICAL_RE) || 'summary' });
   }
 
   // ——— Langue du contenu ———
@@ -515,13 +640,65 @@ export function checkCV(cv, templateOrId, opts = {}) {
   return { score, issues, pages, years };
 }
 
+/** Chemin du premier champ texte (rubriques, titre, accroche) qui correspond à une expression. */
+function findField(cv, re, sections = LIST_SECTIONS) {
+  if (re.test(cv.targetTitle)) return 'targetTitle';
+  if (re.test(cv.summary)) return 'summary';
+  for (const s of sections) {
+    for (let i = 0; i < cv[s].length; i += 1) {
+      for (const [k, v] of Object.entries(cv[s][i])) if (k !== 'id' && typeof v === 'string' && re.test(v)) return `${s}.${i}.${k}`;
+    }
+  }
+  for (const [ci, c] of (cv.custom || []).entries()) {
+    for (const [ii, it] of c.items.entries()) {
+      for (const k of ['title', 'subtitle', 'description']) if (!it.hidden && re.test(it[k])) return `custom.${ci}.items.${ii}.${k}`;
+    }
+  }
+  for (const k of ['address', 'nationality', 'maritalStatus']) if (re.test(cv.identity[k] || '')) return `identity.${k}`;
+  return '';
+}
+
 /** Tous les champs texte saisis par l'utilisateur (pour les contrôles de typographie). */
 function textFields(cv) {
   const out = [cv.targetTitle, cv.summary];
   for (const s of LIST_SECTIONS) {
-    for (const it of cv[s]) for (const v of Object.values(it)) if (typeof v === 'string') out.push(v);
+    for (const it of cv[s]) for (const [k, v] of Object.entries(it)) if (typeof v === 'string' && k !== 'id') out.push(v);
+  }
+  for (const c of cv.custom || []) {
+    out.push(c.title);
+    for (const it of c.items) if (!it.hidden) for (const [k, v] of Object.entries(it)) if (typeof v === 'string' && k !== 'id') out.push(v);
   }
   return out;
+}
+
+/** Titres standard des rubriques intégrées (FR / EN) : une rubrique personnalisée ne doit pas les doubler. */
+const BUILTIN_TITLES = /^(exp[ée]riences?( professionnelles?)?|parcours professionnel|formations?|[ée]tudes|dipl[oô]mes|comp[ée]tences|langues|certifications?|distinctions|publications|projets|b[ée]n[ée]volat|centres? d'int[ée]r[êe]ts?|loisirs|r[ée]f[ée]rences|work experience|experience|education|skills|languages|projects|volunteering|interests|references)$/i;
+
+/** Contrôle des rubriques personnalisées : titre standard, éléments complets, dates lisibles. */
+function checkCustom(cv, add) {
+  const standard = new Set(CUSTOM_TITLES.map((t) => t.toLowerCase()));
+  (cv.custom || []).forEach((c, ci) => {
+    const title = c.title.trim();
+    const visibleItems = c.items.filter((it) => !it.hidden);
+    const p = `custom.${ci}`;
+    if (!title) {
+      if (visibleItems.length) add(`${p}.title`, 'warning', 'Rubrique personnalisée sans titre : elle n\'apparaît pas sur le CV. Donnez-lui un intitulé standard (ex. « Stages »).', { target: `${p}.title` });
+    } else if (BUILTIN_TITLES.test(title)) {
+      add(`${p}.builtin`, 'info', `« ${title} » existe déjà comme rubrique standard : utilisez-la plutôt qu'une rubrique personnalisée (meilleure lecture par les ATS).`, { target: `${p}.title` });
+    } else if (!standard.has(title.toLowerCase()) && (title.length > 40 || /[^\p{L}\p{N}\s'’&,().\/-]/u.test(title))) {
+      add(`${p}.fancy`, 'warning', `Titre de rubrique « ${title} » peu standard : les logiciels de tri reconnaissent des intitulés simples (Stages, Vie associative, Formations complémentaires…).`, { target: `${p}.title` });
+    }
+    c.items.forEach((it, ii) => {
+      if (it.hidden) return;
+      const ip = `${p}.items.${ii}`;
+      const name = it.title || `élément ${ii + 1}`;
+      if (!it.title.trim()) add(`${ip}.title`, 'warning', `« ${title || 'Rubrique personnalisée'} » : élément n° ${ii + 1} sans intitulé.`, { target: `${ip}.title` });
+      for (const k of ['start', 'end']) {
+        if (it[k] && !/^\d{4}$/.test(it[k]) && !MONTH_RE.test(it[k])) add(`${ip}.${k}.format`, 'error', `« ${name} » : date « ${it[k]} » illisible (format attendu mois/année).`, { target: `${ip}.${k}` });
+      }
+      if (it.start && it.end && it.end < it.start) add(`${ip}.end.before`, 'error', `« ${name} » : la date de fin précède la date de début.`, { target: `${ip}.end` });
+    });
+  });
 }
 
 /** Remplace les espaces multiples et tabulations par une espace (préserve les retours à la ligne). */
@@ -535,18 +712,31 @@ export function cleanSpaces(text) {
  * « paper:A4|Letter », « clean:spaces ». (« fit » est géré par l'éditeur : il faut mesurer l'aperçu.)
  */
 export function applyFix(cv, fix) {
-  const [action, arg] = String(fix || '').split(':');
+  const [action, ...rest] = String(fix || '').split(':');
+  const arg = rest.join(':');
   if (action === 'sort' && Array.isArray(cv[arg])) cv[arg] = sortAntichronological(cv[arg]);
   else if (action === 'hide' && arg === 'photo') cv.privacy.showPhoto = false;
   else if (action === 'hide' && arg === 'sensitive') {
-    Object.assign(cv.privacy, { showPhoto: false, showBirthDate: false, showNationality: false, showMaritalStatus: false });
+    Object.assign(cv.privacy, { showPhoto: false, showBirthDate: false, showBirthPlace: false, showNationality: false, showMaritalStatus: false });
   } else if (action === 'anonymous') cv.meta.anonymous = arg !== 'off';
   else if (action === 'paper' && ['A4', 'Letter'].includes(arg)) cv.meta.paper = arg;
+  else if (action === 'phone' && ['phone', 'phone2'].includes(arg)) cv.identity[arg] = formatSenegalPhone(cv.identity[arg]);
+  else if (action === 'equiv') {
+    const m = String(arg).match(/^education\.(\d+)$/);
+    const item = m && cv.education[Number(m[1])];
+    const lang = cv.meta.lang === 'en' ? 'en' : 'fr';
+    const found = item && foreignDiplomas(item.degree, lang)[0];
+    if (found && !hasEquivalentNote(item.degree)) item.degree = `${item.degree} (${found.equivalent})`;
+  }
   else if (action === 'clean' && arg === 'spaces') {
     cv.targetTitle = cleanSpaces(cv.targetTitle);
     cv.summary = cleanSpaces(cv.summary);
     for (const s of LIST_SECTIONS) {
       for (const it of cv[s]) for (const [k, v] of Object.entries(it)) if (typeof v === 'string' && k !== 'id') it[k] = cleanSpaces(v);
+    }
+    for (const c of cv.custom || []) {
+      c.title = cleanSpaces(c.title);
+      for (const it of c.items) for (const [k, v] of Object.entries(it)) if (typeof v === 'string' && k !== 'id') it[k] = cleanSpaces(v);
     }
   }
   return cv;

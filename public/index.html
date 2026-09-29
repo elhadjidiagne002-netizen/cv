@@ -3,6 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- CSP aussi en <meta> : certains hébergeurs (GitHub Pages) ignorent public/_headers. frame-ancestors n'est
+       valable qu'en en-tête HTTP (_headers). Garder identique à _headers (vérifié par tests/deploy.test.js). -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'; upgrade-insecure-requests">
+  <meta name="referrer" content="no-referrer">
   <title>CV en ligne — créez un CV conforme aux normes du recrutement</title>
   <meta name="description" content="Créez gratuitement un CV professionnel : modèles ATS, Europass, résumé américain, aperçu en direct, contrôle de conformité et PDF. Sans compte, vos données restent sur votre appareil.">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
@@ -26,14 +30,14 @@
         <h1 id="hero-title">Un CV professionnel, conforme aux normes du recrutement</h1>
         <p class="lead">Remplissez votre parcours une fois, choisissez parmi <strong id="tpl-count">33</strong> modèles
           (compatibles ATS, Europass, résumé américain, Canada, Allemagne, académique, reconversion, étudiant, métiers, créatifs) et téléchargez un PDF au texte réel, lisible par les
-          logiciels de tri des candidatures.</p>
+          logiciels de tri des candidatures. Avec la <strong>lettre de motivation assortie</strong>, y compris au format administratif sénégalais.</p>
         <div class="hero-cta">
           <a class="btn btn-primary" href="app.html">Créer mon CV</a>
           <a class="btn" href="#normes">Les normes vérifiées</a>
         </div>
         <p class="hint">Gratuit, sans compte. Vos données restent dans votre navigateur : rien n'est envoyé à un serveur.</p>
       </div>
-      <div class="hero-visual" aria-hidden="true"><span class="thumb-inner" id="hero-cv"></span></div>
+      <div class="hero-visual" aria-hidden="true" inert><span class="thumb-inner" id="hero-cv"></span></div>
     </section>
 
     <section class="features" id="normes" aria-label="Points forts">
@@ -62,8 +66,32 @@
         <p>Collez une annonce : taux de correspondance et mots-clés manquants, calculés sur votre appareil.</p>
       </article>
       <article class="feature">
+        <h2>Pensé pour le Sénégal</h2>
+        <p>Numéros +221 et WhatsApp, langues nationales « à l'oral », diplômes (BFEM, DTS, CAEM…) expliqués à l'étranger, montants en FCFA convertis, dossier de concours de la fonction publique.</p>
+      </article>
+      <article class="feature">
+        <h2>Lettre de motivation</h2>
+        <p>Candidature, demande de stage, relance ou remerciement : brouillon construit à partir de votre CV (standard, administratif ou en anglais), mêmes polices et couleurs, contrôle de la longueur et des formules.</p>
+      </article>
+      <article class="feature">
+        <h2>Suivi des candidatures</h2>
+        <p>Notez vos envois, recevez un rappel de relance après 10 jours et préparez la lettre de relance ou de remerciement en un clic. Export pour Excel.</p>
+      </article>
+      <article class="feature">
+        <h2>Depuis LinkedIn</h2>
+        <p>Importez l'archive de vos données LinkedIn : postes, formations, compétences et langues sont repris, sur votre appareil.</p>
+      </article>
+      <article class="feature">
+        <h2>Aide à la rédaction</h2>
+        <p>Exemples de réalisations pour plus de 20 métiers (comptable, chauffeur, enseignant, téléconseiller, BTP, ONG…), à compléter avec vos chiffres.</p>
+      </article>
+      <article class="feature">
         <h2>Même sans connexion</h2>
-        <p>Installez l'application : elle fonctionne hors ligne. Règles adaptées au pays visé (France, Sénégal, Canada, Royaume-Uni, États-Unis, Allemagne).</p>
+        <p>Installez l'application : elle fonctionne hors ligne et ménage votre forfait. Règles adaptées au pays visé (Sénégal, Côte d'Ivoire, Maroc, France, Belgique, Suisse, Canada, Royaume-Uni, États-Unis, Allemagne).</p>
+      </article>
+      <article class="feature">
+        <h2>PDF, Word et texte</h2>
+        <p>PDF au texte réel, fichier Word (.docx) pour les cabinets qui l'exigent, texte brut pour les formulaires en ligne, WhatsApp ou e-mail, et format ouvert JSON Resume.</p>
       </article>
       <article class="feature">
         <h2>Accessible et mobile</h2>

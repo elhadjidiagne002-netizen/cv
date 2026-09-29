@@ -1,8 +1,10 @@
 // Service worker : mode hors ligne. Met en cache tous les fichiers du site (aucune donnée utilisateur :
 // les CV restent dans localStorage). Changer VERSION à chaque déploiement pour renouveler le cache.
-// La liste ASSETS est vérifiée par les tests (tests/pwa.test.js) : tout fichier de public/ doit y figurer.
+// La liste ASSETS est vérifiée par les tests (tests/pwa.test.js) : tout fichier de public/ doit y figurer,
+// sauf les polices « latin étendu » (lettres ŋ, ɓ, ɗ, ƴ des langues nationales) : ~560 Ko rarement utiles,
+// mises en cache à la demande pour ménager les forfaits de données mobiles.
 
-const VERSION = 'cv-2026-09-29-cycle2';
+const VERSION = 'cv-2026-09-29-cycle5';
 const ASSETS = [
   './',
   'app.html',
@@ -34,13 +36,22 @@ const ASSETS = [
   'icons/icon.svg',
   'index.html',
   'js/app.js',
+  'js/applications.js',
+  'js/docx.js',
   'js/home.js',
   'js/i18n.js',
+  'js/jsonresume.js',
+  'js/letter.js',
+  'js/linkedin.js',
   'js/match.js',
   'js/model.js',
   'js/norms.js',
+  'js/paginate.js',
+  'js/phrases.js',
+  'js/plaintext.js',
   'js/pwa.js',
   'js/render.js',
+  'js/senegal.js',
   'js/storage.js',
   'js/templates/academic.js',
   'js/templates/banner.js',
@@ -56,6 +67,7 @@ const ASSETS = [
   'js/templates/single.js',
   'js/templates/student.js',
   'js/templates/trades.js',
+  'js/zip.js',
   'manifest.webmanifest',
 ];
 

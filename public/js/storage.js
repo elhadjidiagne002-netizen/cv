@@ -2,6 +2,7 @@
 // Les données ne quittent jamais le navigateur. Le stockage est injectable (tests sous Node).
 
 import { normalizeCV, validateCV, uid, cloneCV, SCHEMA_VERSION } from './model.js';
+import { isJSONResume, fromJSONResume } from './jsonresume.js';
 
 const PREFIX = 'cvapp.v1.';
 const INDEX_KEY = `${PREFIX}index`;
@@ -22,7 +23,7 @@ export function createMemoryStorage() {
   };
 }
 
-function defaultStorage() {
+export function defaultStorage() {
   try {
     const s = globalThis.localStorage;
     const probe = `${PREFIX}probe`;
@@ -121,6 +122,11 @@ export function importJSON(text) {
     throw new Error('Fichier illisible : ce n\'est pas un fichier JSON valide.');
   }
   const raw = data && typeof data === 'object' && data.cv ? data.cv : data;
+  if (isJSONResume(raw)) {
+    // Format ouvert JSON Resume (jsonresume.org) : converti vers notre modèle.
+    const cv = fromJSONResume(raw);
+    return { cv, warnings: validateCV(cv).errors, source: 'jsonresume' };
+  }
   if (!raw || typeof raw !== 'object' || Array.isArray(raw) || (!raw.identity && !raw.meta && !raw.experiences)) {
     throw new Error('Ce fichier ne contient pas de CV reconnu.');
   }

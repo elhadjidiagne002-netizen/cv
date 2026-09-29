@@ -121,21 +121,138 @@
 9. **Qualité** : audit d'accessibilité automatisé (axe-core en devDependency Playwright), captures de
    non-régression visuelle par modèle, vérification que le texte du PDF s'extrait dans l'ordre de lecture.
 
-## Proposé pour le cycle 3 (priorisé)
-1. **Lettre de motivation** assortie au modèle (même en-tête et typographie), avec structure guidée
-   (vous / moi / nous), contrôles (longueur 1 page, formule de politesse, destinataire) et réutilisation
-   des mots-clés de l'offre : très demandée au Sénégal et en France, complète naturellement le CV.
-2. **Confort d'édition** : annuler / rétablir (historique local), masquer un élément ou une rubrique sans la
-   supprimer (versions ciblées d'un même CV), glisser-déposer accessible au clavier, rubriques personnalisées.
-3. **Aide à la rédaction par métier** (hors ligne) : exemples de lignes et verbes d'action pour ~30 métiers
-   courants (comptable, infirmier, enseignant, chauffeur, commercial, technicien, agent de sécurité…),
-   suggestion de reformulation d'une ligne faible, synonymes pour la correspondance avec l'offre.
-4. **Pagination visuelle réelle** dans l'aperçu (pages A4/Letter séparées, en-tête de page 2 avec le nom) et
-   aperçu d'impression fidèle ; vérification automatique que le PDF extrait le texte dans l'ordre de lecture.
-5. **Interopérabilité** : import / export JSON Resume, copie en texte brut pour les formulaires en ligne,
-   import d'un profil LinkedIn exporté (fichier), export `.txt` compatible ATS.
-6. **Qualité** : audit d'accessibilité automatisé (axe-core en devDependency), captures de non-régression
-   visuelle des 33 modèles, contrôle des contrastes des modèles dans le navigateur (pas seulement des palettes).
-7. **Polices étendues** : sous-ensemble latin-ext (wolof, peul, pulaar : ŋ, ɓ, ɗ, ƴ) pour les noms et adresses.
-8. **Profils pays supplémentaires** : Côte d'Ivoire, Maroc, Belgique, Suisse, fonction publique sénégalaise
-   (pièces du dossier de concours), et modèle « CV + dossier de concours ».
+## Cycle 3 — réalités sénégalaises, lettre de motivation, confort d'édition ✅ (terminé le 2026-09-29)
+
+### Priorités retenues (avant de coder)
+Ce qui apporte le plus à un candidat au Sénégal : (1) la **lettre de motivation / demande d'emploi**, exigée
+presque partout, y compris au format administratif ; (2) des **contrôles adaptés aux réalités locales**
+(numéros +221 et WhatsApp, langues nationales souvent parlées sans être écrites, sigles de diplômes inconnus
+à l'étranger, montants en FCFA, concours de la fonction publique) ; (3) l'**aide à la rédaction par métier**
+pour les profils peu habitués à rédiger un CV ; (4) le confort (annuler, masquer, texte brut pour les
+formulaires et WhatsApp) ; (5) des polices qui affichent ŋ, ɓ, ɗ, ƴ.
+
+### Fait
+- **Lettre de motivation assortie au modèle** (`letter.js`) : même en-tête, polices et couleurs que le CV (33 modèles),
+  3 styles — *standard* (France), *administratif (Sénégal)* (« À Monsieur le Directeur… », objet, « haute
+  considération », P. J.) et *anglais* (cover letter). **Brouillon guidé** vous / moi / nous construit à partir du
+  poste visé, de la dernière expérience (élision « d'augmenter »), des compétences et des mots-clés de l'offre ;
+  passages [ … ] à personnaliser. Formule d'appel déduite du destinataire (« Monsieur le Directeur des RH » →
+  « Monsieur le Directeur, ») et reprise dans la formule de politesse. **Contrôle** : vide, 250–400 mots, 1 page
+  mesurée, paragraphes, objet, destinataire, cohérence appel / politesse, clichés, trop de « Je », mots-clés de
+  l'offre, signature. PDF de la lettre par impression (texte réel).
+- **Référentiel sénégalais** (`senegal.js`, hors ligne) : 21 diplômes avec équivalences FR / EN (CFEE, BFEM, BT, DTS,
+  DUEL, maîtrise, CAEM, CAES, CEAP…), 28 établissements (UCAD, UGB, UASZ, ESP, EPT, ENSAE, ISM, CESAG, UN-CHK…),
+  28 villes, 22 langues → **suggestions de saisie** (`<datalist>`) ; pièces du **dossier de concours**.
+- **Nouvelles règles** : numéro sénégalais (9 chiffres, préfixes 70/75/76/77/78/33) et **correction en un clic**
+  vers `+221 77 123 45 67` (aussi pour le 2e numéro) ; **montants en FCFA** convertis pour une candidature hors
+  zone CFA (parité fixe 655,957) ; **sigles de diplômes** expliqués pour l'étranger (+ bouton « Ajouter
+  l'équivalence ») ; **religion / confrérie / ethnie / caste** (sans faux positif sur « Université catholique… ») ;
+  **numéro de CNI / passeport / IPRES** ; taille et poids ; exemples [ … ] non personnalisés ; suivi du dossier.
+- **Profils pays** : Sénégal fonction publique / concours (liste de pièces à cocher dans l'éditeur), Côte d'Ivoire,
+  Maroc, Belgique, Suisse (11 profils) ; messages accordés (« au Maroc », « aux États-Unis »).
+- **Identité** : second téléphone, mention « (WhatsApp) » écrite en toutes lettres, lieu de naissance (masqué par
+  défaut, jamais sur un modèle anglo-saxon, retiré en mode anonyme). **Langues « à l'oral »** (« Wolof — Langue
+  maternelle, à l'oral ») avec suggestion automatique pour les langues nationales ; Europass et jauges compris.
+- **Aide à la rédaction par métier** (`phrases.js`) : 23 métiers courants au Sénégal (comptable SYSCOHADA,
+  téléconseiller, agent mobile money, chauffeur, enseignant, infirmier, sécurité, électricien, BTP, ONG, agriculture,
+  hôtellerie, banque, couture, jeune diplômé…) : lignes à insérer dans l'expérience choisie, compétences types,
+  accroche type.
+- **Confort** : **annuler / rétablir** (boutons, Ctrl+Z / Ctrl+Y hors des champs texte, 60 étapes, frappe
+  regroupée) ; **masquer un élément sans le supprimer** (versions ciblées : absent du CV, du texte brut et des
+  contrôles, chemins d'alertes recalculés) ; **texte brut** du CV ou de la lettre (copier, télécharger `.txt`,
+  partager via WhatsApp / e-mail sur téléphone).
+- **Polices latin étendu** (ŋ, ɓ, ɗ, ƴ) pour Inter, Montserrat, Merriweather, EB Garamond, Source Serif 4 ;
+  **non pré-téléchargées** par le service worker (≈ 560 Ko) pour ménager les forfaits : chargées si besoin.
+- **Exemple « jeune diplômé »** (BTS, stages, langues nationales à l'oral, WhatsApp) ; accueil mis à jour.
+- **Correction** : l'attribut `hidden` était écrasé par `.btn { display: inline-flex }` (« Taille normale » et
+  « Installer l'application » restaient visibles).
+- **Tests** : 118 tests unitaires (+21) et 26 tests Playwright (+7 : lettre + PDF 1 page, annuler / rétablir,
+  masquer, aide par métier, texte brut, Sénégal, téléphone mobile).
+
+### Reste / limites connues
+- Brouillon de lettre : français « générique » (pas d'accord selon le genre, pas d'article devant le nom de
+  l'employeur en style standard) ; les puces au participe passé sont citées telles quelles.
+- La conversion en dollars utilise un taux indicatif (1 € ≈ 1,10 $) ; l'euro est exact (parité fixe).
+- Aperçu toujours en une longue page avec repères (pas de pagination visuelle page par page).
+- Pas de glisser-déposer ; pas de rubriques personnalisées libres ; pas d'import JSON Resume / LinkedIn.
+- La liste des pièces du dossier de concours est indicative (l'avis de concours fait foi).
+
+## Cycle 4 — formats d'échange, rubriques personnalisées, lettres, accessibilité ✅ (terminé le 2026-09-29)
+
+### Priorités retenues (avant de coder)
+Demande : « autres améliorations ». Retenu ce qui manque le plus à l'usage réel : (1) **le fichier Word**, exigé par
+beaucoup de cabinets de recrutement et de plateformes au Sénégal ; (2) les **rubriques personnalisées** (stages
+séparés, vie associative, mémoire…), très courantes dans les CV de jeunes diplômés ; (3) les **autres lettres** du
+parcours de candidature (demande de stage, relance, remerciement) ; (4) l'**interopérabilité** (JSON Resume) ;
+(5) un **audit d'accessibilité automatisé** pour tenir l'exigence WCAG 2.2 AA dans la durée.
+
+### Fait
+- **Export Word (.docx)** du CV et de la lettre (`docx.js`, `zip.js`), sans dépendance : WordprocessingML écrit à la
+  main + archive ZIP (CRC-32). Document ATS : une colonne, styles Word « Titre 1 » pour les rubriques, dates alignées
+  par tabulation, puces en texte, ni tableau ni image, A4 ou Letter selon le modèle, couleur d'accent de la palette,
+  Calibri ou Cambria (modèles à empattements), langue du document, propriétés (titre, auteur — vides en mode anonyme).
+  Vérifié avec python-docx.
+- **Rubriques personnalisées** (jusqu'à 6) : titre avec suggestions standard (Stages, Vie associative, Formations
+  complémentaires, Mémoire et travaux de recherche…), éléments intitulé / organisme / dates / détails, masquables,
+  déplaçables comme les rubriques standard ; rendues dans les 33 modèles (après l'ordre imposé pour Europass et le
+  résumé US), dans le texte brut, Word et JSON Resume. **Contrôles** : titre manquant, doublon d'une rubrique
+  standard, titre fantaisiste (symboles, > 40 caractères), élément sans intitulé, dates ; les stages déclarés
+  comblent les trous du parcours.
+- **Types de lettre** : candidature, **demande de stage** (durée, date, convention ; pièces jointes adaptées en style
+  administratif), **relance**, **remerciement après entretien** — en français standard, administratif et anglais ;
+  longueur attendue adaptée (80 à 180 mots pour relance et remerciement).
+- **JSON Resume** (`jsonresume.js`) : export conforme au schéma v1.0.0 ; l'import habituel reconnaît
+  automatiquement ce format (niveaux de langue déduits de « fluency », langue du CV déduite du contenu, années seules
+  conservées et signalées plutôt qu'un mois inventé).
+- **Blocs documentaires** (`plaintext.js`) : une seule structure alimente le texte brut et Word (même ordre que le PDF).
+- **Accessibilité** : audit **axe-core** (WCAG 2.0 / 2.1 / 2.2 A et AA) sur l'accueil, l'éditeur (toutes rubriques
+  ouvertes), la lettre, la galerie, le dialogue texte brut et l'affichage téléphone. Deux défauts corrigés : liens
+  focalisables dans l'aperçu décoratif de l'accueil et dans les miniatures de la galerie (contrôles imbriqués) →
+  `inert`. Cases à cocher des formulaires alignées sur une ligne.
+- **Tests** : 128 tests unitaires (+10) et 34 tests Playwright (+8, dont 4 d'accessibilité).
+
+### Reste / limites connues
+- Le .docx n'est pas compressé (8 à 15 Ko pour un CV : sans incidence pratique) ; pas de photo dans le .docx
+  (volontaire : ATS), pas de mise en page à colonnes des modèles créatifs.
+- LibreOffice n'a pas pu être utilisé dans l'environnement de test pour un rendu visuel du .docx.
+- Aperçu toujours en une longue page avec repères (pas de pagination visuelle page par page).
+- Pas de glisser-déposer ; pas d'import de l'export LinkedIn (archive CSV).
+
+## Cycle 5 — aperçu page par page, suivi des candidatures, import LinkedIn ✅ (terminé le 2026-09-29)
+
+### Priorités retenues (avant de coder)
+Demande : « continue les améliorations ». Retenu dans les propositions du cycle 4 : (1) un **aperçu fidèle au PDF**
+(la question « mon CV tient-il sur une page ? » est la plus fréquente) ; (2) le **suivi des candidatures**, qui
+relie CV, lettres et relances — utile à tout candidat qui envoie beaucoup de dossiers ; (3) l'**import LinkedIn**,
+qui évite de tout ressaisir. Reportés : interface en anglais / wolof, glisser-déposer.
+
+### Fait
+- **Aperçu page par page** (`paginate.js`) : feuilles A4 / Letter séparées (« Page 2 / 3 »), aucun bloc coupé
+  (élément, ligne de compétences, langue, paragraphe de lettre), titre de rubrique jamais seul en bas de page, marges
+  identiques à l'impression. Le nombre de pages annoncé (et contrôlé par les règles de longueur, et par « Ajuster à
+  1 page ») est désormais celui de cette pagination : **vérifié identique au PDF imprimé pour les 33 modèles**.
+- **Suivi des candidatures** (`applications.js`, bouton « Mes candidatures ») : entreprise, poste, canal, date
+  d'envoi, statut (à envoyer, envoyée, relancée, entretien, offre, refus, abandonnée), contact, référence, notes.
+  « Envoyée » programme la relance à J+10 ; pastille « n relances » dans la barre ; **lettre de relance pré-remplie**
+  (entreprise, référence, date d'envoi en toutes lettres) et **lettre de remerciement** après un entretien ;
+  statistiques (taux de réponse) ; **export CSV pour Excel** (BOM, « ; », formules neutralisées). Données locales.
+- **Import LinkedIn** (`linkedin.js`) : archive officielle .zip (décompression native « deflate », CRC vérifié) ou
+  fichiers .csv ; Profile, Positions, Education, Skills, Languages, Certifications, Projects, Honors, Volunteering,
+  e-mail principal, téléphone (+221 remis en forme) ; dates « Mar 2022 » / « sept. 2019 » ; niveaux LinkedIn →
+  CECRL (signalés comme approximatifs) ; CSV robuste (guillemets, retours à la ligne, notes en tête).
+- **Accessibilité** : l'audit axe-core couvre aussi le dialogue des candidatures (0 violation).
+- **Tests** : 136 tests unitaires (+8) et 40 tests Playwright (+6, dont la concordance aperçu / PDF sur 33 modèles).
+
+### Reste / limites connues
+- La pagination de l'aperçu repose sur les mêmes règles que l'impression de Chromium ; un autre navigateur peut
+  paginer très légèrement différemment à l'impression.
+- Le suivi des candidatures n'est pas inclus dans l'export `.json` d'un CV (export CSV séparé).
+- Pas encore d'interface en anglais ni de glisser-déposer.
+
+## Proposé pour le cycle 6 (priorisé)
+1. **Sauvegarde complète** en un fichier (tous les CV + lettres + candidatures) et restauration, pour changer de
+   téléphone sans rien perdre.
+2. **Interface en anglais** (et aides principales en wolof).
+3. **Glisser-déposer accessible** des éléments et rubriques.
+4. **Rappel du nom en tête de la page 2** (option), et numéros de page en pied de page à l'impression.
+5. **Captures de non-régression visuelle** des 33 modèles et de la lettre.

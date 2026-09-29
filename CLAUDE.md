@@ -20,7 +20,11 @@ Toujours répondre et écrire l'interface **en français** (l'anglais est une la
   - `public/index.html` : accueil ; `public/app.html` : éditeur + aperçu en direct.
   - `public/js/` : `model.js` (schéma des données + validation), `templates/` (un fichier par famille
     de modèles), `render.js` (données → HTML du CV), `norms.js` (règles de conformité + contrôleur),
-    `i18n.js` (libellés de rubriques FR/EN), `storage.js`, `app.js` (éditeur).
+    `i18n.js` (libellés de rubriques FR/EN), `storage.js`, `app.js` (éditeur), `letter.js` (lettre de motivation
+    assortie), `senegal.js` (référentiel local : diplômes, établissements, +221, FCFA, concours), `phrases.js`
+    (aide à la rédaction par métier), `plaintext.js` (blocs du CV → texte brut), `docx.js` + `zip.js` (export Word
+    sans dépendance), `jsonresume.js` (import / export JSON Resume), `linkedin.js` (import de l'archive LinkedIn),
+    `applications.js` (suivi des candidatures), `paginate.js` (aperçu page par page), `match.js` (offre d'emploi).
   - `public/css/` : `app.css` (éditeur + accueil), `cv-base.css` (commun à tous les CV, impression A4/Letter),
     `templates.css` (couleurs, polices et variantes de chaque modèle, classe `.tpl-<id>`).
   - Modèles : une famille par fichier dans `public/js/templates/` (`single.js`, `europass.js`,
@@ -63,6 +67,7 @@ Toujours répondre et écrire l'interface **en français** (l'anglais est une la
   jour (fait / à faire), entrée ajoutée en haut de `JOURNAL.md`, commit + push sur `main`.
 - Chaque cycle commence par se demander **quelles améliorations apportent le plus** (utilisateur,
   normes, qualité) et les note dans `ROADMAP.md` avant de coder.
-- Vérifier : `npm test` (unitaires) ; `npx playwright test` si Playwright est disponible.
+- Vérifier : `npm test` (unitaires) ; `npx playwright test` si Playwright est disponible (inclut l'audit
+  d'accessibilité axe-core `tests/ui/a11y.spec.mjs`, qui doit rester à zéro violation WCAG A/AA).
 - Ne jamais committer de secret. Pas de dépendance d'exécution : seules des dépendances de
-  développement (Playwright) sont autorisées.
+  développement (Playwright, axe-core) sont autorisées.

@@ -22,6 +22,8 @@
 }
 
 * { box-sizing: border-box; }
+/* L'attribut hidden doit l'emporter sur les display des composants (.btn en inline-flex…). */
+[hidden] { display: none !important; }
 body { margin: 0; line-height: 1.5; background: var(--bg); }
 a { color: var(--primary); }
 :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; box-shadow: 0 0 0 5px #1c1e21; }
@@ -96,6 +98,8 @@ a { color: var(--primary); }
 .field-check { display: flex; align-items: center; gap: 8px; min-height: 40px; }
 .field-check input { width: 20px; height: 20px; }
 .field-check label { font-weight: 500; }
+/* Case à cocher dans une grille de champs : sur une ligne, alignée avec le bas des champs voisins. */
+.field.field-check { flex-direction: row; align-self: end; }
 .inline { display: flex; gap: 8px; align-items: center; }
 .hint { color: var(--muted); font-size: 0.88rem; margin: 4px 0 8px; }
 .sensitive { margin-top: 14px; border: 1px dashed var(--border); border-radius: var(--radius); }
@@ -138,10 +142,12 @@ a { color: var(--primary); }
 .preview-stage { position: relative; margin: 0 auto; }
 .preview { position: absolute; top: 0; left: 0; transform-origin: top left; }
 .preview .cv { box-shadow: 0 2px 10px rgba(0, 0, 0, .18); }
-.page-break {
-  position: absolute; left: 0; right: 0; height: 0; border-top: 2px dashed #b3261e; pointer-events: none;
-  font-size: 11px; color: #b3261e; text-align: right; padding-right: 6px; line-height: 1.6;
+/* Aperçu page par page : bande grise entre deux feuilles (voir paginate.js). */
+.page-gap {
+  position: absolute; background: #dfe3e8; pointer-events: none; display: flex; align-items: center; justify-content: flex-end;
+  padding-right: 18px; font-size: 13px; font-weight: 600; color: #3a4049; z-index: 1;
 }
+.page-spacer { display: block; list-style: none; margin: 0; padding: 0; }
 
 /* Galerie */
 dialog#gallery { width: min(1100px, 96vw); max-height: 92vh; border: none; border-radius: 12px; padding: 16px 20px; }
@@ -216,3 +222,68 @@ dialog#gallery::backdrop { background: rgba(10, 15, 25, .6); }
 
 /* Mesure hors écran pour « Ajuster à 1 page » */
 .fit-probe { position: absolute; left: -10000px; top: 0; visibility: hidden; pointer-events: none; }
+
+/* ——— Cycle 3 : CV / lettre, aide par métier, dossier de concours, éléments masqués, texte brut ——— */
+.doc-switch { display: flex; gap: 6px; margin-bottom: 12px; }
+.doc-switch .btn { flex: 1; min-height: 44px; font-weight: 600; }
+.ed-item.is-hidden { background: #f3f4f6; border-style: dashed; }
+.ed-item.is-hidden .grid { opacity: 0.75; }
+.hidden-label { color: var(--mid); font-weight: 600; }
+.helper { margin: 0 0 12px; border: 1px solid #b9d3ee; background: #f3f8fd; border-radius: var(--radius); }
+.helper > summary { cursor: pointer; padding: 10px 12px; font-weight: 600; color: #063d74; }
+.helper-body { padding: 0 12px 12px; display: grid; gap: 8px; }
+.helper-lines { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.helper-lines li { display: flex; gap: 8px; align-items: center; justify-content: space-between; background: #fff; border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; }
+.helper-lines li span { flex: 1; min-width: 0; }
+.helper-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.dossier-list { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 2px; }
+.dossier-list .field-check { align-items: flex-start; min-height: 36px; }
+.dossier-list .field-check input { margin-top: 3px; flex: none; }
+.letter-editor { padding-top: 12px; }
+.letter-h { margin: 0 16px 8px; font-size: 1.15rem; }
+.letter-sub { font-size: 1rem; margin: 14px 0 6px; }
+.letter-style { border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 12px; margin: 0; }
+.letter-style legend { font-weight: 700; padding: 0 6px; }
+.letter-style .radio { flex-wrap: wrap; row-gap: 0; }
+.letter-style .radio .hint { flex-basis: 100%; margin: 0 0 6px 28px; }
+.letter-draft { margin: 14px 0; padding: 10px 12px; border-radius: var(--radius); background: var(--primary-soft); }
+.letter-draft .hint { margin-bottom: 0; }
+dialog#text-dlg { width: min(760px, 96vw); max-height: 92vh; border: none; border-radius: 12px; padding: 16px 20px; }
+dialog#text-dlg::backdrop { background: rgba(10, 15, 25, .6); }
+#plain-text { width: 100%; font: 0.9rem/1.45 ui-monospace, "Cascadia Mono", Consolas, monospace; padding: 10px; border: 1px solid #8a919c; border-radius: 6px; resize: vertical; }
+.dlg-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+@media (max-width: 560px) {
+  .helper-lines li { flex-direction: column; align-items: stretch; }
+  .topbar-group .btn { min-height: 44px; }
+}
+
+/* ——— Cycle 4 : rubriques personnalisées, autres formats ——— */
+.add-custom { border-style: dashed; }
+.add-custom .ed-body { padding-top: 12px; }
+.add-custom-h { font-size: 1.05rem; margin: 0 0 4px; }
+.add-custom .inline { flex-wrap: wrap; }
+.add-custom input { flex: 1 1 220px; min-height: 40px; padding: 8px 10px; border: 1px solid #8a919c; border-radius: 6px; font: inherit; }
+#formats-menu .menu-panel { left: auto; right: 0; }
+.menu-hint { margin: 4px 4px 0; max-width: 240px; }
+@media (max-width: 700px) { #formats-menu .menu-panel { right: auto; left: 0; } }
+
+/* ——— Cycle 5 : suivi des candidatures ——— */
+.due-badge { background: #8c1d16; color: #fff; border-radius: 999px; padding: 0 8px; font-size: 0.78rem; font-weight: 700; }
+dialog#apps-dlg { width: min(900px, 96vw); max-height: 92vh; border: none; border-radius: 12px; padding: 16px 20px; }
+dialog#apps-dlg::backdrop { background: rgba(10, 15, 25, .6); }
+.apps-stats { font-weight: 600; margin: 4px 0 8px; }
+.apps-due-note { background: #fbe4e2; color: #6e1611; border-radius: var(--radius); padding: 8px 12px; margin: 0 0 10px; }
+.apps-form { border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px 14px; margin-bottom: 14px; }
+.apps-form h3, .apps-list-h { font-size: 1rem; margin: 4px 0 10px; }
+.apps-list { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 8px; }
+.app-card { display: flex; flex-wrap: wrap; gap: 8px 16px; justify-content: space-between; border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; }
+.app-card.is-due { border-left: 6px solid #8c1d16; }
+.app-main { flex: 1 1 320px; min-width: 0; }
+.app-main h4 { margin: 0 0 2px; font-size: 1rem; }
+.app-pos { font-weight: 400; color: var(--muted); }
+.app-meta { margin: 0; color: #3a4049; font-size: 0.9rem; }
+.app-status { font-weight: 700; padding: 0 6px; border-radius: 4px; background: #eceff3; color: #1c1e21; }
+.app-status.st-entretien, .app-status.st-offre { background: #dff3e4; color: #145226; }
+.app-status.st-refus, .app-status.st-abandon { background: #eceff3; color: #555b64; }
+.app-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.app-actions select { min-height: 34px; border: 1px solid #8a919c; border-radius: 6px; font: inherit; font-size: 0.88rem; padding: 2px 6px; background: #fff; }

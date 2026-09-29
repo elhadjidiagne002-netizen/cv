@@ -8,7 +8,7 @@ import { palettes } from './palettes.js';
 const US_ORDER = ['experiences', 'education', 'skills', 'certifications', 'awards', 'publications', 'projects', 'volunteering', 'languages'];
 
 function renderUS(view) {
-  const order = US_ORDER.filter((k) => view.order.includes(k));
+  const order = [...US_ORDER.filter((k) => view.order.includes(k)), ...view.order.filter((k) => k.startsWith('custom:'))];
   return `${head(view, { contact: 'inline', withPhoto: false })}${section(view, 'summary')}${sections(view, order)}`;
 }
 
