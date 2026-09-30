@@ -1,5 +1,16 @@
 # Journal du projet (le plus récent en haut)
 
+## 2026-09-30 — administration : connexion par mot de passe seul
+**Fait.** À la demande du propriétaire (« enlever la vérification à deux étapes »), variable `ADMIN_PASSWORD_ONLY=1`
+ajoutée au projet Pages (production et aperçu, `ADMIN_EMAILS` et liaisons D1 inchangés) puis redéploiement. Le
+compte administrateur est le compte Devizo `elhadjidiagne002@gmail.com` (présent dans `tenants`, sans application
+d'authentification) : la connexion à `/admin` se fait par e-mail + mot de passe Devizo.
+
+**À savoir.** Si l'application d'authentification est un jour activée dans Devizo, le code sera de nouveau demandé
+(la vérification TOTP passe avant ce réglage, cf. `login()` dans `functions/_lib/api.js`). Protection restante :
+8 tentatives par e-mail et 20 par IP toutes les 15 minutes. Pour revenir à la double vérification : supprimer
+`ADMIN_PASSWORD_ONLY` (ou ajouter `RESEND_API_KEY` pour un code par e-mail) puis redéployer.
+
 ## 2026-09-29 — domaine cv.nexusmarket.sn en service
 **Fait.** Enregistrement DNS `CNAME cv → cv-en-ligne.pages.dev` (proxy Cloudflare) créé avec un jeton Cloudflare
 « Modifier le DNS de la zone » limité à nexusmarket.sn, fourni par l'utilisateur dans un fichier local (supprimé
