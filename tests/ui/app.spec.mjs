@@ -144,6 +144,6 @@ test('page d\'accueil : aperçu réel et lien vers l\'éditeur', async ({ page }
   await page.goto('/index.html');
   await expect(page.locator('#hero-cv .cv-name')).toHaveText('Awa Ndiaye');
   await page.click('.hero-cta a[href="app.html"]');
-  await expect(page).toHaveURL(/app\.html$/);
+  await expect(page).toHaveURL(/\/app(\.html)?$/); // Cloudflare Pages (et le serveur de test) redirigent app.html → /app
   expect(errors).toEqual([]);
 });

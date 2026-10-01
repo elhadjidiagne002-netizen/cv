@@ -95,8 +95,17 @@ createServer(async (req, res) => {
     return;
   }
   try {
-    let path = decodeURIComponent(new URL(req.url, 'http://x').pathname);
+    const u = new URL(req.url, 'http://x');
+    // Comme Cloudflare Pages : « /x.html » → 308 vers « /x », et « /x » sert x.html. Sans cela, un service worker
+    // qui ressert une réponse redirigée à une navigation (ERR_FAILED en production) passerait inaperçu.
+    if (u.pathname.endsWith('.html')) {
+      res.writeHead(308, { Location: (u.pathname.replace(/(index)?\.html$/, '') || '/') + u.search });
+      res.end();
+      return;
+    }
+    let path = decodeURIComponent(u.pathname);
     if (path.endsWith('/')) path += 'index.html';
+    else if (!extname(path)) path += '.html';
     const file = normalize(join(root, path));
     if (!file.startsWith(root)) throw new Error('interdit');
     const body = await readFile(file);

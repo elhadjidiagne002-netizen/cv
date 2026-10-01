@@ -4,7 +4,7 @@
 // sauf les polices « latin étendu » (lettres ŋ, ɓ, ɗ, ƴ des langues nationales) : ~560 Ko rarement utiles,
 // mises en cache à la demande pour ménager les forfaits de données mobiles.
 
-const VERSION = 'cv-2026-09-29-domaine';
+const VERSION = 'cv-2026-10-01-sans-redirection';
 const ASSETS = [
   './',
   '404.html',
@@ -80,11 +80,26 @@ const ASSETS = [
 /** Délai au-delà duquel une connexion lente cède la place à la copie locale (réseau mobile instable). */
 const NETWORK_TIMEOUT = 3500;
 
+/**
+ * Cloudflare Pages redirige « x.html » vers « x » (308). Une réponse obtenue après redirection ne doit JAMAIS être
+ * resservie à une navigation : Chrome la refuse (ERR_FAILED, « Ce site est inaccessible »). On la recopie.
+ */
+async function clean(res) {
+  if (!res || !res.redirected) return res;
+  return new Response(await res.blob(), { status: res.status, statusText: res.statusText, headers: res.headers });
+}
+
 self.addEventListener('install', (event) => {
   // cache: 'reload' : télécharge vraiment la nouvelle version (pas une copie du cache HTTP du navigateur).
-  event.waitUntil(caches.open(VERSION)
-    .then((cache) => cache.addAll(ASSETS.map((url) => new Request(url, { cache: 'reload' }))))
-    .then(() => self.skipWaiting()));
+  event.waitUntil((async () => {
+    const cache = await caches.open(VERSION);
+    await Promise.all(ASSETS.map(async (url) => {
+      const res = await fetch(new Request(url, { cache: 'reload' }));
+      if (!res.ok) throw new Error(`Mise en cache impossible : ${url} (${res.status})`);
+      await cache.put(url, await clean(res));
+    }));
+    await self.skipWaiting();
+  })());
 });
 
 self.addEventListener('activate', (event) => {
@@ -95,8 +110,20 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-function fromCache(req) {
-  return caches.match(req, { ignoreSearch: true }).then((r) => r || (req.mode === 'navigate' ? caches.match('app.html') : undefined));
+/** Page « /app » ↔ fichier « app.html » : le cache est rempli sous le nom de fichier. */
+function htmlKey(req) {
+  const path = new URL(req.url).pathname;
+  if (path === '/' || path.endsWith('/')) return './';
+  return /\.[a-z0-9]+$/i.test(path) ? null : `${path.replace(/^\//, '')}.html`;
+}
+
+async function fromCache(req) {
+  let r = await caches.match(req, { ignoreSearch: true });
+  if (!r && req.mode === 'navigate') {
+    const key = htmlKey(req);
+    r = (key && (await caches.match(key))) || (await caches.match('app.html'));
+  }
+  return clean(r);
 }
 
 /**
@@ -119,7 +146,7 @@ function networkFirst(req) {
         clearTimeout(timer);
         if (res.ok) {
           const copy = res.clone();
-          caches.open(VERSION).then((c) => c.put(req, copy));
+          caches.open(VERSION).then(async (c) => c.put(req, await clean(copy)));
         }
         finish(res);
       })

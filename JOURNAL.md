@@ -1,5 +1,15 @@
 # Journal du projet (le plus récent en haut)
 
+## 01/10/2026 — Service worker : pages hors ligne / réseau lent en « site inaccessible »
+- **Cause** : Cloudflare Pages redirige `app.html` → `/app` (308). Le SW pré-cachait `app.html` (réponse redirigée) et la
+  resservait aux navigations hors ligne ou quand le réseau dépassait 3,5 s → Chrome refuse (ERR_FAILED). Même défaut
+  trouvé et corrigé sur My shop (où il bloquait chaque retour).
+- **Correctif** (`public/sw.js`) : réponses redirigées recopiées (`clean`) avant cache et avant d'être servies ; page
+  `/x` retrouvée dans le cache sous `x.html` ; VERSION changée. Serveur de test : redirige `*.html` comme Pages et sert
+  `/x` → `x.html` (un test d'URL adapté).
+- **Vérifié** : hors ligne, pages jamais visitées (`/app`, `/confidentialite`) : ancien SW ERR_FAILED, nouveau OK, en
+  local et en production. Tests : mêmes 2 échecs préexistants (fins de ligne Windows), UI 19/19.
+
 ## 2026-09-30 — administration : connexion par mot de passe seul
 **Fait.** À la demande du propriétaire (« enlever la vérification à deux étapes »), variable `ADMIN_PASSWORD_ONLY=1`
 ajoutée au projet Pages (production et aperçu, `ADMIN_EMAILS` et liaisons D1 inchangés) puis redéploiement. Le
