@@ -33,6 +33,7 @@ import { SCHOOLS, CITIES, LANGUAGES, DIPLOMAS, DOSSIER_ITEMS, isNationalLanguage
 import { JOBS, getJob } from './phrases.js';
 import { cvPlainText } from './plaintext.js';
 import { AI_CONSENT_KEY, AIError, callAI, letterMessages, adviceMessages, parseAIJson, normalizeLetterAnswer, normalizeAdviceAnswer } from './ai.js';
+import { TEXT_ACTIONS, MAX_TEXT, kindForPath, maskPersonal, unmaskPersonal, textMessages, normalizeTextAnswer } from './aitext.js';
 import {
   renderLetter, checkLetter, draftLetter, letterText, wordCount, salutationFor, closingFor,
 } from './letter.js';
@@ -100,6 +101,11 @@ function toast(msg) {
 
 const fieldId = (path) => `f-${path.replace(/\./g, '-')}`;
 
+/** Bouton « Atelier de texte IA » sous une zone de texte (libellé accessible propre à chaque champ). */
+function aiTextButton(id, label) {
+  return `<button type="button" class="btn btn-small btn-ai-text" data-act="ai-text" data-field="${id}" aria-label="Retravailler « ${esc(label)} » avec l'IA">✨ Retravailler avec l'IA</button>`;
+}
+
 function fieldHTML(path, f, value, extra = '') {
   const id = fieldId(path);
   const req = f.required ? ' aria-required="true"' : '';
@@ -108,7 +114,7 @@ function fieldHTML(path, f, value, extra = '') {
     case 'checkbox':
       return `<div class="field field-check"><input type="checkbox" id="${id}" data-path="${path}"${value ? ' checked' : ''}>${label}</div>`;
     case 'textarea':
-      return `<div class="field field-wide">${label}<textarea id="${id}" data-path="${path}" rows="4"${req}>${esc(value)}</textarea></div>`;
+      return `<div class="field field-wide">${label}<textarea id="${id}" data-path="${path}" rows="4"${req}>${esc(value)}</textarea>${aiTextButton(id, f.label)}</div>`;
     case 'select':
       return `<div class="field">${label}<select id="${id}" data-path="${path}"${req}>${f.options
         .map((o) => `<option value="${o}"${o === value ? ' selected' : ''}>${esc(f.optionLabels ? f.optionLabels[o] : o ? levelLabel('fr', o) : '— Choisir —')}</option>`)
@@ -193,6 +199,7 @@ function headlineHTML(cv) {
         <label for="f-summary">Accroche : 2 à 4 lignes, style nominal (qui vous êtes, ce que vous apportez, ce que vous visez)</label>
         <textarea id="f-summary" data-path="summary" rows="4" aria-describedby="summary-count">${esc(cv.summary)}</textarea>
         <p class="hint" id="summary-count">${cv.summary.length} / 500 caractères</p>
+        ${aiTextButton('f-summary', 'Accroche')}
       </div>
     </div>
   </details>`;
@@ -328,6 +335,7 @@ function letterEditorHTML(cv) {
         <label for="f-letter-body">${esc(f('body').label)}</label>
         <textarea id="f-letter-body" data-path="letter.body" rows="16" aria-describedby="letter-count">${esc(L.body)}</textarea>
         <p class="hint" id="letter-count">${wordCount(L.body)} mots (idéal : 250 à 400)</p>
+        ${aiTextButton('f-letter-body', 'Corps de la lettre')}
       </div>
       <div class="grid">${field('closing')}${field('enclosures')}</div>
     </div>
@@ -864,6 +872,9 @@ function onEditorClick(e) {
     }
     case 'letter-ai':
       aiLetter();
+      break;
+    case 'ai-text':
+      aiTextOpen(document.getElementById(btn.dataset.field));
       break;
     case 'photo-remove':
       cv.identity.photo = '';
@@ -1870,6 +1881,7 @@ function bind() {
     $('#announce').hidden = true;
   });
   $('#btn-ai-advice').addEventListener('click', aiAdvice);
+  $('#btn-ai-text').addEventListener('click', aiTextFree);
   $('#ai-close').addEventListener('click', closeAI);
   $('#ai-body').addEventListener('click', onAIClick);
   $('#btn-apps').addEventListener('click', openApps);
@@ -2130,6 +2142,110 @@ async function aiAdvice() {
   }
 }
 
+// ── Atelier de texte IA ─────────────────────────────────────────────────────
+// Retravaille le texte d'un champ (ou le passage sélectionné) ou un texte libre collé.
+// Seul ce texte est envoyé, e-mails et téléphones masqués (aitext.js).
+let aiText = null;
+
+/** Ouvre l'atelier sur un champ du CV / de la lettre (textarea avec data-path). */
+function aiTextOpen(ta) {
+  if (!ta) return;
+  const value = ta.value;
+  const hasSel = typeof ta.selectionStart === 'number' && ta.selectionEnd > ta.selectionStart && document.activeElement === ta;
+  const original = hasSel ? value.slice(ta.selectionStart, ta.selectionEnd) : value;
+  if (original.trim().length < 3) { toast('Écrivez d\'abord quelques mots dans ce champ, puis l\'IA pourra les retravailler.'); return; }
+  const lab = document.querySelector(`label[for="${ta.id}"]`);
+  aiText = {
+    free: false, targetId: ta.id, fieldValue: value, selection: hasSel,
+    start: hasSel ? ta.selectionStart : 0, end: hasSel ? ta.selectionEnd : value.length,
+    kind: kindForPath(ta.dataset.path), label: lab ? lab.textContent.replace(/\s*\*$/, '').trim() : 'Texte', original, ans: null,
+  };
+  aiTextMenu();
+}
+
+/** Ouvre l'atelier en mode libre (texte collé : message, e-mail, profil LinkedIn…). */
+function aiTextFree() {
+  aiText = { free: true, kind: 'libre', original: aiText && aiText.free ? aiText.original : '', ans: null };
+  aiTextMenu();
+  const ta = $('#ai-free-text');
+  if (ta) ta.focus();
+}
+
+function aiTextMenu() {
+  const t = aiText;
+  const extrait = t.original.length > 400 ? `${t.original.slice(0, 400)}…` : t.original;
+  openAI('✨ Atelier de texte IA', `
+    ${t.free
+    ? `<label for="ai-free-text">Texte à retravailler</label>
+       <textarea id="ai-free-text" rows="7" maxlength="${MAX_TEXT}">${esc(t.original)}</textarea>
+       <p class="hint">Message à un recruteur, profil LinkedIn, e-mail de candidature… (${MAX_TEXT} caractères au plus).</p>`
+    : `<p class="hint">${t.chained ? 'Résultat précédent, pour' : t.selection ? 'Passage sélectionné' : 'Texte'} du champ « ${esc(t.label)} » :</p>
+       <blockquote class="ai-quote ai-pre">${esc(extrait)}</blockquote>`}
+    <p class="hint">Seul ce texte est envoyé (e-mails et numéros de téléphone masqués). Rien n'est modifié sans votre clic.</p>
+    <div class="ai-actions" role="group" aria-label="Que faire de ce texte ?">
+      ${TEXT_ACTIONS.map((a) => `<button type="button" class="btn ai-action" data-ai="text-run" data-action="${a.id}"><strong>${esc(a.label)}</strong><span>${esc(a.hint)}</span></button>`).join('')}
+    </div>`);
+}
+
+async function aiTextRun(action) {
+  if (aiText.free) {
+    const ta = $('#ai-free-text');
+    if (ta) aiText.original = ta.value;
+  }
+  const src = aiText.original.trim();
+  if (src.length < 3) { toast('Écrivez ou collez d\'abord un texte.'); return; }
+  if (src.length > MAX_TEXT) { toast(`Texte trop long : ${MAX_TEXT} caractères au plus (sélectionnez un passage).`); return; }
+  if (!(await askAIConsent())) return;
+  const act = TEXT_ACTIONS.find((a) => a.id === action);
+  const title = `✨ ${act ? act.label : 'Atelier de texte IA'}`;
+  openAI(title, aiWait('Traitement du texte'));
+  try {
+    const { masked, map } = maskPersonal(src);
+    const raw = await callAI(textMessages(action, masked, { kind: aiText.kind }), { maxTokens: 2000, temperature: action === 'corriger' ? 0.1 : 0.4 });
+    const ans = normalizeTextAnswer(parseAIJson(raw));
+    if (!ans) throw new Error('format');
+    ans.text = unmaskPersonal(ans.text, map);
+    aiText.ans = ans;
+    aiText.action = action;
+    openAI(title, `
+      <div class="ai-cols"><div><span class="ai-tag">Avant</span><pre>${esc(src)}</pre></div><div><span class="ai-tag">Après</span><pre>${esc(ans.text)}</pre></div></div>
+      ${ans.notes.length ? `<ul class="ai-tips">${ans.notes.map((n) => `<li>${esc(n)}</li>`).join('')}</ul>` : ''}
+      <p class="hint">Relisez avant d'utiliser et complétez les passages entre crochets [ … ].</p>
+      <div class="dlg-actions">
+        ${aiText.free ? '' : `<button type="button" class="btn btn-primary" data-ai="text-use">${aiText.selection ? 'Remplacer le passage' : 'Remplacer le texte'}</button>`}
+        <button type="button" class="btn${aiText.free ? ' btn-primary' : ''}" data-ai="text-copy">Copier</button>
+        <button type="button" class="btn" data-ai="text-run" data-action="${esc(action)}">Autre version</button>
+        <button type="button" class="btn" data-ai="text-chain">Retravailler ce résultat</button>
+      </div>`);
+  } catch (e) {
+    openAI(title, `${aiFail(e)}<div class="dlg-actions"><button type="button" class="btn" data-ai="text-run" data-action="${esc(action)}">Réessayer</button><button type="button" class="btn" data-ai="text-menu">Autre action</button></div>`);
+  }
+}
+
+function aiTextUse() {
+  const ta = aiText && document.getElementById(aiText.targetId);
+  if (!ta || !aiText.ans) { toast('Champ introuvable : copiez le texte et collez-le à la main.'); return; }
+  // eslint-disable-next-line no-alert
+  if (ta.value !== aiText.fieldValue && !window.confirm('Ce champ a changé depuis l\'ouverture de l\'atelier. Remplacer quand même ?')) return;
+  const v = ta.value;
+  ta.value = aiText.selection && ta.value === aiText.fieldValue
+    ? v.slice(0, aiText.start) + aiText.ans.text + v.slice(aiText.end)
+    : aiText.ans.text;
+  ta.dispatchEvent(new Event('input', { bubbles: true }));   // même chemin qu'une saisie : modèle, compteurs, sauvegarde
+  closeAI();
+  ta.focus();
+  toast('Texte remplacé (« Annuler » en haut pour revenir en arrière).');
+}
+
+async function aiTextCopy(btn) {
+  try {
+    await navigator.clipboard.writeText(aiText.ans.text);
+    btn.textContent = 'Copié ✔';
+  } catch {
+    toast('Copie impossible ici : sélectionnez le texte « Après » et copiez-le à la main.');
+  }
+}
+
 function onAIClick(e) {
   const btn = e.target.closest('button[data-ai]');
   if (!btn) return;
@@ -2137,6 +2253,17 @@ function onAIClick(e) {
   switch (btn.dataset.ai) {
     case 'retry-letter': aiLetter(); break;
     case 'retry-advice': aiAdvice(); break;
+    case 'text-run': aiTextRun(btn.dataset.action); break;
+    case 'text-menu': aiTextMenu(); break;
+    case 'text-use': aiTextUse(); break;
+    case 'text-copy': aiTextCopy(btn); break;
+    case 'text-chain':
+      // Le résultat devient le texte de départ (ex. : traduire, puis raccourcir).
+      // En mode champ, le résultat final remplacera toujours le texte (ou le passage) d'origine.
+      aiText.original = aiText.ans.text;
+      aiText.chained = true;
+      aiTextMenu();
+      break;
     case 'use-letter': {
       const L = cv.letter;
       // eslint-disable-next-line no-alert

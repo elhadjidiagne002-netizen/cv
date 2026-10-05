@@ -318,6 +318,15 @@ dialog#apps-dlg::backdrop { background: rgba(10, 15, 25, .6); }
 .ai-quote { margin: 6px 0; padding: 8px 12px; border-left: 4px solid #6d28d9; background: var(--bg); }
 .ai-rewrite { border-top: 1px solid var(--border); padding: 8px 0; }
 .ai-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+/* Atelier de texte IA */
+.btn-ai-text { margin-top: 6px; color: #5b21b6; border-color: #c4b5fd; background: #f5f3ff; }
+.btn-ai-text:hover { background: #ede9fe; }
+.ai-box .btn-ai + .hint + .btn-ai { margin-top: 10px; }
+.ai-actions { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; margin-top: 10px; }
+.ai-action { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; white-space: normal; min-height: 48px; }
+.ai-action span { font-size: 0.82rem; font-weight: 400; color: var(--muted); }
+.ai-pre { white-space: pre-wrap; max-height: 12em; overflow: auto; }
+#ai-free-text { width: 100%; }
 .ai-cols pre { white-space: pre-wrap; font: inherit; font-size: 0.9rem; margin: 4px 0; background: var(--bg); padding: 6px 8px; border-radius: 6px; }
 @media (max-width: 640px) { .ai-cols { grid-template-columns: 1fr; } }
 .spinner { width: 18px; height: 18px; border: 3px solid var(--border); border-top-color: #6d28d9; border-radius: 50%; animation: ai-spin 0.8s linear infinite; }

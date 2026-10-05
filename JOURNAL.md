@@ -1,5 +1,18 @@
 # Journal du projet (le plus récent en haut)
 
+## 05/10/2026 — Atelier de texte IA (traitement de textes par l'IA)
+- **Fait** : bouton « ✨ Retravailler avec l'IA » sous chaque zone de texte (accroche, missions de chaque expérience,
+  descriptions, corps de la lettre) et « Atelier de texte IA » libre dans le panneau de l'assistant. 8 actions :
+  corriger les fautes, rendre plus professionnel, raccourcir, développer (repères [à compléter], rien d'inventé),
+  mettre en puces avec verbes d'action, simplifier, traduire en anglais / en français. Sélection partielle possible ;
+  avant / après, remarques, « Remplacer » (avec confirmation si le champ a changé entre-temps), « Copier »,
+  « Autre version », « Continuer sur ce résultat ». Module pur `public/js/aitext.js`, consignes adaptées à la nature du
+  texte (accroche, missions, lettre…).
+- **Pourquoi** : demande du propriétaire (« faire des traitements de texte grâce à l'IA »).
+- **Données** : même service et même accord préalable que l'assistant ; seul le texte à retravailler part (jamais le
+  reste du CV), e-mails et téléphones remplacés par ⟦1⟧, ⟦2⟧… avant l'envoi puis remis en place (testé).
+- **État** : `npm test` 180/180, Playwright 58/58 (axe : 0 violation). `VERSION` du service worker changée.
+
 ## 01/10/2026 — Service worker : pages hors ligne / réseau lent en « site inaccessible »
 - **Cause** : Cloudflare Pages redirige `app.html` → `/app` (308). Le SW pré-cachait `app.html` (réponse redirigée) et la
   resservait aux navigations hors ligne ou quand le réseau dépassait 3,5 s → Chrome refuse (ERR_FAILED). Même défaut

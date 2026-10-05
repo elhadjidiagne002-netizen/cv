@@ -326,6 +326,12 @@ famille de modèles haut de gamme ; l'administration et la monétisation attende
 ### Reste à faire côté hébergement (par le propriétaire)
 - Créer la base D1 `cv-en-ligne`, lier `DB` et `AUTH_DB` (Devizo), secret `ADMIN_EMAILS` (voir `DEPLOIEMENT.md`).
 
+## Atelier de texte IA ✅ (05/10/2026, hors cycle, à la demande)
+- [x] Bouton « Retravailler avec l'IA » sous chaque zone de texte + mode libre (8 actions, sélection partielle).
+- [x] Seul le texte part, coordonnées masquées puis restituées ; accord préalable commun à l'assistant.
+- [x] Tests unitaires (`tests/aitext.test.js`) et d'interface (`tests/ui/aitext.spec.mjs`).
+- [ ] Idées : ton (sobre / chaleureux), traduction vers d'autres langues (espagnol, arabe), historique des versions.
+
 ## Proposé pour le cycle 9
 1. **Paiement automatique** (agrégateur Wave / Orange Money type PayDunya ou CinetPay) : code délivré sans
    intervention, en gardant la validation manuelle en secours.

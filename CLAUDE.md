@@ -12,7 +12,8 @@ Toujours répondre et écrire l'interface **en français** (l'anglais est une la
 - **Les données restent dans le navigateur** (`localStorage`), jamais envoyées à un serveur (RGPD) ; seule
   exception : l'**assistant IA** (`public/js/ai.js`), facultatif, après accord explicite, qui envoie le parcours
   professionnel SANS identité ni coordonnées (`profileForAI`) à `https://nexusmarket.sn/api/ai` (Groq, clé côté
-  serveur NEXUS) — seule origine externe autorisée dans `connect-src ;
+  serveur NEXUS) — seule origine externe autorisée dans `connect-src` ; l'**atelier de texte IA** (`public/js/aitext.js`)
+  n'envoie que le texte à retravailler, e-mails et téléphones masqués (`maskPersonal`) ;
   export / import d'un fichier `.json` pour les sauvegarder ou changer d'appareil.
 - **Administration et monétisation** (cycle 8) : `functions/` (Cloudflare Pages Functions, `/api/*`) + D1 `DB` (offres,
   commandes, codes de déblocage, réglages, compteurs anonymes, journal) ; compte admin = **compte Devizo** (liaison D1
