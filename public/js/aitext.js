@@ -81,6 +81,26 @@ Réponds UNIQUEMENT par un objet JSON : {"texte": "le texte retravaillé", "rema
   ];
 }
 
+/**
+ * Lit la réponse du modèle : JSON demandé (même entouré de texte ou mal échappé), sinon repli raisonnable —
+ * champ « texte » extrait à la main, ou réponse en texte brut quand le modèle a ignoré le format.
+ * `parseJson` = parseAIJson (injecté pour garder ce module sans dépendance).
+ */
+export function readTextAnswer(raw, parseJson) {
+  const s = String(raw || '').trim();
+  if (!s) return null;
+  const fromJson = normalizeTextAnswer(parseJson(s));
+  if (fromJson) return fromJson;
+  const m = s.match(/"texte"\s*:\s*"([\s\S]*?)"\s*(?:,\s*"remarques"|\}\s*(?:```)?\s*$)/);
+  if (m) {
+    const text = m[1].replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\').trim();
+    return text ? { text: text.slice(0, MAX_TEXT * 2), notes: [] } : null;
+  }
+  if (s.includes('"texte"')) return null; // JSON tronqué : mieux vaut réessayer que coller un morceau de JSON
+  const plain = s.replace(/^```[a-z]*\s*/i, '').replace(/\s*```$/, '').trim();
+  return plain ? { text: plain.slice(0, MAX_TEXT * 2), notes: [] } : null;
+}
+
 /** Nettoie la réponse : texte non vide, remarques bornées. */
 export function normalizeTextAnswer(a) {
   if (!a || typeof a !== 'object') return null;

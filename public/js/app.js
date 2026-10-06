@@ -33,7 +33,7 @@ import { SCHOOLS, CITIES, LANGUAGES, DIPLOMAS, DOSSIER_ITEMS, isNationalLanguage
 import { JOBS, getJob } from './phrases.js';
 import { cvPlainText } from './plaintext.js';
 import { AI_CONSENT_KEY, AIError, callAI, letterMessages, adviceMessages, parseAIJson, normalizeLetterAnswer, normalizeAdviceAnswer } from './ai.js';
-import { TEXT_ACTIONS, MAX_TEXT, kindForPath, maskPersonal, unmaskPersonal, textMessages, normalizeTextAnswer } from './aitext.js';
+import { TEXT_ACTIONS, MAX_TEXT, kindForPath, maskPersonal, unmaskPersonal, textMessages, readTextAnswer } from './aitext.js';
 import {
   renderLetter, checkLetter, draftLetter, letterText, wordCount, salutationFor, closingFor,
 } from './letter.js';
@@ -2202,7 +2202,7 @@ async function aiTextRun(action) {
   try {
     const { masked, map } = maskPersonal(src);
     const raw = await callAI(textMessages(action, masked, { kind: aiText.kind }), { maxTokens: 2000, temperature: action === 'corriger' ? 0.1 : 0.4 });
-    const ans = normalizeTextAnswer(parseAIJson(raw));
+    const ans = readTextAnswer(raw, parseAIJson);
     if (!ans) throw new Error('format');
     ans.text = unmaskPersonal(ans.text, map);
     aiText.ans = ans;

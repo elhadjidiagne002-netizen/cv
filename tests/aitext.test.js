@@ -3,9 +3,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  TEXT_ACTIONS, MAX_TEXT, kindForPath, maskPersonal, unmaskPersonal, textMessages, normalizeTextAnswer,
+  TEXT_ACTIONS, MAX_TEXT, kindForPath, maskPersonal, unmaskPersonal, textMessages, normalizeTextAnswer, readTextAnswer,
 } from '../public/js/aitext.js';
-import { parseAIJson } from '../public/js/ai.js';
+import { parseAIJson, callAI, AIError } from '../public/js/ai.js';
 
 test('8 actions, identifiants uniques, libellés et aides en français', () => {
   assert.equal(TEXT_ACTIONS.length, 8);
@@ -91,4 +91,20 @@ test('chaîne complète : masquer → (modèle) → démasquer redonne les vraie
   const reponse = JSON.stringify({ texte: masked.replace('Joignable au', 'Vous pouvez me joindre au'), remarques: [] });
   const ans = normalizeTextAnswer(parseAIJson(reponse));
   assert.equal(unmaskPersonal(ans.text, map), 'Vous pouvez me joindre au 78 555 44 33 ou sur fatou.ndiaye@mail.com.');
+});
+
+test('réponses réelles des modèles : retours à la ligne bruts dans le JSON, texte brut, JSON tronqué, appel en erreur', async () => {
+  // Cause de la panne en production : le modèle met de VRAIS retours à la ligne dans la chaîne JSON.
+  const brut = '{"texte": "Gérer la caisse.\nSuivre les stocks.\n\tCommander", "remarques": ["Ajoutez un chiffre."]}'.replace(/\\n/g, '\n').replace(/\\t/g, '\t');
+  assert.ok(brut.includes('\n'), 'le test contient bien un vrai retour à la ligne');
+  assert.deepEqual(readTextAnswer(brut, parseAIJson), { text: 'Gérer la caisse.\nSuivre les stocks.\n\tCommander', notes: ['Ajoutez un chiffre.'] });
+  assert.deepEqual(parseAIJson('```json\n{"objet": "A", "corps": "ligne 1\nligne 2"}\n```'.replace('1\\nl', '1\nl')), { objet: 'A', corps: 'ligne 1\nligne 2' });
+  // Le modèle a ignoré le format : on garde son texte (sans les balises de code).
+  assert.deepEqual(readTextAnswer('```\nComptable rigoureux, 5 ans d’expérience.\n```', parseAIJson), { text: 'Comptable rigoureux, 5 ans d’expérience.', notes: [] });
+  // JSON tronqué (réponse coupée) : rien plutôt qu'un morceau de JSON collé dans le CV.
+  assert.equal(readTextAnswer('{"texte": "Début du texte coupé', parseAIJson), null);
+  assert.equal(readTextAnswer('', parseAIJson), null);
+  // Erreur du service : la raison donnée par le serveur est montrée (diagnostic à distance).
+  await assert.rejects(callAI([{ role: 'user', content: 'x' }], { fetchImpl: async () => new Response(JSON.stringify({ error: 'Assistant indisponible', detail: 'model does not exist' }), { status: 500 }) }),
+    (e) => e instanceof AIError && /indisponible/.test(e.message) && /model does not exist/.test(e.message));
 });

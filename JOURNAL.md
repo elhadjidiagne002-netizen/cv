@@ -1,5 +1,17 @@
 # Journal du projet (le plus récent en haut)
 
+## 06/10/2026 — Atelier de texte IA « ne marche pas » en production : réponses du modèle mal lues
+- **Constat** : les demandes arrivaient bien au service IA (compteur NEXUS : 2 appels le 05/10 à 23 h 05), donc l'échec
+  venait de la lecture de la réponse. Les tests utilisaient une IA simulée qui renvoyait un JSON parfaitement échappé ;
+  le vrai modèle écrit les textes sur plusieurs lignes avec de **vrais retours à la ligne dans la chaîne JSON**
+  (JSON invalide) → « Réponse inattendue de l'assistant IA ».
+- **Correctif** : `parseAIJson` (ai.js) échappe les caractères de contrôle dans les chaînes avant de réessayer (profite
+  aussi à la lettre et aux conseils) ; `readTextAnswer` (aitext.js) se rabat sur le champ « texte » extrait à la main ou
+  sur le texte brut si le modèle a ignoré le format (jamais un JSON tronqué) ; en cas d'erreur du service, la raison
+  renvoyée par le serveur est affichée. `VERSION` du service worker changée.
+- **État** : 181 tests unitaires (+1, échoue sur l'ancien code), Playwright 58/58. Essai réel impossible depuis la
+  session (réseau bloqué vers nexusmarket.sn) : à confirmer sur le site après déploiement.
+
 ## 05/10/2026 — Atelier de texte IA (traitement de textes par l'IA)
 - **Fait** : bouton « ✨ Retravailler avec l'IA » sous chaque zone de texte (accroche, missions de chaque expérience,
   descriptions, corps de la lettre) et « Atelier de texte IA » libre dans le panneau de l'assistant. 8 actions :

@@ -78,10 +78,33 @@ export function parseAIJson(text) {
     if (c === '"') inStr = true;
     else if (c === '{') depth++;
     else if (c === '}' && --depth === 0) {
-      try { return JSON.parse(s.slice(start, i + 1)); } catch { return null; }
+      const raw = s.slice(start, i + 1);
+      try { return JSON.parse(raw); } catch { /* retours à la ligne bruts dans une chaîne : voir ci-dessous */ }
+      try { return JSON.parse(escapeControlsInStrings(raw)); } catch { return null; }
     }
   }
   return null;
+}
+
+/**
+ * Les modèles écrivent souvent un texte sur plusieurs lignes dans une chaîne JSON avec de VRAIS retours à la ligne
+ * (JSON invalide pour JSON.parse). On échappe les caractères de contrôle situés à l'intérieur des chaînes.
+ */
+function escapeControlsInStrings(json) {
+  let out = ''; let inStr = false; let esc = false;
+  for (const c of json) {
+    if (inStr) {
+      if (esc) esc = false;
+      else if (c === '\\') esc = true;
+      else if (c === '"') inStr = false;
+      else if (c === '\n') { out += '\\n'; continue; }
+      else if (c === '\r') { out += '\\r'; continue; }
+      else if (c === '\t') { out += '\\t'; continue; }
+      else if (c < ' ') continue;
+    } else if (c === '"') inStr = true;
+    out += c;
+  }
+  return out;
 }
 
 /** Nettoie la réponse « lettre » (types, longueurs). */
@@ -130,7 +153,12 @@ export async function callAI(messages, { fetchImpl = globalThis.fetch, maxTokens
     throw new AIError('Impossible de joindre l\'assistant IA. Vérifiez votre connexion et réessayez.');
   }
   if (res.status === 429) throw new AIError('Trop de demandes en peu de temps : réessayez dans une minute.');
-  if (!res.ok) throw new AIError('L\'assistant IA est momentanément indisponible. Réessayez plus tard.');
+  if (!res.ok) {
+    // Le service renvoie souvent la raison (« detail ») : on la montre, utile pour diagnostiquer à distance.
+    const err = await res.json().catch(() => null);
+    const detail = err && typeof (err.detail || err.error) === 'string' ? String(err.detail || err.error).slice(0, 160) : '';
+    throw new AIError(`L'assistant IA est momentanément indisponible. Réessayez plus tard.${detail ? ` (${detail})` : ''}`);
+  }
   const data = await res.json().catch(() => null);
   const text = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
   if (!text) throw new AIError('Réponse vide de l\'assistant IA. Réessayez.');
