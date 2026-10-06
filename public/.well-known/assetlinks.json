@@ -1,0 +1,10 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "sn.nexusmarket.cv",
+      "sha256_cert_fingerprints": ["FB:1F:0C:50:A1:11:FF:67:D0:EB:28:41:21:24:56:26:55:D7:2D:76:28:B3:29:72:8D:34:3A:02:9C:93:FF:A2"]
+    }
+  }
+]

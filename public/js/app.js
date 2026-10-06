@@ -26,7 +26,7 @@ import {
 import { renderCV, TEMPLATES, getTemplate, effectivePaper, applyTheme, effectivePalette } from './render.js';
 import { checkCV, applyFix } from './norms.js';
 import { matchOffer } from './match.js';
-import { registerServiceWorker, setupInstallButton } from './pwa.js';
+import { registerServiceWorker, setupAppLink } from './pwa.js';
 import { levelLabel } from './i18n.js';
 import { esc } from './templates/parts.js';
 import { SCHOOLS, CITIES, LANGUAGES, DIPLOMAS, DOSSIER_ITEMS, isNationalLanguage } from './senegal.js';
@@ -1979,7 +1979,7 @@ function bind() {
       requestAnimationFrame(() => $('#job-offer').focus());
     }
   });
-  setupInstallButton($('#btn-install'), () => toast('Application installée : elle fonctionne aussi sans connexion.'));
+  setupAppLink($('#btn-install'));
 
   $('#norms').addEventListener('click', (e) => {
     const fix = e.target.closest('button[data-fix]');

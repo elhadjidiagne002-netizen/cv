@@ -1,7 +1,7 @@
 // Page d'accueil : aperçu réel d'un CV d'exemple (même moteur que l'éditeur).
 import { createSampleCV } from './model.js';
 import { renderCV, TEMPLATES } from './render.js';
-import { registerServiceWorker } from './pwa.js';
+import { registerServiceWorker, setupAppLink } from './pwa.js';
 
 const target = document.getElementById('hero-cv');
 if (target) {
@@ -17,3 +17,4 @@ if (target) {
 const count = document.getElementById('tpl-count');
 if (count) count.textContent = String(TEMPLATES.length);
 registerServiceWorker();
+setupAppLink(document.getElementById('btn-android'));

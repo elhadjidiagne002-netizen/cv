@@ -1,5 +1,12 @@
 # Journal du projet (le plus récent en haut)
 
+## 06/10/2026 — Vraie application Android (APK) à la place du bouton « Installer »
+- **Fait** : le bouton « Installer l'application » (raccourci du navigateur) devient « 📲 Application Android » (éditeur et
+  accueil, visible sur Android hors de l'application) et télécharge l'APK signé `sn.nexusmarket.cv` (Trusted Web
+  Activity, dépôt public `nexus-apps`) ; l'impression PDF marche dans l'application (moteur de Chrome).
+  `public/.well-known/assetlinks.json` + en-tête JSON ; `VERSION` du service worker changée.
+- **État** : 182 tests unitaires, Playwright 58/58. L'APK sera disponible dès la 1ʳᵉ construction de `nexus-apps`.
+
 ## 06/10/2026 — Atelier de texte IA « ne marche pas » en production : réponses du modèle mal lues
 - **Constat** : les demandes arrivaient bien au service IA (compteur NEXUS : 2 appels le 05/10 à 23 h 05), donc l'échec
   venait de la lecture de la réponse. Les tests utilisaient une IA simulée qui renvoyait un JSON parfaitement échappé ;

@@ -21,25 +21,32 @@ export function registerServiceWorker(onUpdate = () => {}) {
   });
 }
 
-/** Affiche le bouton « Installer » quand le navigateur le permet. */
-export function setupInstallButton(button, onInstalled = () => {}) {
-  if (!button) return;
-  let deferred = null;
-  window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferred = e;
-    button.hidden = false;
-  });
-  button.addEventListener('click', async () => {
-    if (!deferred) return;
-    deferred.prompt();
-    const choice = await deferred.userChoice.catch(() => null);
-    deferred = null;
-    button.hidden = true;
-    if (choice && choice.outcome === 'accepted') onInstalled();
-  });
-  window.addEventListener('appinstalled', () => {
-    button.hidden = true;
-    onInstalled();
-  });
+// Application Android « CV en ligne » : vraie application installable (APK signé, Trusted Web Activity), construite et
+// publiée par le dépôt public elhadjidiagne002-netizen/nexus-apps (remplace l'ancien raccourci « Installer »).
+export const ANDROID_PACKAGE = 'sn.nexusmarket.cv';
+export const APK_URL = 'https://github.com/elhadjidiagne002-netizen/nexus-apps/releases/latest/download/cv-en-ligne.apk';
+const IN_APP_KEY = 'cv:in-android-app';
+
+/** Ouvert DANS l'application Android ? (referrer « android-app://<paquet> » au lancement, mémorisé pour la session) */
+export function insideAndroidApp({ referrer = globalThis.document?.referrer || '', storage = globalThis.sessionStorage } = {}) {
+  let inside = referrer.startsWith(`android-app://${ANDROID_PACKAGE}`);
+  try {
+    if (inside) storage?.setItem(IN_APP_KEY, '1');
+    else inside = storage?.getItem(IN_APP_KEY) === '1';
+  } catch { /* stockage indisponible */ }
+  return inside;
+}
+
+/** « android », « ios » ou « autre ». */
+export function mobilePlatform(ua = globalThis.navigator?.userAgent || '') {
+  if (/Android/i.test(ua)) return 'android';
+  if (/iPhone|iPad|iPod/i.test(ua)) return 'ios';
+  return 'autre';
+}
+
+/** Lien « Application Android » : visible sur Android, sauf dans l'application elle-même. */
+export function setupAppLink(link) {
+  if (!link) return;
+  link.href = APK_URL;
+  link.hidden = !(mobilePlatform() === 'android' && !insideAndroidApp());
 }

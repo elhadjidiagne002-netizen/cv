@@ -28,7 +28,7 @@ test('le service worker met en cache tous les fichiers du site (et rien d\'exter
   const list = [...sw.match(/const ASSETS = \[([\s\S]*?)\];/)[1].matchAll(/'([^']+)'/g)].map((m) => m[1]);
   // Polices « latin étendu » : chargées et mises en cache à la demande (données mobiles).
   const files = walk(pub).filter((f) => !['_headers', 'sw.js'].includes(f) && !f.endsWith('.txt') && f !== 'sitemap.xml' && !/-latin-ext-/.test(f)
-    && !/^(admin\.html|js\/admin\.js|css\/admin\.css)$/.test(f)); // administration : jamais hors ligne
+    && !/^(admin\.html|js\/admin\.js|css\/admin\.css)$/.test(f) && !f.startsWith('.well-known/')); // administration : jamais hors ligne
   assert.ok(!list.some((f) => /admin/.test(f)), 'le tableau de bord n\'est pas mis en cache');
   assert.ok(sw.includes("url.pathname.startsWith('/api/')"), 'les appels à l\'API ne passent jamais par le cache');
   assert.ok(!list.some((f) => /-latin-ext-/.test(f)), 'les polices latin-ext ne sont pas pré-téléchargées');
@@ -54,4 +54,20 @@ test('service worker : versions cohérentes après un déploiement (réseau d\'a
   assert.match(sw, /NETWORK_TIMEOUT = \d{4}/);
   assert.doesNotMatch(sw, /return cached \|\| network/, 'plus de « cache d\'abord » pour les scripts (mélange de versions)');
   assert.match(read('js/pwa.js'), /controllerchange/);
+});
+
+test('application Android : lien de téléchargement, détection de l’application, lien de confiance', async () => {
+  const { APK_URL, ANDROID_PACKAGE, insideAndroidApp, mobilePlatform } = await import('../public/js/pwa.js');
+  assert.match(APK_URL, /\/nexus-apps\/releases\/latest\/download\/cv-en-ligne\.apk$/);
+  for (const f of ['app.html', 'index.html']) assert.ok(read(f).includes(APK_URL), f);
+  const m = new Map();
+  const s = { getItem: (k) => m.get(k) ?? null, setItem: (k, v) => m.set(k, v) };
+  assert.equal(insideAndroidApp({ referrer: '', storage: s }), false);
+  assert.equal(insideAndroidApp({ referrer: `android-app://${ANDROID_PACKAGE}/`, storage: s }), true);
+  assert.equal(insideAndroidApp({ referrer: '', storage: s }), true);
+  assert.equal(mobilePlatform('Mozilla/5.0 (Linux; Android 13) Chrome/129 Mobile'), 'android');
+  assert.equal(mobilePlatform('Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X)'), 'ios');
+  const links = JSON.parse(read('.well-known/assetlinks.json'));
+  assert.equal(links[0].target.package_name, ANDROID_PACKAGE);
+  assert.match(read('_headers'), /\/\.well-known\/assetlinks\.json\n\s+Content-Type: application\/json/);
 });
