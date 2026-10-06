@@ -47,6 +47,10 @@ jobs:
           echo "Vérification (jeton de compte)   : $(echo "$a" | grep -o '"success":[a-z]*\|"status":"[a-z]*"\|"message":"[^"]*"' | paste -sd' ' -)"
           p=$(curl -s -H "Authorization: Bearer $t" "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects?per_page=5")
           echo "Accès aux projets Pages du compte : $(echo "$p" | grep -o '"success":[a-z]*\|"message":"[^"]*"\|"name":"[a-z0-9-]*"' | head -8 | paste -sd' ' -)"
+          c=$(curl -s -H "Authorization: Bearer $t" "https://api.cloudflare.com/client/v4/accounts?per_page=20")
+          echo "Comptes accessibles avec ce jeton : $(echo "$c" | grep -o '"id":"[0-9a-f]\{32\}","name":"[^"]*"' | paste -sd' ' -)"
+          d=$(curl -s -H "Authorization: Bearer $t" "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database?per_page=5")
+          echo "Accès aux bases D1 du compte : $(echo "$d" | grep -o '"success":[a-z]*\|"message":"[^"]*"' | head -3 | paste -sd' ' -)"
           echo "$u$a" | grep -q '"status":"active"' || { echo "::error::Cloudflare ne reconnaît pas ce jeton comme actif : recopiez la VALEUR du jeton (environ 40 caractères), pas son nom."; exit 1; }
           echo "$p" | grep -q '"success":true' || { echo "::error::Jeton actif mais sans accès aux projets Pages de ce compte : ajoutez la permission « Cloudflare Pages : Edit » et le bon compte dans « Account Resources »."; exit 1; }
 
