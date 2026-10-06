@@ -369,3 +369,7 @@ dialog#unlock-dlg::backdrop { background: rgba(10, 15, 25, .6); }
 .pay-box p { margin: 0 0 6px; }
 #order-result:focus { outline: none; }
 .print-locked { padding: 20mm; }
+
+/* Icônes Lucide (06/10/2026) : remplacent les emojis des boutons et titres */
+.ico-l { width: 1.1em; height: 1.1em; flex: none; vertical-align: -0.18em; margin-inline-end: .4em; }
+.btn .ico-l { margin-inline-end: .35em; }

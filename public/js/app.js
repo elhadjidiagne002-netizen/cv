@@ -32,6 +32,7 @@ import { esc } from './templates/parts.js';
 import { SCHOOLS, CITIES, LANGUAGES, DIPLOMAS, DOSSIER_ITEMS, isNationalLanguage } from './senegal.js';
 import { JOBS, getJob } from './phrases.js';
 import { cvPlainText } from './plaintext.js';
+import { lucideSvg } from './icons.js';
 import { PIECES, attachmentsHTML, sendMessage, compressImage as compressPiece } from './dossier.js';
 import { AI_CONSENT_KEY, AIError, callAI, letterMessages, adviceMessages, parseAIJson, normalizeLetterAnswer, normalizeAdviceAnswer } from './ai.js';
 import { TEXT_ACTIONS, MAX_TEXT, kindForPath, maskPersonal, unmaskPersonal, textMessages, readTextAnswer } from './aitext.js';
@@ -104,7 +105,7 @@ const fieldId = (path) => `f-${path.replace(/\./g, '-')}`;
 
 /** Bouton « Atelier de texte IA » sous une zone de texte (libellé accessible propre à chaque champ). */
 function aiTextButton(id, label) {
-  return `<button type="button" class="btn btn-small btn-ai-text" data-act="ai-text" data-field="${id}" aria-label="Retravailler « ${esc(label)} » avec l'IA">✨ Retravailler avec l'IA</button>`;
+  return `<button type="button" class="btn btn-small btn-ai-text" data-act="ai-text" data-field="${id}" aria-label="Retravailler « ${esc(label)} » avec l'IA">${lucideSvg('sparkles')}Retravailler avec l'IA</button>`;
 }
 
 function fieldHTML(path, f, value, extra = '') {
@@ -329,7 +330,7 @@ function letterEditorHTML(cv) {
       <div class="grid">${['organization', 'recipientTitle', 'recipientName', 'recipientAddress', 'place', 'date'].map((k) => field(k)).join('')}</div>
       <div class="letter-draft">
         <button type="button" class="btn btn-primary" data-act="letter-draft">Proposer un brouillon à partir de mon CV</button>
-        <button type="button" class="btn btn-ai" data-act="letter-ai">✨ Rédiger avec l'IA</button>
+        <button type="button" class="btn btn-ai" data-act="letter-ai">${lucideSvg('sparkles')}Rédiger avec l'IA</button>
         <p class="hint">Structure « vous / moi / nous » construite avec votre poste visé, votre dernière expérience et les mots-clés de l'offre collée à droite. Complétez les passages entre crochets.</p>
       </div>
       <div class="grid">${field('subject', { type: 'text' })}${field('reference')}${field('salutation')}</div>
@@ -2151,13 +2152,13 @@ async function aiLetter() {
   if (!(await askAIConsent())) return;
   const cv = state.cv;
   const L = cv.letter;
-  openAI('✨ Lettre rédigée par l\'IA', aiWait('Rédaction de votre lettre'));
+  openAI('Lettre rédigée par l\'IA', aiWait('Rédaction de votre lettre'));
   try {
     const text = await callAI(letterMessages(cv, { offer: cv.meta.jobOffer || '', organization: L.organization, kind: L.kind || 'candidature', style: L.style || 'standard' }), { maxTokens: 2000 });
     const ans = normalizeLetterAnswer(parseAIJson(text));
     if (!ans) throw new Error('format');
     aiResult = { kind: 'letter', ans };
-    openAI('✨ Lettre rédigée par l\'IA', `
+    openAI('Lettre rédigée par l\'IA', `
       <p class="hint">Proposition à relire et à personnaliser (passages entre crochets [ … ]). Votre lettre actuelle n'est remplacée que si vous cliquez sur « Utiliser ».</p>
       ${ans.subject ? `<p><strong>Objet :</strong> ${esc(ans.subject)}</p>` : ''}
       <div class="ai-letter">${ans.body.split(/\n{2,}/).map((p) => `<p>${esc(p)}</p>`).join('')}</div>
@@ -2168,21 +2169,21 @@ async function aiLetter() {
       </div>
       ${cv.meta.jobOffer ? '' : '<p class="hint">Astuce : collez l\'annonce dans « Correspondance avec une offre d\'emploi » pour une lettre ciblée.</p>'}`);
   } catch (e) {
-    openAI('✨ Lettre rédigée par l\'IA', `${aiFail(e)}<div class="dlg-actions"><button type="button" class="btn" data-ai="retry-letter">Réessayer</button></div>`);
+    openAI('Lettre rédigée par l\'IA', `${aiFail(e)}<div class="dlg-actions"><button type="button" class="btn" data-ai="retry-letter">Réessayer</button></div>`);
   }
 }
 
 async function aiAdvice() {
   if (!(await askAIConsent())) return;
   const cv = state.cv;
-  openAI('✨ Conseils de l\'IA pour étoffer votre CV', aiWait('Analyse de votre CV'));
+  openAI('Conseils de l\'IA pour étoffer votre CV', aiWait('Analyse de votre CV'));
   try {
     const text = await callAI(adviceMessages(cv, { offer: cv.meta.jobOffer || '' }), { maxTokens: 2400 });
     const ans = normalizeAdviceAnswer(parseAIJson(text), cv);
     if (!ans || (!ans.tips.length && !ans.summary && !ans.rewrites.length)) throw new Error('format');
     aiResult = { kind: 'advice', ans };
     const prioLabel = { haute: 'Priorité haute', moyenne: 'Priorité moyenne', basse: 'Priorité basse' };
-    openAI('✨ Conseils de l\'IA pour étoffer votre CV', `
+    openAI('Conseils de l\'IA pour étoffer votre CV', `
       <p class="hint">Suggestions à vérifier : n'ajoutez que ce qui est vrai. Remplacez les [chiffres] par vos vrais résultats.</p>
       ${ans.tips.length ? `<h3>Conseils</h3><ul class="ai-tips">${ans.tips.map((t) => `<li class="prio-${esc(t.priority)}"><span class="ai-tag">${esc(prioLabel[t.priority] || '')} · ${esc(t.section)}</span> ${esc(t.text)}</li>`).join('')}</ul>` : ''}
       ${ans.summary ? `<h3>Accroche proposée</h3><blockquote class="ai-quote">${esc(ans.summary)}</blockquote>
@@ -2194,7 +2195,7 @@ async function aiAdvice() {
       ${ans.missingSkills.length ? `<h3>Compétences à valoriser (si vous les avez)</h3><p>${ans.missingSkills.map(esc).join(' · ')}</p>` : ''}
       <div class="dlg-actions"><button type="button" class="btn" data-ai="retry-advice">Relancer l'analyse</button></div>`);
   } catch (e) {
-    openAI('✨ Conseils de l\'IA pour étoffer votre CV', `${aiFail(e)}<div class="dlg-actions"><button type="button" class="btn" data-ai="retry-advice">Réessayer</button></div>`);
+    openAI('Conseils de l\'IA pour étoffer votre CV', `${aiFail(e)}<div class="dlg-actions"><button type="button" class="btn" data-ai="retry-advice">Réessayer</button></div>`);
   }
 }
 
@@ -2230,7 +2231,7 @@ function aiTextFree() {
 function aiTextMenu() {
   const t = aiText;
   const extrait = t.original.length > 400 ? `${t.original.slice(0, 400)}…` : t.original;
-  openAI('✨ Atelier de texte IA', `
+  openAI('Atelier de texte IA', `
     ${t.free
     ? `<label for="ai-free-text">Texte à retravailler</label>
        <textarea id="ai-free-text" rows="7" maxlength="${MAX_TEXT}">${esc(t.original)}</textarea>
@@ -2253,7 +2254,7 @@ async function aiTextRun(action) {
   if (src.length > MAX_TEXT) { toast(`Texte trop long : ${MAX_TEXT} caractères au plus (sélectionnez un passage).`); return; }
   if (!(await askAIConsent())) return;
   const act = TEXT_ACTIONS.find((a) => a.id === action);
-  const title = `✨ ${act ? act.label : 'Atelier de texte IA'}`;
+  const title = act ? act.label : 'Atelier de texte IA';
   openAI(title, aiWait('Traitement du texte'));
   try {
     const { masked, map } = maskPersonal(src);
