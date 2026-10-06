@@ -32,12 +32,23 @@ jobs:
       - name: Tests unitaires
         run: npm test
 
-      - name: Jeton Cloudflare présent ?
+      - name: Jeton Cloudflare valide ?
         run: |
           if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
             echo "::error::Secret CLOUDFLARE_API_TOKEN manquant (Settings → Secrets and variables → Actions)."
             exit 1
           fi
+          # Diagnostic sans jamais afficher le jeton : longueur, forme, et réponse de Cloudflare.
+          t="$CLOUDFLARE_API_TOKEN"
+          echo "Jeton : ${#t} caractères ; espaces ou retours à la ligne : $(printf '%s' "$t" | grep -c '[[:space:]]' || true)"
+          u=$(curl -s -H "Authorization: Bearer $t" https://api.cloudflare.com/client/v4/user/tokens/verify)
+          a=$(curl -s -H "Authorization: Bearer $t" "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/tokens/verify")
+          echo "Vérification (jeton utilisateur) : $(echo "$u" | grep -o '"success":[a-z]*\|"status":"[a-z]*"\|"message":"[^"]*"' | paste -sd' ' -)"
+          echo "Vérification (jeton de compte)   : $(echo "$a" | grep -o '"success":[a-z]*\|"status":"[a-z]*"\|"message":"[^"]*"' | paste -sd' ' -)"
+          p=$(curl -s -H "Authorization: Bearer $t" "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects?per_page=5")
+          echo "Accès aux projets Pages du compte : $(echo "$p" | grep -o '"success":[a-z]*\|"message":"[^"]*"\|"name":"[a-z0-9-]*"' | head -8 | paste -sd' ' -)"
+          echo "$u$a" | grep -q '"status":"active"' || { echo "::error::Cloudflare ne reconnaît pas ce jeton comme actif : recopiez la VALEUR du jeton (environ 40 caractères), pas son nom."; exit 1; }
+          echo "$p" | grep -q '"success":true' || { echo "::error::Jeton actif mais sans accès aux projets Pages de ce compte : ajoutez la permission « Cloudflare Pages : Edit » et le bon compte dans « Account Resources »."; exit 1; }
 
       # Depuis la racine du dépôt : sinon functions/ (l'API) ne serait pas envoyé.
       - name: Déploiement Cloudflare Pages
