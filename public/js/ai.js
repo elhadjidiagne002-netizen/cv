@@ -42,7 +42,9 @@ const NORMES = `Normes à respecter : aucun fait inventé — n'utilise QUE le p
 export function letterMessages(cv, { offer = '', organization = '', kind = 'candidature', style = 'standard' } = {}) {
   const en = style === 'en';
   const kinds = { candidature: 'lettre de motivation (candidature)', stage: 'demande de stage', relance: 'lettre de relance après une candidature', remerciement: 'lettre de remerciement après un entretien' };
+  const wo = style === 'wo';
   const styleTxt = en ? 'une cover letter en anglais (ton professionnel anglo-saxon)'
+    : wo ? 'une lettre en WOLOF (orthographe officielle du Sénégal, alphabet latin : à, é, ë, ñ, ŋ ; registre poli et respectueux, sans mots français inutiles sauf les termes techniques du métier). Ajoute dans le JSON « appel » (formule d’appel en wolof) et « politesse » (formule de politesse finale en wolof). L’« objet » reste en français'
     : style === 'administratif' ? 'une lettre administrative sénégalaise / française (formules de haute considération, « J\'ai l\'honneur de solliciter… »)'
     : 'une lettre en français standard, structure « vous / moi / nous »';
   return [
@@ -112,7 +114,8 @@ export function normalizeLetterAnswer(a) {
   if (!a || typeof a !== 'object') return null;
   const body = cut(a.corps || a.body, 8000).replace(/\r/g, '');
   if (body.length < 80) return null;
-  return { subject: cut(a.objet || a.subject, 300), body, tips: (Array.isArray(a.conseils) ? a.conseils : []).map((x) => cut(x, 300)).filter(Boolean).slice(0, 4) };
+  return { subject: cut(a.objet || a.subject, 300), body, tips: (Array.isArray(a.conseils) ? a.conseils : []).map((x) => cut(x, 300)).filter(Boolean).slice(0, 4),
+    salutation: cut(a.appel, 120), closing: cut(a.politesse, 400) };
 }
 
 /** Nettoie la réponse « conseils » ; les réécritures ne visent que des expériences existantes. */

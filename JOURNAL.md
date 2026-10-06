@@ -1,5 +1,17 @@
 # Journal du projet (le plus récent en haut)
 
+## 06/10/2026 — Lettre en wolof, dossier de candidature en un seul PDF, attestations employeur
+- **Lettre en wolof** : 4e style de lettre « Wolof (avec l'IA) » : l'assistant rédige le corps et les formules
+  d'appel / de politesse en wolof d'après l'offre (en-tête et objet en français) ; avis « à faire relire par un locuteur ».
+- **Dossier de candidature** (« Candidature Express ») : panneau « 📎 Dossier de candidature en un seul PDF » dans l'éditeur :
+  photos / scans de diplômes, attestations, pièce d'identité (réduits sur l'appareil, jamais enregistrés ni envoyés),
+  réordonnables et renommables ; « Créer le dossier PDF » imprime CV + lettre + pièces (une par page) en un seul fichier ;
+  « Message d'envoi » : objet + e-mail listant les pièces, à copier ou ouvrir dans la messagerie.
+- **Attestations** (`attestation.html`) : attestation de travail (en poste / terminée), de stage, de formation ; aperçu A4
+  en direct, accords (née / employée), impression sur papier à en-tête, brouillon gardé dans le navigateur.
+- Service worker : nouveaux fichiers en cache (`cv-2026-10-06-dossier-attestations`). Tests : +4 fichiers de cas.
+- 3 tests de configuration échouent seulement sous Windows (fins de ligne CRLF de `_headers` / workflow) : préexistants.
+
 ## 06/10/2026 — Vraie application Android (APK) à la place du bouton « Installer »
 - **Fait** : le bouton « Installer l'application » (raccourci du navigateur) devient « 📲 Application Android » (éditeur et
   accueil, visible sur Android hors de l'application) et télécharge l'APK signé `sn.nexusmarket.cv` (Trusted Web

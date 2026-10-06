@@ -32,6 +32,7 @@ import { esc } from './templates/parts.js';
 import { SCHOOLS, CITIES, LANGUAGES, DIPLOMAS, DOSSIER_ITEMS, isNationalLanguage } from './senegal.js';
 import { JOBS, getJob } from './phrases.js';
 import { cvPlainText } from './plaintext.js';
+import { PIECES, attachmentsHTML, sendMessage, compressImage as compressPiece } from './dossier.js';
 import { AI_CONSENT_KEY, AIError, callAI, letterMessages, adviceMessages, parseAIJson, normalizeLetterAnswer, normalizeAdviceAnswer } from './ai.js';
 import { TEXT_ACTIONS, MAX_TEXT, kindForPath, maskPersonal, unmaskPersonal, textMessages, readTextAnswer } from './aitext.js';
 import {
@@ -303,6 +304,7 @@ const LETTER_STYLES_UI = [
   { id: 'standard', name: 'Standard', desc: 'Lettre de motivation « à la française » : entreprises, ONG, candidatures en ligne.' },
   { id: 'administratif', name: 'Administratif (Sénégal)', desc: '« À Monsieur le Directeur… », objet, formule de haute considération : administrations, sociétés nationales, demande d\'emploi.' },
   { id: 'en', name: 'Anglais (cover letter)', desc: 'Pour une candidature en anglais (organisations internationales, étranger).' },
+  { id: 'wo', name: 'Wolof (avec l\'IA)', desc: 'Le corps de la lettre et les formules en wolof, rédigés par l\'assistant IA d\'après l\'offre ; en-tête et objet en français. Faites-la relire par un locuteur avant l\'envoi.' },
 ];
 
 function letterEditorHTML(cv) {
@@ -1080,6 +1082,14 @@ function preparePrint() {
       Utilisez le bouton « Télécharger en PDF » de l'éditeur, ou choisissez un modèle gratuit.</p></article>`;
     return;
   }
+  if (state.dossierPrinting) {
+    // Dossier de candidature : CV, puis la lettre (si elle est rédigée), puis chaque pièce jointe sur sa page.
+    root.innerHTML = renderCV(state.cv, tplId)
+      + (state.cv.letter.body.trim() ? `<div class="dossier-break">${renderLetter(state.cv, tplId)}</div>` : '')
+      + attachmentsHTML(state.dossierItems || []);
+    applyAccent(root);
+    return;
+  }
   root.innerHTML = state.doc === 'letter' ? renderLetter(state.cv, tplId) : renderCV(state.cv, tplId);
   applyAccent(root);
   // Numéros « 1 / 2 » en pied de page, seulement pour un CV de plusieurs pages.
@@ -1128,11 +1138,56 @@ function printCV() {
   const previous = document.title;
   const { firstName, lastName } = state.cv.identity;
   const who = [firstName, lastName].filter(Boolean).join(' ');
-  document.title = state.doc === 'letter' ? `Lettre de motivation ${who}`.trim() : state.cv.meta.anonymous ? 'CV anonyme' : `CV ${who}`.trim();
+  document.title = state.dossierPrinting ? `Dossier de candidature ${who}`.trim() : state.doc === 'letter' ? `Lettre de motivation ${who}`.trim() : state.cv.meta.anonymous ? 'CV anonyme' : `CV ${who}`.trim();
   window.print();
   setTimeout(() => {
     document.title = previous;
   }, 500);
+}
+
+// ————————————————————————— Dossier de candidature (un seul PDF) —————————————————————————
+function setupDossier() {
+  state.dossierItems = [];
+  $('#dossier-label').innerHTML = PIECES.map((p) => `<option>${esc(p)}</option>`).join('');
+  const draw = () => {
+    $('#dossier-list').innerHTML = state.dossierItems.map((it, i) => `<li><img src="${esc(it.src)}" alt=""><input type="text" value="${esc(it.label)}" data-dossier-label="${i}" aria-label="Nom de la pièce ${i + 1}">
+      <button type="button" class="btn btn-small" data-dossier-up="${i}" aria-label="Monter la pièce ${i + 1}"${i ? '' : ' disabled'}>↑</button>
+      <button type="button" class="btn btn-small" data-dossier-del="${i}" aria-label="Retirer la pièce ${i + 1}">✕</button></li>`).join('');
+  };
+  $('#dossier-files').addEventListener('change', async (e) => {
+    const files = [...e.target.files].slice(0, 12);
+    for (const f of files) {
+      try { state.dossierItems.push({ label: $('#dossier-label').value, src: await compressPiece(f) }); } catch (err) { toast(err.message); }
+    }
+    e.target.value = '';
+    draw();
+  });
+  $('#dossier-list').addEventListener('input', (e) => { const i = e.target.dataset.dossierLabel; if (i !== undefined) state.dossierItems[i].label = e.target.value.slice(0, 80); });
+  $('#dossier-list').addEventListener('click', (e) => {
+    const del = e.target.closest('[data-dossier-del]');
+    const up = e.target.closest('[data-dossier-up]');
+    if (del) state.dossierItems.splice(Number(del.dataset.dossierDel), 1);
+    else if (up) { const i = Number(up.dataset.dossierUp); [state.dossierItems[i - 1], state.dossierItems[i]] = [state.dossierItems[i], state.dossierItems[i - 1]]; } else return;
+    draw();
+  });
+  $('#btn-dossier-print').addEventListener('click', () => {
+    if (state.doc === 'letter') switchDoc('cv');
+    gatedDownload('pdf', () => {
+      state.dossierPrinting = true;
+      try { printCV(); } finally {
+        setTimeout(() => { state.dossierPrinting = false; }, 800);
+      }
+    });
+  });
+  $('#btn-dossier-msg').addEventListener('click', () => {
+    const { subject, body } = sendMessage(state.cv, { hasLetter: Boolean(state.cv.letter.body.trim()), items: state.dossierItems });
+    $('#dossier-msg').value = `${subject}\n\n${body}`;
+    $('#dossier-mailto').href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    $('#dossier-msg-box').hidden = false;
+  });
+  $('#btn-dossier-copy').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText($('#dossier-msg').value); toast('Message copié.'); } catch { $('#dossier-msg').select(); }
+  });
 }
 
 // ————————————————————————— Galerie de modèles —————————————————————————
@@ -1832,6 +1887,7 @@ function bind() {
     }
   });
   $('#btn-print').addEventListener('click', () => gatedDownload('pdf', printCV));
+  setupDossier();
   $('#preview').addEventListener('click', onPreviewClick);
   document.querySelector('.doc-switch').addEventListener('click', (e) => {
     const b = e.target.closest('button[data-doc]');
@@ -2270,6 +2326,8 @@ function onAIClick(e) {
       if (L.body.trim() && !window.confirm('Remplacer le texte actuel de la lettre ? (« Annuler » en haut reste possible.)')) break;
       if (aiResult.ans.subject) L.subject = aiResult.ans.subject;
       L.body = aiResult.ans.body;
+      if (L.style === 'wo' && aiResult.ans.salutation) L.salutation = aiResult.ans.salutation;
+      if (L.style === 'wo' && aiResult.ans.closing) L.closing = aiResult.ans.closing;
       if (!L.place) L.place = cv.identity.city;
       closeAI();
       if (state.doc !== 'letter') { state.doc = 'letter'; renderDocSwitch(); }

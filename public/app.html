@@ -173,6 +173,32 @@
           <div id="match-result" aria-live="polite"></div>
         </div>
       </details>
+      <details class="match-box" id="dossier-box">
+        <summary><span class="match-title">📎 Dossier de candidature en un seul PDF</span><span class="match-sub">CV + lettre + diplômes et attestations scannés</span></summary>
+        <div class="match-body">
+          <p class="hint">Photographiez vos diplômes, attestations ou pièce d'identité : ils sont ajoutés à la suite du CV et de la lettre,
+            dans <strong>un seul fichier PDF</strong> à envoyer au recruteur — plus de pièce jointe oubliée. Les images restent sur votre
+            appareil et ne sont pas enregistrées (ajoutez-les juste avant de créer le dossier).</p>
+          <div class="field">
+            <label for="dossier-label">Type de pièce</label>
+            <select id="dossier-label"></select>
+          </div>
+          <div class="field">
+            <label for="dossier-files">Ajouter une ou plusieurs images (photo ou scan)</label>
+            <input type="file" id="dossier-files" accept="image/*" multiple>
+          </div>
+          <ol id="dossier-list" class="dossier-list"></ol>
+          <div class="dlg-actions">
+            <button type="button" class="btn btn-primary" id="btn-dossier-print">Créer le dossier PDF</button>
+            <button type="button" class="btn" id="btn-dossier-msg">Message d'envoi</button>
+          </div>
+          <div id="dossier-msg-box" hidden>
+            <label for="dossier-msg">Message à copier dans votre e-mail (objet en première ligne)</label>
+            <textarea id="dossier-msg" rows="12" readonly></textarea>
+            <div class="dlg-actions"><button type="button" class="btn" id="btn-dossier-copy">Copier</button><a class="btn" id="dossier-mailto" href="#">Ouvrir ma messagerie</a></div>
+          </div>
+        </div>
+      </details>
       <div class="preview-toolbar">
         <p id="template-info"></p>
         <button type="button" class="btn btn-small" id="btn-fit">Ajuster à 1 page</button>

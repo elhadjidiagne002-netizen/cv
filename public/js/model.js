@@ -327,7 +327,7 @@ export function findCustom(cv, key) {
  * Styles de lettre : « standard » (lettre de motivation française), « administratif » (usage sénégalais :
  * « À Monsieur le Directeur… », objet, formule de haute considération), « en » (cover letter).
  */
-export const LETTER_STYLES = ['standard', 'administratif', 'en'];
+export const LETTER_STYLES = ['standard', 'administratif', 'en', 'wo'];
 
 /** Types de lettre : candidature (motivation / demande d'emploi), demande de stage, relance, remerciement après entretien. */
 export const LETTER_KINDS = ['candidature', 'stage', 'relance', 'remerciement'];

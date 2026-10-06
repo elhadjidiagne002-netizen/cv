@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- CSP aussi en <meta> : garder identique à _headers (vérifié par tests/deploy.test.js). -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://nexusmarket.sn; manifest-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'; upgrade-insecure-requests">
+  <meta name="referrer" content="no-referrer">
+  <title>Attestation de travail, de stage ou de formation — CV en ligne</title>
+  <meta name="description" content="Employeurs : rédigez en 2 minutes une attestation de travail, de stage ou de formation, prête à imprimer et à signer. Gratuit, sans compte, rien n'est envoyé.">
+  <link rel="canonical" href="https://cv.nexusmarket.sn/attestation.html">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#0b5cad">
+  <link rel="stylesheet" href="css/app.css">
+  <link rel="stylesheet" href="css/fonts.css">
+  <link rel="stylesheet" href="css/attestation.css">
+  <script type="module" src="js/attestation.js"></script>
+</head>
+<body class="home att-page">
+  <header class="home-header">
+    <a class="brand" href="index.html">CV en ligne</a>
+    <a class="btn" href="app.html">Créer un CV</a>
+  </header>
+  <main class="att-main">
+    <div class="att-form">
+      <h1>Attestation de travail, de stage ou de formation</h1>
+      <p class="hint">Pour les employeurs, maîtres de stage et organismes de formation. Remplissez, vérifiez l'aperçu, imprimez sur
+        votre papier à en-tête puis signez et apposez votre cachet. Rien n'est envoyé : tout reste sur cet appareil.</p>
+      <form id="att-form" novalidate></form>
+    </div>
+    <section class="att-preview-pane" aria-labelledby="att-prev-title">
+      <h2 id="att-prev-title" class="sr-only">Aperçu</h2>
+      <div class="att-actions">
+        <button type="button" class="btn btn-primary" id="att-print">Imprimer / PDF</button>
+        <p id="att-missing" class="hint" aria-live="polite"></p>
+      </div>
+      <article id="att-doc" class="att-doc"></article>
+    </section>
+  </main>
+  <footer class="home-footer"><p>Vous êtes candidat ? <a href="app.html">Créez votre CV</a> et réunissez CV, lettre et attestations en un seul PDF.
+    Recrutez ou vendez sur <a href="https://nexusmarket.sn/?src=cv-attestation">NEXUS Market</a> · gérez votre boutique avec <a href="https://myshop.nexusmarket.sn/?src=cv-attestation">My shop</a> · devis et factures avec <a href="https://devis.nexusmarket.sn/?src=cv-attestation">Devizo</a>.</p></footer>
+</body>
+</html>
