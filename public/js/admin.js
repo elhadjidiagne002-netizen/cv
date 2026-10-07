@@ -122,7 +122,45 @@ async function renderPortfolios(panel) {
   }));
 }
 
-const RENDERERS = { overview: renderOverview, orders: renderOrders, offers: renderOffers, templates: renderTemplates, codes: renderCodes, settings: renderSettings, portfolios: renderPortfolios, audit: renderAudit };
+// ——— Concours annoncés (liste tenue à la main, source officielle obligatoire) ———
+async function renderConcours(panel) {
+  const { concours } = await api('GET', 'concours');
+  const fam = { ena: 'ENA', police: 'Police', douane: 'Douanes', enseignement: 'Enseignement', gendarmerie: 'Gendarmerie / Armées', sante: 'Santé', autre: 'Autre' };
+  panel.innerHTML = `<p class="hint">Les candidats voient ces concours sur la page « Préparer un concours » et les ajoutent à leur liste. <strong>Lien vers l'avis officiel obligatoire</strong> (Journal officiel, site du ministère ou de l'école, presse) : n'ajoutez rien sans source.</p>
+    <form id="cc-form" class="admin-form"><input type="hidden" name="id">
+      <div class="grid2"><label>Intitulé exact<input name="title" required maxlength="160"></label>
+      <label>Famille<select name="family">${Object.entries(fam).map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></label>
+      <label>Organisme<input name="organisme" maxlength="160"></label><label>Lien de l'avis officiel (https://…)<input name="source_url" type="url" required maxlength="400"></label>
+      <label>Date limite de dépôt<input name="deadline" type="date"></label><label>Date des épreuves<input name="exam" type="date"></label></div>
+      <label>Précisions (niveau, nombre de postes…)<textarea name="notes" maxlength="600" rows="2"></textarea></label>
+      <label class="check"><input type="checkbox" name="published" checked> Publié</label>
+      <button class="btn btn-primary" type="submit">Enregistrer</button></form>
+    ${concours.length ? `<table class="data-table"><thead><tr><th scope="col">Concours</th><th scope="col">Dates</th><th scope="col">Source</th><th scope="col">Actions</th></tr></thead><tbody>
+      ${concours.map((c) => `<tr><td>${esc(c.title)}<br><small>${esc(fam[c.family] || '')}${c.organisme ? ` · ${esc(c.organisme)}` : ''}${c.published ? '' : ' · <strong>non publié</strong>'}</small></td>
+        <td>${esc(c.deadline || '—')} / ${esc(c.exam || '—')}</td><td><a href="${esc(c.source_url)}" target="_blank" rel="noopener">avis</a></td>
+        <td><button type="button" class="btn btn-small" data-cc-edit="${esc(c.id)}">Modifier</button> <button type="button" class="btn btn-small btn-danger" data-cc-del="${esc(c.id)}">Retirer</button></td></tr>`).join('')}</tbody></table>` : '<p>Aucun concours annoncé.</p>'}`;
+  const form = panel.querySelector('#cc-form');
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const f = new FormData(form);
+    const body = Object.fromEntries(f.entries());
+    body.published = form.published.checked;
+    try { await api('POST', 'concours', body); toast('Concours enregistré.'); openTab('concours'); } catch (err) { toast(err.message); }
+  });
+  panel.querySelectorAll('[data-cc-edit]').forEach((b) => b.addEventListener('click', () => {
+    const c = concours.find((x) => x.id === b.dataset.ccEdit);
+    for (const k of ['id', 'title', 'family', 'organisme', 'source_url', 'deadline', 'exam', 'notes']) form[k].value = c[k] || '';
+    form.published.checked = Boolean(c.published);
+    form.scrollIntoView({ behavior: 'smooth' });
+  }));
+  panel.querySelectorAll('[data-cc-del]').forEach((b) => b.addEventListener('click', async () => {
+    // eslint-disable-next-line no-alert
+    if (!window.confirm('Retirer ce concours de la liste publique ?')) return;
+    try { await api('POST', `concours/${b.dataset.ccDel}/delete`, {}); openTab('concours'); } catch (err) { toast(err.message); }
+  }));
+}
+
+const RENDERERS = { concours: renderConcours, overview: renderOverview, orders: renderOrders, offers: renderOffers, templates: renderTemplates, codes: renderCodes, settings: renderSettings, portfolios: renderPortfolios, audit: renderAudit };
 
 async function openTab(tab, focus = true) {
   state.tab = tab;
@@ -201,6 +239,13 @@ async function renderOverview(panel) {
       ${barChart('Téléchargements PDF par jour', last30(d.days, 'pdf'), 'téléchargements')}
       ${barChart('Visites de l\'éditeur par jour', last30(d.days, 'visit'), 'visites')}
     </div>
+    ${d.usage ? `<section class="card"><h2>Usage des fonctions (30 jours)</h2><table class="data-table"><tbody>
+      <tr><th scope="row">Entretiens simulés</th><td>${d.usage.interview || 0}</td></tr>
+      <tr><th scope="row">Dictées vocales lancées</th><td>${d.usage.dictation || 0}</td></tr>
+      <tr><th scope="row">Concours ajoutés par les candidats</th><td>${d.usage.concours || 0}</td></tr>
+      <tr><th scope="row">Portfolios publiés (30 j / en ligne)</th><td>${d.usage.portfolio_published || 0} / ${d.usage.portfolios || 0}</td></tr>
+      <tr><th scope="row">Visites des portfolios (total)</th><td>${d.usage.portfolio_views || 0}</td></tr>
+      <tr><th scope="row">Concours annoncés publiés</th><td>${d.usage.annonces || 0}</td></tr></tbody></table></section>` : ''}
     <div class="cols-2">
       <section><h2>Modèles les plus téléchargés (30 jours)</h2>
         ${top.length ? `<ul class="hbars">${top.map((t) => `<li><span class="hbar-label">${esc(tplName(t.key))}</span>

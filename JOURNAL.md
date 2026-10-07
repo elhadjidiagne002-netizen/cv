@@ -1,5 +1,22 @@
 # Journal du projet (le plus récent en haut)
 
+## 07/10/2026 (b) — Dictée vocale, photos du portfolio, concours annoncés, relecture du wolof, usage des fonctions
+- **Réponse à voix haute** dans le simulateur d'entretien (dictée du navigateur, français et anglais ; le wolof n'est pas
+  reconnu, message affiché) : `Permissions-Policy` passe de `microphone=()` à `microphone=(self)` ; avertissement à la
+  première utilisation (la voix est transcrite par le service du navigateur, CV en ligne ne reçoit aucun son).
+- **Portfolio avec photos** : 6 photos de réalisations au plus, avec légende, réduites sur le téléphone (1280 px, JPEG),
+  signature vérifiée côté serveur (220 Ko max), table `portfolio_images`, servies sur `/p/<adresse>/photo-N`
+  (`functions/p/[slug]/[file].js`) ; garder / retirer / remplacer à la mise à jour. Page supprimée côté serveur : l'éditeur
+  repart proprement d'une page neuve.
+- **Concours annoncés** : liste tenue à la main par l'admin (onglet « Concours annoncés »), **lien vers l'avis officiel
+  obligatoire** (https) ; les candidats voient les concours publiés et à venir sur `concours.html` et les ajoutent à leurs
+  concours d'un geste. Aucun concours n'est inventé ni recopié automatiquement.
+- **Relecture du wolof** : `docs/relecture-wolof.md` (généré par `node scripts/relecture-wolof.mjs`) liste tous les textes
+  wolof et les consignes données à l'IA, avec une colonne « Correction proposée » — **à faire remplir par un locuteur**.
+- **Usage des fonctions** (admin, vue d'ensemble) : entretiens, dictées, concours ajoutés, portfolios publiés et visites,
+  concours annoncés (compteurs anonymes `events`, sans identifiant).
+- Tests : 194 (dont photos et concours annoncés) ; l'imitation D1 des tests sait faire `batch`.
+
 ## 07/10/2026 — Simulateur d'entretien IA, portfolio en ligne, préparation aux concours
 - **Simulateur d'entretien** (`entretien.html`) : offre collée → questions probables générées par l'IA (avec ou sans le
   parcours, toujours sans identité), en français, wolof ou anglais ; réponse écrite notée sur 10 avec points forts,

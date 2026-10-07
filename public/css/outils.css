@@ -37,3 +37,4 @@
   body.tool-page > header, .tool-noprint { display: none !important; }
   .cc-letter { border: 0; padding: 0; }
 }
+.tool-thumb { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 8px; display: block; margin-bottom: 6px; }

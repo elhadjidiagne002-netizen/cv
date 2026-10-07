@@ -109,7 +109,7 @@ export function letterText(c, identity = {}, { city = '', date = new Date() } = 
 export function cleanConcours(c = {}) {
   const day = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(String(v || '')) ? v : '');
   const t = (v, n) => String(v ?? '').trim().slice(0, n);
-  return { id: t(c.id, 40) || `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, family: FAMILIES[c.family] ? c.family : 'autre',
+  return { source: t(c.source, 40) || undefined, id: t(c.id, 40) || `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, family: FAMILIES[c.family] ? c.family : 'autre',
     title: t(c.title, 160), organisme: t(c.organisme, 160), authority: t(c.authority, 200), session: t(c.session, 40), deadline: day(c.deadline), exam: day(c.exam),
     place: t(c.place, 160), notes: t(c.notes, 1500), done: (Array.isArray(c.done) ? c.done : []).filter((id) => CHECKLIST.some((d) => d.id === id) || /^x-/.test(id)).slice(0, 40),
     epreuves: (Array.isArray(c.epreuves) ? c.epreuves : []).filter((x) => typeof x === 'string').slice(0, 20) };

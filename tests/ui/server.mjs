@@ -13,6 +13,7 @@ import { fileURLToPath } from 'node:url';
 
 import { handle } from '../../functions/_lib/api.js';
 import { onRequestGet as portfolioPage } from '../../functions/p/[slug].js';
+import { onRequestGet as portfolioPhoto } from '../../functions/p/[slug]/[file].js';
 import { hashPassword } from '../../functions/_lib/devizo.js';
 import { createD1, DEVIZO_SCHEMA } from '../helpers/d1.js';
 
@@ -89,10 +90,11 @@ const headers = globalHeaders();
 
 createServer(async (req, res) => {
   // Page publique d'un portfolio (Function functions/p/[slug].js en production).
-  const pf = /^\/p\/([\w-]{1,60})\/?(?:\?|$)/.exec(req.url);
+  const pf = /^\/p\/([\w-]{1,60})(?:\/([\w-]{1,20}))?\/?(?:\?|$)/.exec(req.url);
   if (pf) {
     const db = (/(?:^|;\s*)testdb=([\w-]+)/.exec(req.headers.cookie || '') || [])[1] || 'default';
-    envFor(db).then((env) => portfolioPage({ request: new Request(`http://${req.headers.host}${req.url}`), env, params: { slug: pf[1] } }))
+    envFor(db).then((env) => (pf[2] ? portfolioPhoto({ env, params: { slug: pf[1], file: pf[2] } })
+      : portfolioPage({ request: new Request(`http://${req.headers.host}${req.url}`), env, params: { slug: pf[1] } })))
       .then(async (out) => { const h = {}; out.headers.forEach((v, k) => { h[k] = v; }); res.writeHead(out.status, h); res.end(Buffer.from(await out.arrayBuffer())); })
       .catch((err) => { res.writeHead(500); res.end(String(err)); });
     return;

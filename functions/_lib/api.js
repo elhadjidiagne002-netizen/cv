@@ -12,11 +12,12 @@ import {
 } from './db.js';
 import { isSuperAdmin, findDevizoAccount, checkDevizoTotp } from './devizo.js';
 import { portfolioRoutes, portfolioAdminRoutes } from './portfolio.js';
+import { concoursRoutes, concoursAdminRoutes } from './concours.js';
 
 const ADMIN_COOKIE = 'cv_admin';
 const SESSION_HOURS = 12;
 const CHALLENGE_MINUTES = 10;
-const EVENT_NAMES = ['visit', 'pdf', 'docx', 'letter_pdf', 'template', 'unlock_view', 'backup'];
+const EVENT_NAMES = ['visit', 'pdf', 'docx', 'letter_pdf', 'template', 'unlock_view', 'backup', 'interview', 'dictation', 'concours', 'portfolio'];
 const ID_RE = /^[a-z0-9-]{1,60}$/;
 
 // ————————————————————————— Outils —————————————————————————
@@ -307,7 +308,7 @@ async function overview({ db }) {
   const today = `${nowIso().slice(0, 10)}T00:00:00.000Z`;
   const d30 = new Date(Date.now() - 30 * 86400_000).toISOString().slice(0, 10);
   const one = (sql, ...args) => db.prepare(sql).bind(...args).first();
-  const [monthRev, todayRev, totalRev, pending, activeCodes, byOffer, days, topTemplates, recent] = await Promise.all([
+  const [monthRev, todayRev, totalRev, pending, activeCodes, byOffer, days, topTemplates, recent, usage] = await Promise.all([
     one('SELECT COALESCE(SUM(amount),0) AS amount, COUNT(*) AS n FROM orders WHERE status = \'validated\' AND decided_at >= ?', month),
     one('SELECT COALESCE(SUM(amount),0) AS amount, COUNT(*) AS n FROM orders WHERE status = \'validated\' AND decided_at >= ?', today),
     one('SELECT COALESCE(SUM(amount),0) AS amount, COUNT(*) AS n FROM orders WHERE status = \'validated\''),
@@ -317,6 +318,13 @@ async function overview({ db }) {
     db.prepare('SELECT day, name, SUM(count) AS n FROM events WHERE day >= ? GROUP BY day, name ORDER BY day').bind(d30).all(),
     db.prepare('SELECT key, SUM(count) AS n FROM events WHERE day >= ? AND name IN (\'pdf\', \'docx\') AND key != \'\' GROUP BY key ORDER BY n DESC LIMIT 12').bind(d30).all(),
     db.prepare('SELECT admin, action, target, detail, created_at FROM audit ORDER BY id DESC LIMIT 12').all(),
+    // Usage des fonctions récentes (30 jours) : compteurs anonymes + pages publiées.
+    one(`SELECT (SELECT COALESCE(SUM(count), 0) FROM events WHERE day >= ?1 AND name = 'interview') AS interview,
+                (SELECT COALESCE(SUM(count), 0) FROM events WHERE day >= ?1 AND name = 'dictation') AS dictation,
+                (SELECT COALESCE(SUM(count), 0) FROM events WHERE day >= ?1 AND name = 'concours') AS concours,
+                (SELECT COALESCE(SUM(count), 0) FROM events WHERE day >= ?1 AND name = 'portfolio') AS portfolio_published,
+                (SELECT COUNT(*) FROM portfolios) AS portfolios, (SELECT COALESCE(SUM(views), 0) FROM portfolios) AS portfolio_views,
+                (SELECT COUNT(*) FROM concours_annonces WHERE published = 1) AS annonces`, d30),
   ]);
   return json({
     monetization: s.monetization,
@@ -327,6 +335,7 @@ async function overview({ db }) {
     days: days.results || [],
     top_templates: topTemplates.results || [],
     recent_audit: recent.results || [],
+    usage: usage || {},
   });
 }
 
@@ -535,11 +544,13 @@ const PUBLIC = [
   ['POST', /^\/api\/admin\/login\/code$/, loginCode],
   ['POST', /^\/api\/admin\/logout$/, logout],
   ...portfolioRoutes,
+  ...concoursRoutes,
 ];
 
 const ADMIN = [
   ['GET', /^\/api\/admin\/me$/, ({ admin }) => json({ email: admin })],
   ...portfolioAdminRoutes,
+  ...concoursAdminRoutes,
   ['GET', /^\/api\/admin\/overview$/, overview],
   ['GET', /^\/api\/admin\/orders$/, listOrders],
   ['GET', /^\/api\/admin\/orders\.csv$/, ordersCsv],

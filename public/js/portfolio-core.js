@@ -69,11 +69,11 @@ const para = (s) => esc(s).replace(/\n/g, '<br>');
 export const colorClass = (color) => `pf-c${Math.max(0, COLORS.indexOf(color))}`;
 
 /** Contenu de la page publique /p/<adresse>, aussi utilisé pour l'aperçu dans l'éditeur. */
-export function portfolioBody(d) {
+export function portfolioBody(d, { photoUrl = (im) => im.src || '' } = {}) {
   const en = d.cv_lang === 'en';
   const L = en
-    ? { exp: 'Experience', proj: 'Projects', edu: 'Education', skills: 'Skills', lang: 'Languages', contact: 'Contact', see: 'View project', made: 'Portfolio created with', site: 'Website' }
-    : { exp: 'Expérience', proj: 'Projets et réalisations', edu: 'Formation', skills: 'Compétences', lang: 'Langues', contact: 'Me contacter', see: 'Voir le projet', made: 'Portfolio créé avec', site: 'Site' };
+    ? { exp: 'Experience', proj: 'Projects', edu: 'Education', skills: 'Skills', lang: 'Languages', contact: 'Contact', see: 'View project', made: 'Portfolio created with', site: 'Website', photos: 'Work samples' }
+    : { exp: 'Expérience', proj: 'Projets et réalisations', edu: 'Formation', skills: 'Compétences', lang: 'Langues', contact: 'Me contacter', see: 'Voir le projet', made: 'Portfolio créé avec', site: 'Site', photos: 'Réalisations en images' };
   const c = d.contact || {};
   const wa = c.whatsapp ? `https://wa.me/${c.whatsapp.replace(/^\+/, '').replace(/^(\d{9})$/, '221$1')}` : '';
   const list = (k) => (Array.isArray(d[k]) ? d[k] : []);
@@ -92,6 +92,7 @@ export function portfolioBody(d) {
     links ? `<nav class="pf-links" aria-label="${L.contact}">${links}</nav>` : '',
     '</header>',
     d.summary ? `<section class="pf-sec"><p>${para(d.summary)}</p></section>` : '',
+    list('images').length ? section(L.photos, `<div class="pf-photos">${list('images').map((im) => `<figure><img src="${esc(photoUrl(im))}" alt="${esc(im.caption || L.photos)}" loading="lazy">${im.caption ? `<figcaption>${esc(im.caption)}</figcaption>` : ''}</figure>`).join('')}</div>`) : '',
     list('projects').length ? section(L.proj, `<div class="pf-grid">${list('projects').map((x) => `<article class="pf-card"><h3>${esc(x.name)}</h3>${x.description ? `<p>${para(x.description)}</p>` : ''}${x.link ? `<a href="${esc(x.link)}" rel="noopener nofollow">${L.see} →</a>` : ''}</article>`).join('')}</div>`) : '',
     list('experiences').length ? section(L.exp, list('experiences').map((x) => `<div class="pf-item"><h3>${esc(x.position)}${x.employer ? ` — ${esc(x.employer)}` : ''}</h3>${x.period ? `<p class="pf-period">${esc(x.period)}</p>` : ''}${x.description ? `<p>${para(x.description)}</p>` : ''}</div>`).join('')) : '',
     list('education').length ? section(L.edu, list('education').map((x) => `<div class="pf-item"><h3>${esc(x.degree)}</h3><p class="pf-period">${esc([x.school, x.period].filter(Boolean).join(' · '))}</p></div>`).join('')) : '',

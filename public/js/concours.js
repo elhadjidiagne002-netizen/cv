@@ -1,6 +1,7 @@
 // Page « Préparer un concours » : mes concours (dates, rappels .ics), pièces du dossier, lettre de candidature, épreuves.
 // Données dans ce navigateur seulement (localStorage), comme le CV.
 import { createStore } from './storage.js';
+import { track } from './premium.js';
 import { STORE_KEY, FAMILIES, CHECKLIST, daysLeft, countdownText, nextDeadline, icsFor, letterText, cleanConcours } from './concours-core.js';
 
 const root = document.getElementById('cc-app');
@@ -15,6 +16,10 @@ let items = load();
 let open = null;      // id du concours affiché
 let editing = null;   // brouillon du formulaire
 let showLetter = false;
+// Concours annoncés par l'équipe (avec le lien vers l'avis officiel) : chargés en ligne, absents hors ligne.
+let annonces = [];
+fetch('/api/concours').then((r) => (r.ok ? r.json() : null)).then((d) => { if (d && Array.isArray(d.concours)) { annonces = d.concours; if (!editing && !open) home(); } }).catch(() => {});
+const fmtDay = (d) => (d ? new Date(`${d}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) : '');
 
 function home() {
   const sorted = [...items].sort((a, b) => (nextDeadline(a)?.n ?? 9999) - (nextDeadline(b)?.n ?? 9999));
@@ -27,6 +32,16 @@ function home() {
         <span class="tool-muted">${esc(FAMILIES[c.family].label)} · dossier ${done}/${CHECKLIST.length}</span>
         ${nd ? ` · <span class="cc-days${nd.n <= 7 ? ' soon' : ''}">${esc(nd.label)} ${esc(countdownText(nd.n))}</span>` : ''}</li>`;
     }).join('')}</ul>` : `<div class="tool-card"><p>Aucun concours pour l'instant. Ajoutez celui que vous préparez : vous aurez le compte à rebours, la liste des pièces et la lettre de candidature.</p></div>`}
+    ${annonces.length ? `<h2>Concours annoncés</h2>
+    <p class="tool-muted">Relevés par l'équipe CV en ligne, chacun avec le lien vers l'avis officiel. <strong>Vérifiez toujours l'avis</strong> : conditions, pièces et dates peuvent changer.</p>
+    <ul class="tool-list tool-card">${annonces.map((a) => {
+      const nd = nextDeadline(a);
+      const mine = items.some((c) => c.source === a.id);
+      return `<li><strong>${esc(a.title)}</strong><div class="tool-muted">${esc(FAMILIES[a.family]?.label || '')}${a.organisme ? ` · ${esc(a.organisme)}` : ''}${a.deadline ? ` · dépôt avant le ${esc(fmtDay(a.deadline))}` : ''}${a.exam ? ` · épreuves le ${esc(fmtDay(a.exam))}` : ''}${nd ? ` · <span class="cc-days${nd.n <= 7 ? ' soon' : ''}">${esc(countdownText(nd.n))}</span>` : ''}</div>
+        ${a.notes ? `<div class="tool-muted">${esc(a.notes)}</div>` : ''}
+        <div class="tool-row"><a class="btn btn-small" href="${esc(a.source_url)}" target="_blank" rel="noopener nofollow">Voir l'avis officiel</a>
+        ${mine ? '<span class="tool-muted">✓ Dans mes concours</span>' : `<button type="button" class="btn btn-small btn-primary" data-annonce="${esc(a.id)}">Ajouter à mes concours</button>`}</div></li>`;
+    }).join('')}</ul>` : ''}
     <h2>Familles de concours</h2>
     <div class="tool-grid">${Object.entries(FAMILIES).filter(([k]) => k !== 'autre').map(([k, f]) => `<div class="tool-card"><strong>${esc(f.label)}</strong>
       <p class="tool-muted">Épreuves habituelles : ${esc(f.epreuves.join(', '))}.</p><button type="button" class="btn btn-small" data-new="${k}">Préparer ce concours</button></div>`).join('')}</div>
@@ -91,6 +106,12 @@ root.addEventListener('click', (e) => {
   if (!b) return;
   if (b.dataset.open) { open = b.dataset.open; showLetter = false; return draw(); }
   if (b.dataset.new) { editing = cleanConcours({ family: b.dataset.new }); return draw(); }
+  if (b.dataset.annonce) {
+    const a = annonces.find((x) => x.id === b.dataset.annonce);
+    if (!a) return;
+    const c = { ...cleanConcours({ family: a.family, title: a.title, organisme: a.organisme, deadline: a.deadline, exam: a.exam, notes: [a.notes, `Avis officiel : ${a.source_url}`].filter(Boolean).join('\n') }), source: a.id };
+    items = [...items, c]; save(); track('concours', c.family); open = c.id; return draw();
+  }
   const c = items.find((x) => x.id === open);
   switch (b.dataset.act) {
     case 'new': editing = cleanConcours({ family: 'ena' }); break;
@@ -98,7 +119,8 @@ root.addEventListener('click', (e) => {
     case 'save': {
       const clean = cleanConcours(editing);
       if (!clean.title) { alert('Indiquez l’intitulé du concours.'); return; }
-      items = [...items.filter((x) => x.id !== clean.id), clean];
+      if (!items.some((x) => x.id === clean.id)) track('concours', clean.family);
+      items = [...items.filter((x) => x.id !== clean.id), { ...clean, source: items.find((x) => x.id === clean.id)?.source }];
       save(); open = clean.id; editing = null; break;
     }
     case 'back': open = null; break;

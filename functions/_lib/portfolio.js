@@ -9,6 +9,53 @@ import { portfolioBody, colorClass } from '../../public/js/portfolio-core.js';
 export const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])$/;
 const RESERVED = new Set(['admin', 'api', 'app', 'cv', 'aide', 'contact', 'nexus', 'nexusmarket', 'devizo', 'myshop', 'support', 'www', 'portfolio', 'test']);
 const MAX_BYTES = 30_000;
+export const MAX_IMAGES = 6;
+const MAX_IMAGE_BYTES = 220_000;   // par photo, après compression sur le téléphone (≈ 1280 px, JPEG)
+
+/** Photo envoyée en data URL : type autorisé, signature vérifiée, taille bornée. → { mime, data (base64) } */
+export function decodePhoto(dataUrl) {
+  const m = /^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/=]+)$/.exec(String(dataUrl || ''));
+  if (!m) throw new HttpError(400, 'Photo invalide : JPEG, PNG ou WebP uniquement.');
+  const bin = atob(m[2]);
+  if (bin.length > MAX_IMAGE_BYTES) throw new HttpError(413, 'Photo trop lourde : 220 Ko au plus après compression.');
+  const b = (i) => bin.charCodeAt(i);
+  const ok = { jpeg: b(0) === 0xff && b(1) === 0xd8, png: b(0) === 0x89 && b(1) === 0x50 && b(2) === 0x4e && b(3) === 0x47, webp: bin.slice(0, 4) === 'RIFF' && bin.slice(8, 12) === 'WEBP' }[m[1]];
+  if (!ok) throw new HttpError(400, 'Le contenu du fichier ne correspond pas à une image.');
+  return { mime: `image/${m[1]}`, data: m[2] };
+}
+
+/**
+ * Photos de réalisations : la liste envoyée remplace l'ancienne. Chaque élément garde une photo existante
+ * ({ keep: n }) ou en ajoute une ({ data: dataURL }), avec une légende. Absent = photos inchangées.
+ */
+async function savePhotos(db, slug, list, data) {
+  if (!Array.isArray(list)) {
+    const prev = await db.prepare('SELECT data FROM portfolios WHERE slug = ?').bind(slug).first();
+    data.images = prev ? (JSON.parse(prev.data).images || []) : [];
+    return;
+  }
+  const old = new Map((await db.prepare('SELECT idx, mime, data FROM portfolio_images WHERE slug = ?').bind(slug).all()).results.map((r) => [r.idx, r]));
+  const next = [];
+  for (const item of list.slice(0, MAX_IMAGES)) {
+    const caption = t(item?.caption, 120);
+    if (item && Number.isInteger(item.keep) && old.has(item.keep)) next.push({ ...old.get(item.keep), caption });
+    else if (item && item.data) next.push({ ...decodePhoto(item.data), caption });
+  }
+  const stmts = [db.prepare('DELETE FROM portfolio_images WHERE slug = ?').bind(slug)];
+  next.forEach((im, i) => stmts.push(db.prepare('INSERT INTO portfolio_images (slug, idx, mime, data) VALUES (?, ?, ?, ?)').bind(slug, i, im.mime, im.data)));
+  await db.batch(stmts);
+  data.images = next.map((im, i) => ({ i, caption: im.caption, v: Date.now().toString(36) }));
+}
+
+/** Photo publique : /p/<adresse>/photo-<n> */
+export async function servePhoto(db, slug, idx) {
+  const r = await db.prepare('SELECT mime, data FROM portfolio_images WHERE slug = ? AND idx = ?').bind(slug, idx).first();
+  if (!r) return null;
+  const bin = atob(r.data);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return { mime: r.mime, bytes };
+}
 
 const t = (v, max) => String(v ?? '').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max);
 const para = (v, max) => String(v ?? '').replace(/[\u0000-\u0009\u000b-\u001f\u007f]/g, ' ').replace(/\n{3,}/g, '\n\n').trim().slice(0, max);
@@ -65,7 +112,7 @@ export const portfolioRoutes = [
   }],
   ['POST', /^\/api\/portfolios$/, async ({ db, request }) => {
     await rateLimit(db, `portfolio:${clientIp(request)}`, 5, 86400);
-    const b = await readJson(request, 40_000);
+    const b = await readJson(request, 1_600_000);
     if (b.consent !== true) throw new HttpError(400, 'Cochez la case : vous acceptez que ces informations soient publiques.');
     const slug = checkSlug(b.slug);
     const data = cleanPortfolio(b.data);
@@ -74,6 +121,10 @@ export const portfolioRoutes = [
     try {
       await db.prepare('INSERT INTO portfolios (slug, key_hash, data, views, created_at, updated_at) VALUES (?, ?, ?, 0, ?, ?)')
         .bind(slug, await sha256Hex(key), JSON.stringify(data), now, now).run();
+      if (Array.isArray(b.images) && b.images.length) {
+        await savePhotos(db, slug, b.images, data);
+        await db.prepare('UPDATE portfolios SET data = ? WHERE slug = ?').bind(JSON.stringify(data), slug).run();
+      }
     } catch (e) {
       if (/UNIQUE|PRIMARY/i.test(String(e?.message))) throw new HttpError(409, 'Adresse déjà prise : choisissez-en une autre.');
       throw e;
@@ -87,14 +138,15 @@ export const portfolioRoutes = [
   ['PUT', /^\/api\/portfolios\/([a-z0-9-]{1,60})$/, async ({ db, request, params }) => {
     await rateLimit(db, `portfolio-put:${clientIp(request)}`, 60, 3600);
     const row = await owned(db, request, params[0]);
-    const b = await readJson(request, 40_000);
+    const b = await readJson(request, 1_600_000);
     const data = cleanPortfolio(b.data);
+    await savePhotos(db, row.slug, b.images, data);
     await db.prepare('UPDATE portfolios SET data = ?, updated_at = ? WHERE slug = ?').bind(JSON.stringify(data), nowIso(), row.slug).run();
     return json({ slug: row.slug, ok: true });
   }],
   ['DELETE', /^\/api\/portfolios\/([a-z0-9-]{1,60})$/, async ({ db, request, params }) => {
     const row = await owned(db, request, params[0]);
-    await db.prepare('DELETE FROM portfolios WHERE slug = ?').bind(row.slug).run();
+    await db.batch([db.prepare('DELETE FROM portfolios WHERE slug = ?').bind(row.slug), db.prepare('DELETE FROM portfolio_images WHERE slug = ?').bind(row.slug)]);
     return json({ ok: true });
   }],
 ];
@@ -107,6 +159,7 @@ export const portfolioAdminRoutes = [
   }],
   ['POST', /^\/api\/admin\/portfolios\/([a-z0-9-]{1,60})\/delete$/, async ({ db, admin, params }) => {
     const r = await db.prepare('DELETE FROM portfolios WHERE slug = ?').bind(params[0]).run();
+    await db.prepare('DELETE FROM portfolio_images WHERE slug = ?').bind(params[0]).run();
     if (!r.meta?.changes) throw new HttpError(404, 'Portfolio introuvable.');
     await audit(db, admin, 'portfolio.delete', params[0]);
     return json({ ok: true });
@@ -122,5 +175,5 @@ export function portfolioPage(d, slug, origin) {
 <title>${e(d.name)}${d.title ? ` — ${e(d.title)}` : ''}</title><meta name="description" content="${e(desc)}">
 <link rel="canonical" href="${e(`${origin}/p/${slug}`)}"><meta property="og:title" content="${e(d.name)}"><meta property="og:description" content="${e(desc)}"><meta property="og:type" content="profile">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="/css/fonts.css"><link rel="stylesheet" href="/css/portfolio.css"></head>
-<body class="pf ${colorClass(d.color)}">${portfolioBody(d)}</body></html>`;
+<body class="pf ${colorClass(d.color)}">${portfolioBody(d, { photoUrl: (im) => `/p/${slug}/photo-${im.i}?v=${im.v || ''}` })}</body></html>`;
 }

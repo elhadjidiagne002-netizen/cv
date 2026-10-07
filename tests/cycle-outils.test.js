@@ -155,3 +155,51 @@ test('concours : compte à rebours, prochaine échéance, agenda .ics, lettre et
   assert.equal(salutation('Monsieur le Ministre de l’Éducation nationale'), 'Monsieur le Ministre');
   assert.ok(Object.values(FAMILIES).every((f) => f.authority && f.epreuves.length));
 });
+
+test('portfolio : photos de réalisations (6 au plus, signature vérifiée), conservées, remplacées, servies publiquement', async () => {
+  const { env, call } = server();
+  const jpeg = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=';
+  const data = cvToPortfolio(sampleCV(), {});
+  const r = await call('POST', '/api/portfolios', { slug: 'photos-test', data, consent: true, images: [{ data: jpeg, caption: 'Robe de mariée (exemple)' }, { data: jpeg }] });
+  assert.equal(r.status, 201, JSON.stringify(r.data));
+  const key = r.data.key;
+  let d = (await call('GET', '/api/portfolios/photos-test', undefined, { key })).data.data;
+  assert.equal(d.images.length, 2);
+  assert.equal(d.images[0].caption, 'Robe de mariée (exemple)');
+  const { onRequestGet: photoRoute } = await import('../functions/p/[slug]/[file].js');
+  const ph = await photoRoute({ env, params: { slug: 'photos-test', file: 'photo-0' } });
+  assert.equal(ph.status, 200);
+  assert.equal(ph.headers.get('content-type'), 'image/jpeg');
+  assert.equal((await photoRoute({ env, params: { slug: 'photos-test', file: 'photo-9' } })).status, 404);
+  // Mise à jour sans « images » : photos inchangées ; puis on garde la 2e seulement.
+  await call('PUT', '/api/portfolios/photos-test', { data: { ...data, title: 'Couturière' } }, { key });
+  assert.equal((await call('GET', '/api/portfolios/photos-test', undefined, { key })).data.data.images.length, 2);
+  await call('PUT', '/api/portfolios/photos-test', { data, images: [{ keep: 1, caption: 'Boubou' }] }, { key });
+  d = (await call('GET', '/api/portfolios/photos-test', undefined, { key })).data.data;
+  assert.deepEqual(d.images.map((i) => [i.i, i.caption]), [[0, 'Boubou']]);
+  const page = await portfolioRoute({ request: new Request(`${ORIGIN}/p/photos-test`), env, params: { slug: 'photos-test' } });
+  assert.match(await page.text(), /\/p\/photos-test\/photo-0\?v=/);
+  // Faux fichier image refusé.
+  const bad = await call('PUT', '/api/portfolios/photos-test', { data, images: [{ data: 'data:image/png;base64,QUJDREVGRw==' }] }, { key });
+  assert.equal(bad.status, 400);
+  await call('DELETE', '/api/portfolios/photos-test', undefined, { key });
+  assert.equal(env.DB.raw.prepare('SELECT COUNT(*) AS n FROM portfolio_images').get().n, 0);
+});
+
+test('concours annoncés : source officielle obligatoire, réservés à l’admin, seuls les publiés et à venir sont montrés', async () => {
+  const { env, call } = server();
+  const { cleanAnnonce } = await import('../functions/_lib/concours.js');
+  assert.throws(() => cleanAnnonce({ title: 'X', source_url: 'http://pas-https.sn' }), /avis officiel/);
+  assert.throws(() => cleanAnnonce({ title: '', source_url: 'https://exemple.sn/avis' }), /Intitulé/);
+  assert.equal((await call('POST', '/api/admin/concours', { title: 'X', source_url: 'https://exemple.sn' })).status, 401, 'admin seulement');
+  const day = (n) => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
+  const now = new Date().toISOString();
+  const ins = env.DB.raw.prepare('INSERT INTO concours_annonces (id, title, family, organisme, deadline, exam, source_url, notes, published, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+  await call('GET', '/api/config'); // crée le schéma
+  ins.run('a', 'Concours à venir (exemple)', 'douane', '', day(10), day(40), 'https://exemple.sn/avis-a', '', 1, now, now);
+  ins.run('b', 'Concours passé (exemple)', 'police', '', day(-40), day(-10), 'https://exemple.sn/avis-b', '', 1, now, now);
+  ins.run('c', 'Brouillon (exemple)', 'ena', '', day(10), null, 'https://exemple.sn/avis-c', '', 0, now, now);
+  const list = (await call('GET', '/api/concours')).data.concours;
+  assert.deepEqual(list.map((c) => c.id), ['a']);
+  assert.equal(list[0].source_url, 'https://exemple.sn/avis-a');
+});

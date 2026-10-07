@@ -29,6 +29,16 @@ export function createD1(schema = '') {
       };
       return api;
     },
+    /** D1 : lot de requêtes atomique (ici : transaction SQLite). */
+    async batch(list) {
+      db.exec('BEGIN');
+      try {
+        const out = [];
+        for (const s of list) out.push(await s.run());
+        db.exec('COMMIT');
+        return out;
+      } catch (e) { db.exec('ROLLBACK'); throw e; }
+    },
   };
 }
 

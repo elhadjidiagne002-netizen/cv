@@ -3,6 +3,7 @@
 import { createStore } from './storage.js';
 import { AI_CONSENT_KEY, AIError, callAI, profileForAI, parseAIJson } from './ai.js';
 import { maskPersonal } from './aitext.js';
+import { track } from './premium.js';
 import { LANGS, questionMessages, feedbackMessages, normalizeQuestions, normalizeFeedback, bankQuestions, quickTips, summaryText } from './interview-core.js';
 
 const root = document.getElementById('iv-app');
@@ -12,6 +13,11 @@ const store = createStore();
 const cvList = store.list();
 const cv = cvList.length ? store.load(cvList[0].id) : null;
 
+// Dictée du navigateur (Chrome, Edge, Safari) : répondre à voix haute, comme en vrai entretien. Le wolof n'est pas reconnu.
+const Recognition = globalThis.SpeechRecognition || globalThis.webkitSpeechRecognition || null;
+const MIC_OK_KEY = 'cv-dictee-ok-v1';
+const DICTEE_LANG = { fr: 'fr-FR', en: 'en-US' };
+let rec = null;
 const st = { step: 'setup', offer: (cv && cv.meta.jobOffer) || '', lang: cv && cv.meta.lang === 'en' ? 'en' : 'fr', count: 6, useCv: Boolean(cv), questions: [], i: 0, rounds: [], busy: false, error: '', ai: consented() };
 
 function draw() {
@@ -38,6 +44,8 @@ function draw() {
       <p class="iv-q">${esc(q.q)}</p>
       ${q.why ? `<p class="tool-muted">Ce que le recruteur vérifie : ${esc(q.why)}</p>` : ''}
       <div class="field"><label for="iv-answer">Votre réponse (comme à l'oral)</label><textarea id="iv-answer" rows="7" maxlength="2500"${r.feedback ? ' readonly' : ''}>${esc(r.answer || '')}</textarea></div>
+      ${!r.feedback && Recognition && DICTEE_LANG[st.lang] ? `<div class="tool-row"><button type="button" class="btn" id="iv-mic" aria-pressed="${rec ? 'true' : 'false'}">${rec ? '⏹ Arrêter la dictée' : '🎤 Répondre à voix haute'}</button><span class="tool-muted" id="iv-mic-state">${rec ? 'Parlez : le texte s’écrit tout seul.' : ''}</span></div>` : ''}
+      ${!r.feedback && Recognition && st.lang === 'wo' ? '<p class="tool-muted">La dictée du téléphone ne reconnaît pas encore le wolof : écrivez votre réponse.</p>' : ''}
       ${r.feedback ? feedbackHtml(r.feedback) : ''}
       ${st.error ? `<p class="tool-err" role="alert">${esc(st.error)}</p>` : ''}
       <div class="tool-row">
@@ -94,6 +102,7 @@ async function start() {
     st.questions = bankQuestions(st.lang, st.count, Date.now() % 97);
   }
   st.rounds = st.questions.map((q) => ({ q: q.q, answer: '', feedback: null }));
+  track('interview', st.lang);
   st.i = 0; st.step = 'question';
   draw();
 }
@@ -120,8 +129,47 @@ async function evaluate() {
   draw();
 }
 
+function stopMic() { if (rec) { const r = rec; rec = null; try { r.stop(); } catch { /* déjà arrêtée */ } } }
+
+/** Dictée : la première fois, on explique que le navigateur envoie la voix à son service de reconnaissance. */
+function toggleMic() {
+  if (rec) { stopMic(); draw(); return; }
+  let ok = false;
+  try { ok = localStorage.getItem(MIC_OK_KEY) === '1'; } catch { ok = false; }
+  if (!ok) {
+    // eslint-disable-next-line no-alert
+    ok = confirm('Dictée vocale : votre navigateur (Google pour Chrome, Apple pour Safari) transcrit votre voix sur ses serveurs. CV en ligne ne reçoit et ne garde aucun son. Continuer ?');
+    if (!ok) return;
+    try { localStorage.setItem(MIC_OK_KEY, '1'); } catch { /* stockage bloqué */ }
+  }
+  const area = document.getElementById('iv-answer');
+  const startText = area.value ? `${area.value.trimEnd()} ` : '';
+  let finalText = '';
+  rec = new Recognition();
+  rec.lang = DICTEE_LANG[st.lang] || 'fr-FR';
+  rec.continuous = true;
+  rec.interimResults = true;
+  rec.onresult = (ev) => {
+    let interim = '';
+    for (let i = ev.resultIndex; i < ev.results.length; i++) {
+      if (ev.results[i].isFinal) finalText += ev.results[i][0].transcript;
+      else interim += ev.results[i][0].transcript;
+    }
+    const a = document.getElementById('iv-answer');
+    if (a) a.value = (startText + finalText + interim).slice(0, 2500);
+  };
+  rec.onerror = (ev) => { st.error = ev.error === 'not-allowed' ? 'Micro refusé : autorisez-le dans les réglages du navigateur, ou écrivez votre réponse.' : 'La dictée s’est arrêtée. Réessayez ou écrivez votre réponse.'; rec = null; draw(); };
+  rec.onend = () => { if (rec) { const a = document.getElementById('iv-answer'); st.rounds[st.i].answer = a ? a.value : st.rounds[st.i].answer; rec = null; draw(); } };
+  try { rec.start(); track('dictation', st.lang); } catch { rec = null; }
+  st.rounds[st.i].answer = area.value;
+  draw();
+}
+
+root.addEventListener('input', (e) => { if (e.target.id === 'iv-answer' && st.rounds[st.i]) st.rounds[st.i].answer = e.target.value; });
 root.addEventListener('click', (e) => {
   const id = e.target.closest('button')?.id;
+  if (id === 'iv-mic') { toggleMic(); return; }
+  if (id && id !== 'iv-mic') stopMic();
   if (id === 'iv-start') start();
   else if (id === 'iv-eval') evaluate();
   else if (id === 'iv-next' || id === 'iv-skip') { st.error = ''; if (st.i + 1 < st.questions.length) st.i += 1; else st.step = 'summary'; draw(); }

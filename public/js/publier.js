@@ -2,6 +2,7 @@
 // La clé de modification est gardée dans ce navigateur (localStorage) : la perdre = ne plus pouvoir modifier
 // (on peut toujours en publier un nouveau ; l'administration retire une page sur demande).
 import { createStore } from './storage.js';
+import { track } from './premium.js';
 import { PF_KEY, COLORS, SECTIONS, cvToPortfolio, suggestSlug, publicFields, portfolioBody, colorClass } from './portfolio-core.js';
 
 const root = document.getElementById('pf-app');
@@ -27,13 +28,48 @@ let cv = list.length ? store.load((saved && list.some((c) => c.id === saved.cvId
 const choices = { sections: new Set(SECTIONS.map(([k]) => k)), email: false, whatsapp: false, linkedin: true, website: true, city: true, color: (saved && saved.color) || COLORS[0] };
 let slug = saved?.slug || (cv ? suggestSlug(cv) : '');
 let status = null;
+// Photos de réalisations : { i, src, caption } (déjà publiée) ou { data, src, caption } (nouvelle, compressée ici).
+let photos = [];
+const MAX_PHOTOS = 6;
+
+/** Réduit la photo sur le téléphone (1280 px, JPEG) : sous la limite du serveur, économe en données mobiles. */
+function shrink(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, 1280 / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(img.src);
+      let q = 0.8; let url = c.toDataURL('image/jpeg', q);
+      while (url.length > 280_000 && q > 0.3) { q -= 0.1; url = c.toDataURL('image/jpeg', q); }
+      resolve(url);
+    };
+    img.onerror = () => reject(new Error('Photo illisible.'));
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+async function loadPhotos() {
+  if (!saved) return;
+  try {
+    const r = await api(`/api/portfolios/${encodeURIComponent(saved.slug)}`, { key: saved.key });
+    photos = (r.data.images || []).map((im) => ({ i: im.i, caption: im.caption || '', src: `/p/${saved.slug}/photo-${im.i}?v=${im.v || ''}` }));
+  } catch (e) {
+    // Page supprimée (par vous sur un autre appareil, ou retirée par l'administration) : on repart d'une page neuve.
+    if (/introuvable/i.test(e.message)) { saved = null; writeSaved(null); photos = []; status = { ok: false, text: 'Votre ancienne page n’existe plus : vous pouvez en publier une nouvelle.' }; return; }
+    photos = null; // hors ligne : photos inchangées à la mise à jour
+  }
+}
+const photosPayload = () => (photos === null ? undefined : photos.map((ph) => (ph.data ? { data: ph.data, caption: ph.caption } : { keep: ph.i, caption: ph.caption })));
 
 function draw() {
   if (!cv) {
     root.innerHTML = `<div class="tool-card"><p>Commencez par créer votre CV : le portfolio reprend ses informations.</p><a class="btn btn-primary" href="app.html">Créer mon CV</a></div>`;
     return;
   }
-  const data = cvToPortfolio(cv, choices);
+  const data = { ...cvToPortfolio(cv, choices), images: (photos || []).map((ph) => ({ src: ph.src, caption: ph.caption })) };
   const pub = publicFields(data);
   root.innerHTML = `
     ${saved ? `<div class="tool-card tool-ok"><p class="tool-big">Votre portfolio est en ligne : <a href="/p/${esc(saved.slug)}" target="_blank" rel="noopener">${esc(location.host)}/p/${esc(saved.slug)}</a></p>
@@ -53,8 +89,14 @@ function draw() {
       <div class="tool-row">${COLORS.map((c, i) => `<button type="button" class="tool-color c${i}" data-color="${c}" aria-label="Couleur ${i + 1}" aria-pressed="${c === choices.color}"></button>`).join('')}</div>
       ${saved ? '' : `<h2>Adresse de la page</h2>
       <div class="field"><label for="pf-slug">cv.nexusmarket.sn/p/</label><input id="pf-slug" value="${esc(slug)}" maxlength="40" autocomplete="off" spellcheck="false"><p class="hint" id="pf-slug-hint">3 à 40 lettres minuscules, chiffres ou tirets.</p></div>`}
+      <h2>Photos de réalisations <span class="tool-muted">(${MAX_PHOTOS} au plus)</span></h2>
+      <p class="tool-muted">Vos travaux en images : couture, menuiserie, graphisme, coiffure, chantier… Elles sont réduites sur votre téléphone avant l'envoi.</p>
+      ${photos === null ? '<p class="tool-warn">Photos indisponibles hors ligne : elles restent telles quelles.</p>' : `<div class="tool-grid">${photos.map((ph, n) => `<div class="tool-card"><img class="tool-thumb" src="${esc(ph.src)}" alt="">
+        <input type="text" data-cap="${n}" value="${esc(ph.caption)}" maxlength="120" placeholder="Légende (ex. : robe de mariée)" aria-label="Légende de la photo ${n + 1}">
+        <button type="button" class="btn btn-small btn-danger" data-delphoto="${n}">Retirer</button></div>`).join('')}</div>
+      ${photos.length < MAX_PHOTOS ? '<label class="btn">＋ Ajouter des photos<input type="file" id="pf-photos" accept="image/*" multiple hidden></label>' : ''}`}
       <h2>Aperçu</h2>
-      <div class="tool-preview"><div class="pf ${colorClass(data.color)}">${data.name ? portfolioBody(data) : '<p class="tool-warn">Ajoutez votre nom dans le CV.</p>'}</div></div>
+      <div class="tool-preview"><div class="pf ${colorClass(data.color)}">${data.name ? portfolioBody(data, { photoUrl: (im) => im.src }) : '<p class="tool-warn">Ajoutez votre nom dans le CV.</p>'}</div></div>
       <p class="tool-muted">Sera public : ${esc(pub.join(', '))}. Jamais publié : photo, adresse, date de naissance, nationalité, situation familiale, références.</p>
       ${saved ? '' : `<label class="tool-row"><input type="checkbox" id="pf-consent"> J'accepte que ces informations soient publiques, visibles par toute personne qui a le lien (et par les moteurs de recherche).</label>`}
       <div class="tool-row"><button type="button" class="btn btn-primary" id="pf-publish">${saved ? 'Mettre à jour la page' : 'Publier mon portfolio'}</button></div>
@@ -70,6 +112,10 @@ root.addEventListener('change', (e) => {
   const t = e.target;
   if (t.dataset.sec) { t.checked ? choices.sections.add(t.dataset.sec) : choices.sections.delete(t.dataset.sec); draw(); }
   else if (t.dataset.c) { choices[t.dataset.c] = t.checked; draw(); }
+  else if (t.id === 'pf-photos') {
+    const files = [...t.files].slice(0, MAX_PHOTOS - photos.length);
+    Promise.all(files.map(shrink)).then((urls) => { photos.push(...urls.map((u) => ({ data: u, src: u, caption: '' }))); draw(); }).catch((err) => { status = { ok: false, text: err.message }; draw(); });
+  } else if (t.dataset.cap !== undefined) { photos[Number(t.dataset.cap)].caption = t.value; }
   else if (t.id === 'pf-cv') { cv = store.load(t.value); if (!saved) slug = suggestSlug(cv); draw(); }
 });
 let slugTimer = null;
@@ -86,19 +132,24 @@ root.addEventListener('click', async (e) => {
   const b = e.target.closest('button');
   if (!b) return;
   if (b.dataset.color) { choices.color = b.dataset.color; draw(); return; }
+  if (b.dataset.delphoto !== undefined) { photos.splice(Number(b.dataset.delphoto), 1); draw(); return; }
   if (b.id === 'pf-copy') { navigator.clipboard?.writeText(`${location.origin}/p/${saved.slug}`).then(() => { b.textContent = 'Lien copié ✓'; }); return; }
   if (b.id === 'pf-publish') {
     const data = cvToPortfolio(cv, choices);
     b.disabled = true;
     try {
       if (saved) {
-        await api(`/api/portfolios/${encodeURIComponent(saved.slug)}`, { method: 'PUT', body: { data }, key: saved.key });
+        await api(`/api/portfolios/${encodeURIComponent(saved.slug)}`, { method: 'PUT', body: { data, images: photosPayload() }, key: saved.key });
+        await loadPhotos();
         saved = { ...saved, color: choices.color, cvId: cv.id };
         status = { ok: true, text: 'Page mise à jour.' };
       } else {
         if (!document.getElementById('pf-consent')?.checked) throw new Error('Cochez la case d’accord avant de publier.');
-        const r = await api('/api/portfolios', { method: 'POST', body: { slug, data, consent: true } });
+        const r = await api('/api/portfolios', { method: 'POST', body: { slug, data, consent: true, images: photosPayload() } });
         saved = { slug: r.slug, key: r.key, cvId: cv.id, color: choices.color };
+        writeSaved(saved);
+        track('portfolio');
+        await loadPhotos();
         status = { ok: true, text: 'Portfolio publié ! Gardez la clé de modification si vous changez d’appareil.' };
       }
       writeSaved(saved);
@@ -115,9 +166,9 @@ root.addEventListener('click', async (e) => {
   if (b.id === 'pf-restore') {
     const s = document.getElementById('pf-old-slug').value.trim().toLowerCase().replace(/^.*\/p\//, '');
     const k = document.getElementById('pf-old-key').value.trim();
-    try { await api(`/api/portfolios/${encodeURIComponent(s)}`, { key: k }); saved = { slug: s, key: k, cvId: cv.id, color: choices.color }; writeSaved(saved); status = { ok: true, text: 'Portfolio retrouvé : vous pouvez le mettre à jour.' }; } catch (err) { status = { ok: false, text: err.message }; }
+    try { await api(`/api/portfolios/${encodeURIComponent(s)}`, { key: k }); saved = { slug: s, key: k, cvId: cv.id, color: choices.color }; writeSaved(saved); await loadPhotos(); status = { ok: true, text: 'Portfolio retrouvé : vous pouvez le mettre à jour.' }; } catch (err) { status = { ok: false, text: err.message }; }
     draw();
   }
 });
 
-draw();
+loadPhotos().finally(draw);
