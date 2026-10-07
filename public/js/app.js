@@ -290,6 +290,7 @@ function dossierHTML(cv) {
         <strong>L'avis de concours fait foi</strong> : vérifiez la liste exacte, les délais et le lieu de dépôt. Cochez ce qui est prêt.</p>
       <ul class="dossier-list">${DOSSIER_ITEMS.map((d) => `<li class="field-check"><input type="checkbox" id="dossier-${d.id}" data-dossier="${d.id}"${done.has(d.id) ? ' checked' : ''}><label for="dossier-${d.id}">${esc(d.label)}</label></li>`).join('')}</ul>
       <p class="hint">La demande manuscrite peut être préparée avec l'onglet « Lettre de motivation », style « Administratif (Sénégal) ».</p>
+      <p class="hint"><a href="concours.html">Préparer un concours</a> : dates et rappels, lettre de candidature, épreuves. · <a href="entretien.html">Simulateur d'entretien</a> · <a href="publier.html">Portfolio en ligne</a></p>
     </div>
   </details>`;
 }

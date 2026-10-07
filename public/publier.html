@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- CSP aussi en <meta> : garder identique à _headers (vérifié par tests/deploy.test.js). -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://nexusmarket.sn; manifest-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'; upgrade-insecure-requests">
+  <meta name="referrer" content="no-referrer">
+  <title>Portfolio en ligne gratuit — CV en ligne</title>
+  <meta name="description" content="Publiez une page portfolio à votre nom (projets, expériences, compétences) à partir de votre CV : un lien à mettre sur votre CV, WhatsApp ou LinkedIn. Vous choisissez ce qui est public.">
+  <link rel="canonical" href="https://cv.nexusmarket.sn/publier.html">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#0b5cad">
+  <link rel="stylesheet" href="css/app.css">
+  <link rel="stylesheet" href="css/fonts.css">
+  <link rel="stylesheet" href="css/portfolio.css">
+  <link rel="stylesheet" href="css/outils.css">
+  <script type="module" src="js/publier.js"></script>
+</head>
+<body class="home tool-page">
+  <header class="home-header">
+    <a class="brand" href="index.html">CV en ligne</a>
+    <a class="btn" href="app.html">Mon CV</a>
+  </header>
+  <main class="tool-main">
+    <h1>Portfolio en ligne</h1>
+    <p class="hint">Une page à votre nom — <strong>cv.nexusmarket.sn/p/votre-nom</strong> — avec vos projets, expériences et compétences, à partir
+      de votre CV. Un lien à ajouter sur le CV, dans votre statut WhatsApp ou sur LinkedIn.</p>
+    <p class="tool-warn">C'est la seule fonction du site qui <strong>publie</strong> des informations : vous choisissez chaque rubrique, vous voyez
+      l'aperçu, et vous pouvez modifier ou supprimer la page à tout moment depuis ce navigateur. Votre CV, lui, reste sur votre appareil.</p>
+    <div id="pf-app" aria-live="polite"></div>
+  </main>
+</body>
+</html>

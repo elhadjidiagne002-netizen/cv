@@ -108,7 +108,21 @@ async function onCode(e) {
 
 // ————————————————————————— Onglets —————————————————————————
 
-const RENDERERS = { overview: renderOverview, orders: renderOrders, offers: renderOffers, templates: renderTemplates, codes: renderCodes, settings: renderSettings, audit: renderAudit };
+// ——— Portfolios publics (retrait sur signalement ou abus) ———
+async function renderPortfolios(panel) {
+  const { portfolios } = await api('GET', 'portfolios');
+  panel.innerHTML = `<p class="hint">Pages publiées par les candidats eux-mêmes (/p/…). Retirez une page signalée (contenu choquant, usurpation) : l'action est journalisée.</p>
+    ${portfolios.length ? `<table class="data-table"><thead><tr><th scope="col">Adresse</th><th scope="col">Nom</th><th scope="col">Titre</th><th scope="col">Visites</th><th scope="col">Mis à jour</th><th scope="col">Action</th></tr></thead><tbody>
+    ${portfolios.map((p) => `<tr><td><a href="/p/${esc(p.slug)}" target="_blank" rel="noopener">${esc(p.slug)}</a></td><td>${esc(p.name)}</td><td>${esc(p.title)}</td><td>${p.views}</td><td>${esc(String(p.updated_at).slice(0, 10))}</td>
+      <td><button type="button" class="btn btn-small btn-danger" data-portfolio-delete="${esc(p.slug)}">Retirer</button></td></tr>`).join('')}</tbody></table>` : '<p>Aucun portfolio publié.</p>'}`;
+  panel.querySelectorAll('[data-portfolio-delete]').forEach((b) => b.addEventListener('click', async () => {
+    // eslint-disable-next-line no-alert
+    if (!window.confirm(`Retirer définitivement le portfolio « ${b.dataset.portfolioDelete} » ?`)) return;
+    try { await api('POST', `portfolios/${b.dataset.portfolioDelete}/delete`, {}); toast('Portfolio retiré.'); openTab('portfolios'); } catch (err) { toast(err.message); }
+  }));
+}
+
+const RENDERERS = { overview: renderOverview, orders: renderOrders, offers: renderOffers, templates: renderTemplates, codes: renderCodes, settings: renderSettings, portfolios: renderPortfolios, audit: renderAudit };
 
 async function openTab(tab, focus = true) {
   state.tab = tab;

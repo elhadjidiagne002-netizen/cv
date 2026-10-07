@@ -1,5 +1,27 @@
 # Journal du projet (le plus récent en haut)
 
+## 07/10/2026 — Simulateur d'entretien IA, portfolio en ligne, préparation aux concours
+- **Simulateur d'entretien** (`entretien.html`) : offre collée → questions probables générées par l'IA (avec ou sans le
+  parcours, toujours sans identité), en français, wolof ou anglais ; réponse écrite notée sur 10 avec points forts,
+  points à améliorer et « meilleure réponse » STAR (faits manquants entre crochets, rien d'inventé) ; bilan à copier.
+  Sans accord IA ou hors ligne : questions classiques et conseils calculés sur l'appareil. Banque de questions en wolof
+  écrite par nos soins : **à faire relire par un locuteur**.
+- **Portfolio en ligne** (`publier.html` → page publique `/p/<adresse>`) : **première donnée de candidat stockée sur le
+  serveur**, et seulement ce que la personne publie (rubriques et coordonnées cochées une à une, aperçu, case d'accord).
+  Jamais publiés : photo, adresse, naissance, nationalité, situation familiale, références. Sans compte : clé de
+  modification remise à la publication (gardée dans le navigateur, affichable pour changer d'appareil) ; mise à jour,
+  suppression, adresse unique vérifiée en direct. Page rendue côté serveur (`functions/p/[slug].js`, en-têtes de sécurité
+  posés dans la réponse car `_headers` ne s'applique pas aux Functions), compteur de visites sans cookie. Admin :
+  onglet « Portfolios » (retrait journalisé). Table `portfolios` créée automatiquement (`ensureSchema`).
+- **Préparer un concours** (`concours.html`) : familles (ENA, police, douanes, enseignement, gendarmerie, santé),
+  mes concours avec compte à rebours (dépôt, épreuves) et fichier agenda `.ics` (rappel 3 jours avant), pièces du dossier
+  à cocher (+ pièces propres à la famille), épreuves habituelles, **lettre de demande de candidature** (formule d'appel
+  administrative, pièces jointes cochées) à imprimer ou recopier à la main. Contenu indicatif : l'avis officiel fait foi.
+- Liens depuis l'accueil et le panneau « Dossier de concours » de l'éditeur ; plan du site ; service worker
+  `cv-2026-10-07-entretien-portfolio-concours` (`/p/` jamais mis en cache). Serveur de test local : route `/p/`.
+- Tests : 192 (6 nouveaux cas). Les 3 échecs locaux restants viennent des fins de ligne CRLF de la copie Windows
+  (préexistants, la CI Linux passe).
+
 ## 06/10/2026 — Lettre en wolof, dossier de candidature en un seul PDF, attestations employeur
 - **Lettre en wolof** : 4e style de lettre « Wolof (avec l'IA) » : l'assistant rédige le corps et les formules
   d'appel / de politesse en wolof d'après l'offre (en-tête et objet en français) ; avis « à faire relire par un locuteur ».

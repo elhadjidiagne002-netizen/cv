@@ -12,6 +12,7 @@ import { extname, join, normalize, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { handle } from '../../functions/_lib/api.js';
+import { onRequestGet as portfolioPage } from '../../functions/p/[slug].js';
 import { hashPassword } from '../../functions/_lib/devizo.js';
 import { createD1, DEVIZO_SCHEMA } from '../helpers/d1.js';
 
@@ -87,6 +88,15 @@ function globalHeaders() {
 const headers = globalHeaders();
 
 createServer(async (req, res) => {
+  // Page publique d'un portfolio (Function functions/p/[slug].js en production).
+  const pf = /^\/p\/([\w-]{1,60})\/?(?:\?|$)/.exec(req.url);
+  if (pf) {
+    const db = (/(?:^|;\s*)testdb=([\w-]+)/.exec(req.headers.cookie || '') || [])[1] || 'default';
+    envFor(db).then((env) => portfolioPage({ request: new Request(`http://${req.headers.host}${req.url}`), env, params: { slug: pf[1] } }))
+      .then(async (out) => { const h = {}; out.headers.forEach((v, k) => { h[k] = v; }); res.writeHead(out.status, h); res.end(Buffer.from(await out.arrayBuffer())); })
+      .catch((err) => { res.writeHead(500); res.end(String(err)); });
+    return;
+  }
   if (req.url.startsWith('/api/')) {
     api(req, res).catch((err) => {
       res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });

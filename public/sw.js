@@ -4,17 +4,21 @@
 // sauf les polices « latin étendu » (lettres ŋ, ɓ, ɗ, ƴ des langues nationales) : ~560 Ko rarement utiles,
 // mises en cache à la demande pour ménager les forfaits de données mobiles.
 
-const VERSION = 'cv-2026-10-06-icones';
+const VERSION = 'cv-2026-10-07-entretien-portfolio-concours';
 const ASSETS = [
   './',
   '404.html',
   'app.html',
   'attestation.html',
+  'concours.html',
   'confidentialite.html',
+  'entretien.html',
   'css/app.css',
   'css/attestation.css',
   'css/cv-base.css',
   'css/fonts.css',
+  'css/outils.css',
+  'css/portfolio.css',
   'css/templates.css',
   'favicon.svg',
   'fonts/eb-garamond/eb-garamond-latin-400-italic.woff2',
@@ -39,16 +43,21 @@ const ASSETS = [
   'icons/icon-512.png',
   'icons/icon.svg',
   'index.html',
+  'publier.html',
   'js/ai.js',
   'js/aitext.js',
   'js/attestation.js',
   'js/attestation-core.js',
+  'js/concours.js',
+  'js/concours-core.js',
   'js/dossier.js',
+  'js/entretien.js',
   'js/app.js',
   'js/applications.js',
   'js/docx.js',
   'js/home.js',
   'js/i18n.js',
+  'js/interview-core.js',
   'js/icons.js',
   'js/jsonresume.js',
   'js/letter.js',
@@ -59,7 +68,9 @@ const ASSETS = [
   'js/paginate.js',
   'js/phrases.js',
   'js/plaintext.js',
+  'js/portfolio-core.js',
   'js/premium.js',
+  'js/publier.js',
   'js/privacy.js',
   'js/pwa.js',
   'js/render.js',
@@ -170,7 +181,7 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
   // API (offres, commandes, administration) et tableau de bord : toujours le réseau, jamais de cache.
-  if (url.pathname.startsWith('/api/') || /\/(admin\.html|js\/admin\.js|css\/admin\.css)$/.test(url.pathname)) return;
+  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/p/') || /\/(admin\.html|js\/admin\.js|css\/admin\.css)$/.test(url.pathname)) return;
   // Polices et icônes : fichiers immuables, servis depuis le cache (économie de données mobiles).
   if (/\/(fonts|icons)\//.test(url.pathname)) {
     event.respondWith(caches.match(req).then((cached) => cached || fetch(req).then((res) => {

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- CSP aussi en <meta> : garder identique à _headers (vérifié par tests/deploy.test.js). -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://nexusmarket.sn; manifest-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'; upgrade-insecure-requests">
+  <meta name="referrer" content="no-referrer">
+  <title>Préparer un concours (ENA, police, douanes, enseignement) — CV en ligne</title>
+  <meta name="description" content="Concours de la fonction publique au Sénégal : calendrier personnel avec rappels, pièces du dossier à cocher, lettre de demande de candidature prête à imprimer, épreuves à préparer. Gratuit, rien n'est envoyé.">
+  <link rel="canonical" href="https://cv.nexusmarket.sn/concours.html">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#0b5cad">
+  <link rel="stylesheet" href="css/app.css">
+  <link rel="stylesheet" href="css/fonts.css">
+  <link rel="stylesheet" href="css/outils.css">
+  <script type="module" src="js/concours.js"></script>
+</head>
+<body class="home tool-page">
+  <header class="home-header">
+    <a class="brand" href="index.html">CV en ligne</a>
+    <a class="btn" href="app.html">Mon CV</a>
+  </header>
+  <main class="tool-main">
+    <div class="tool-noprint">
+      <h1>Préparer un concours</h1>
+      <p class="hint">ENA, police, douanes, enseignement, gendarmerie, santé… Notez vos concours et leurs dates, cochez les pièces du dossier,
+        imprimez la lettre de demande de candidature. <strong>L'avis officiel du concours fait foi</strong> (conditions, pièces, dates, lieu de dépôt) :
+        vérifiez-le toujours. Tout reste sur cet appareil.</p>
+    </div>
+    <div id="cc-app" aria-live="polite"></div>
+  </main>
+</body>
+</html>

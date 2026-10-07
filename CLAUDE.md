@@ -20,6 +20,11 @@ Toujours répondre et écrire l'interface **en français** (l'anglais est une la
   `AUTH_DB` en lecture, PBKDF2 + TOTP, `ADMIN_EMAILS`). Le **contenu des CV n'est jamais envoyé** : seuls le code, la
   référence et le numéro de paiement le sont. Sans liaison `DB`, tout est gratuit (`/api/config` « non configuré »).
   Client : `public/js/premium.js` (droits), `public/admin.html` + `js/admin.js` (tableau de bord, hors cache hors ligne).
+- **Exception assumée (07/10/2026) : portfolio en ligne** (`publier.html`, `functions/_lib/portfolio.js`, page publique
+  `functions/p/[slug].js`) : seule donnée de candidat stockée côté serveur, limitée à ce que la personne PUBLIE elle-même
+  (choix rubrique par rubrique + accord). Clé de modification (hash SHA-256 en base), pas de compte. Le rendu est partagé
+  avec l'aperçu (`public/js/portfolio-core.js` → `portfolioBody`). Les réponses des Functions ne reçoivent PAS `_headers` :
+  la CSP est posée dans la réponse elle-même.
   Tests serveur : `tests/server.test.js` sur une D1 imitée (`tests/helpers/d1.js`, node:sqlite).
 - **Export PDF = impression du navigateur** (`window.print()` + CSS `@page`) : le texte reste du vrai
   texte sélectionnable, lisible par les logiciels de recrutement (ATS). Jamais de PDF « image »

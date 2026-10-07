@@ -11,6 +11,7 @@ import {
   ensureSchema, getSettings, saveSetting, offerFromRow, codeFromRow, audit, rateLimit, OFFER_KINDS, FEATURES, DEFAULT_SETTINGS,
 } from './db.js';
 import { isSuperAdmin, findDevizoAccount, checkDevizoTotp } from './devizo.js';
+import { portfolioRoutes, portfolioAdminRoutes } from './portfolio.js';
 
 const ADMIN_COOKIE = 'cv_admin';
 const SESSION_HOURS = 12;
@@ -533,10 +534,12 @@ const PUBLIC = [
   ['POST', /^\/api\/admin\/login$/, login],
   ['POST', /^\/api\/admin\/login\/code$/, loginCode],
   ['POST', /^\/api\/admin\/logout$/, logout],
+  ...portfolioRoutes,
 ];
 
 const ADMIN = [
   ['GET', /^\/api\/admin\/me$/, ({ admin }) => json({ email: admin })],
+  ...portfolioAdminRoutes,
   ['GET', /^\/api\/admin\/overview$/, overview],
   ['GET', /^\/api\/admin\/orders$/, listOrders],
   ['GET', /^\/api\/admin\/orders\.csv$/, ordersCsv],

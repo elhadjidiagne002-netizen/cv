@@ -1,0 +1,39 @@
+/* Pages outils : portfolio (publier.html), simulateur d'entretien (entretien.html), concours (concours.html). */
+.tool-main { max-width: 960px; margin: 0 auto; padding: 16px 16px 48px; }
+.tool-main h1 { font-size: 1.6rem; margin: 8px 0; }
+.tool-main h2 { font-size: 1.1rem; margin: 22px 0 8px; }
+.tool-card { background: #fff; border: 1px solid var(--border, #d8dde5); border-radius: 14px; padding: 16px; margin-top: 12px; }
+.tool-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
+.tool-checks { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 6px 14px; margin: 8px 0; }
+.tool-checks label { display: flex; gap: 8px; align-items: center; min-height: 36px; }
+.tool-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+.tool-ok { background: #e7f6ec; color: #1d5f35; border-radius: 10px; padding: 10px 12px; }
+.tool-warn { background: #fff6e0; color: #6b4c00; border-radius: 10px; padding: 10px 12px; }
+.tool-err { background: #fdecea; color: #8a1c13; border-radius: 10px; padding: 10px 12px; }
+.tool-muted { color: #5b6573; font-size: .92rem; }
+.tool-big { font-size: 1.05rem; font-weight: 600; }
+.tool-list { list-style: none; padding: 0; margin: 0; }
+.tool-list > li { border-top: 1px solid #edf0f4; padding: 10px 0; }
+.tool-list > li:first-child { border-top: 0; }
+.tool-preview { border: 1px dashed #c3cbd6; border-radius: 14px; overflow: hidden; margin-top: 10px; }
+.tool-preview .pf { background: #f4f6f9; }
+.tool-preview .pf-main { padding: 12px; }
+.tool-color { width: 36px; height: 36px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 1px #c3cbd6; cursor: pointer; padding: 0; }
+.tool-color[aria-pressed="true"] { box-shadow: 0 0 0 3px #111827; }
+.tool-color.c0 { background: #0b5cad; } .tool-color.c1 { background: #0f766e; } .tool-color.c2 { background: #7c3aed; }
+.tool-color.c3 { background: #b45309; } .tool-color.c4 { background: #be123c; } .tool-color.c5 { background: #111827; }
+.tool-key { font-family: ui-monospace, Consolas, monospace; background: #f3f4f6; padding: 8px 10px; border-radius: 8px; word-break: break-all; }
+/* Entretien */
+.iv-q { font-size: 1.1rem; font-weight: 600; margin: 4px 0 10px; }
+.iv-score { font-size: 2rem; font-weight: 800; color: var(--primary, #0b5cad); }
+.iv-step { color: #5b6573; font-size: .9rem; }
+.iv-fb h3 { font-size: 1rem; margin: 12px 0 4px; }
+.iv-fb ul { margin: 0; padding-left: 20px; }
+/* Concours */
+.cc-days { font-weight: 800; color: var(--primary, #0b5cad); white-space: nowrap; }
+.cc-days.soon { color: #b42318; }
+.cc-letter { white-space: pre-wrap; background: #fff; border: 1px solid #d8dde5; border-radius: 10px; padding: 18px; font-family: "Times New Roman", Georgia, serif; line-height: 1.6; }
+@media print {
+  body.tool-page > header, .tool-noprint { display: none !important; }
+  .cc-letter { border: 0; padding: 0; }
+}
